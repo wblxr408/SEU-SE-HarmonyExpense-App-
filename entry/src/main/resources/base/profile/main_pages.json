@@ -1,6 +1,5 @@
 {
   "src": [
-    "pages/Logo",
-    "pages/Home"
+    "pages/Index"
   ]
 }
