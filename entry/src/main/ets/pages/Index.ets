@@ -1,7 +1,11 @@
 import {MOCK_TRANSACTIONS} from '../mock/MockData';
 import {Transaction} from '../model/Transaction';
-import router from '@ohos.router';
 
+
+// 使用新模块
+import { router } from '@kit.ArkUI';
+
+import { BusinessError } from '@ohos.base';
 
 @Entry
 @Component
@@ -23,22 +27,22 @@ struct Index {
         }
         .layoutWeight(1) //列表占据剩余空间
         .padding({ left: 12, right: 12 })
+        //表格展示结束
+        Button('记一笔')
+          .type(ButtonType.Capsule)
+          .fontSize(18)
+          .width('80%')
+          .height(50)
+          .margin(20) //设置按钮外边框
+          .onClick(() => {
+            router.push({
+              url: 'pages/AddBill'
+
+            })
+          })
+      }
       }
 
-      //表格展示结束
-      Button('记一笔')
-        .type(ButtonType.Capsule)
-        .fontSize(18)
-        .width('80%')
-        .height(50)
-        .margin(20) //设置按钮外边框
-        .onClick(() => {
-          //当State变量遭到修改的话
-          const newBill = new Transaction(99, 25, 'expense', '咖啡', '2025-10-28');
-          //MOCK_TRANSACTION 是只读 不能直接push
-          this.transactions = [...this.transactions, newBill];
-        })
-    }
     .width('100%')
     .height('100%')
     .backgroundColor($r('sys.color.point_color_checked')) //设置一个浅灰色的背景
