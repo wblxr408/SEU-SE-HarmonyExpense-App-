@@ -16,6 +16,14 @@
 import hilog from '@ohos.hilog'
 import UIAbility from '@ohos.app.ability.UIAbility'
 import Window from '@ohos.window'
+import { AccountDAO } from '../dao/AccountDAO'
+import { BillDAO } from '../dao/BillDAO'
+import { CategoryDAO } from '../dao/CategoryDAO'
+import { BudgetDAO } from '../dao/BudgetDAO'
+import { StatisticsDAO } from '../dao/StatisticsDAO'
+import { UserDAO } from '../dao/UserDAO'
+import { Account } from '../model/Account'
+import { Category } from '../model/Category'
 
 export default class EntryAbility extends UIAbility {
   onCreate(want, launchParam) {
