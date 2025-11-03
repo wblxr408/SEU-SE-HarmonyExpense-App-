@@ -1,11 +1,18 @@
 import router from '@ohos.router'
-
+import { Bill } from '../model/Bill'
+import { BillDAO } from '../dao/BillDAO'
+// 2. 导入 promptAction 用于显示 Toast 提示
+import promptAction from '@ohos.promptAction'
 @Entry
 @Component
 struct AddBill{
   @State amount: string = '';
   @State selectedDate: Date = new Date(); // 默认为当前日期
   @State notes: string = '';
+  //创建一个辅助函数:将Date对象转换成相应的格式
+private formatDate(date:Date):string{
+  return date.toISOString().split('T')[0];
+}
   build() {
     Navigation() {
       Column({ space: 15 }) {
@@ -20,9 +27,11 @@ struct AddBill{
         //画一条分割线
         Divider()
 
-        // 分类选择
+        // 分类选择,在spring2中实现
         Row() {
-          Text('分类').fontSize(16)
+          Text('分类')
+            .fontSize(16)
+            .fontWeight(FontWeight.Bold)
 
           Text('餐饮 >') // 这是一个模拟的选择器
             .fontSize(16)
@@ -42,7 +51,7 @@ struct AddBill{
           end: new Date('2030-12-31'),
           selected: this.selectedDate
         })
-          .onChange((value) => {
+          .onChange((value: DatePickerResult) => {
             //使用空值合并??,来排除value.year当中的未定义的情况
             const now  = new Date();
             const year = value.year ?? now.getFullYear();
@@ -56,7 +65,7 @@ struct AddBill{
 
         //备注
         TextArea({placeholder:'点击添加备注...'})
-          .onChange((value)=>{
+          .onChange((value:string)=>{
             this.notes = value;
           })
           .layoutWeight(1)  //占据剩余空间
@@ -68,16 +77,42 @@ struct AddBill{
           .height(50)
           .type(ButtonType.Capsule)
           .margin(15)
-          .onClick(() => {
-            // 现阶段：不调用数据库
-            // 只是打印信息并返回
-            console.info(`[Mock Save] 金额: ${this.amount}, 日期: ${this.selectedDate}, 备注: ${this.notes}`);
+          .onClick(async () => {
+            const finalAmount = parseFloat(this.amount);
+            if (isNaN(finalAmount) || finalAmount <= 0) {
+              promptAction.showToast({ message: '请输入有效的金额' });
+              return;
+            }
+            //创建账单对象
+            const now = new Date().toISOString();
+            const newBill = new Bill();
 
-            // TODO: Sprint 1 任务 ，这里需要调用 B 提供的 DAO 接口
-            // 并且在成功后刷新首页列表
+            // 假设的硬编码外键 (对应步骤一中插入的模拟数据)
+            //newBill.userId = 1; // 假设用户 ID 为 1
+            newBill.accountId = 1; // 假设账户 ID 为 1 (默认现金账户)
+            newBill.categoryId = 1; // 假设分类 ID 为 1 (餐饮)
 
-            // 返回上一页
-            router.back();
+            // 从表单获取的数据
+            newBill.amount = finalAmount;
+            newBill.type = 'expense'; // TODO: Sprint 2 需要添加类型选择
+            newBill.note = this.notes;
+            newBill.transactionDate = this.formatDate(this.selectedDate); // 'YYYY-MM-DD'
+            newBill.createdAt = now;
+            newBill.updatedAt = now;
+            newBill.isDeleted = 0;
+            //调用接口插入数据
+            try{
+              await BillDAO.insert(newBill);
+              promptAction.showToast({ message: '保存成功' });
+
+              // TODO: Sprint 1 任务，通知首页刷新
+              // (目前先直接返回)
+
+              router.back();
+            }catch (error){
+              console.error('[添加账单] 保存失败: %{public}s', JSON.stringify(error));
+              promptAction.showToast({ message: `保存失败: ${error.message}` });
+            }
           })
       }
       .padding(15)
@@ -88,4 +123,8 @@ struct AddBill{
     .title('记一笔')
     .titleMode(NavigationTitleMode.Mini)
   }
+}
+
+function Spacer() {
+  throw new Error('Function not implemented.');
 }
