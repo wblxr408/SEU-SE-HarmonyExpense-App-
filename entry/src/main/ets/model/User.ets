@@ -1,4 +1,3 @@
-// src/model/User.ts
 export interface UserJSON {
   userId: number;
   username: string;
