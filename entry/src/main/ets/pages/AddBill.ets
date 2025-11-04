@@ -142,22 +142,27 @@ private formatDate(date:Date):string{
           .onClick(async () => {
             const finalAmount = parseFloat(this.amount);
             if (isNaN(finalAmount) || finalAmount <= 0) {
-              try {
-                promptAction.showToast({ message: '请输入有效的金额' });
-              } catch (error) {
-                let e = error as BusinessError;
-                console.error(`showToast 失败: code=${e.code}, msg=${e.message}`);
-              }
+              promptAction.showToast({ message: '请输入有效的金额' });
               return;
             }
+            if (!this.selectedCategoryId ||this.selectedCategoryId <= 0){
+              promptAction.showToast({ message: '请选择分类' });
+              return;
+            }
+            if (!this.selectedAccountId ||this.selectedAccountId <= 0){
+              promptAction.showToast({ message: '请选择账户' });
+              return;
+            }
+
+
             //创建账单对象
             const now = new Date().toISOString();
             const newBill = new Bill();
 
-            // 假设的硬编码外键 (对应步骤一中插入的模拟数据)
-            //newBill.userId = 1; // 假设用户 ID 为 1
-            newBill.accountId = 1; // 假设账户 ID 为 1 (默认现金账户)
-            newBill.categoryId = 1; // 假设分类 ID 为 1 (餐饮)
+            // 使用 @State 中的真实数据
+            newBill.accountId = this.selectedAccountId;
+            newBill.categoryId = this.selectedCategoryId;
+            newBill.type = this.billType;
 
             // 从表单获取的数据
             newBill.amount = finalAmount;
