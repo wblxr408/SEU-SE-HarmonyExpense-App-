@@ -2,18 +2,75 @@ import router from '@ohos.router'
 import { Bill } from '../model/Bill'
 import { BillDAO } from '../dao/BillDAO'
 // 2. 导入 promptAction 用于显示 Toast 提示
-import promptAction from '@ohos.promptAction'
+import { promptAction } from '@kit.ArkUI';
+import type { BusinessError } from '@ohos.base';
+import { Account } from '../model/Account' //
+import { AccountDAO } from '../dao/AccountDAO' //
+import { Category } from '../model/Category' //
+import { CategoryDAO } from '../dao/CategoryDAO' //
+import { hilog } from '@kit.PerformanceAnalysisKit';
+
+class SelectOption {
+  value: string; // 'value' 是 Select 组件要求必须有的
+
+  constructor(value: string) {
+    this.value = value;
+  }
+}
 @Entry
 @Component
 struct AddBill{
   @State amount: string = '';
   @State selectedDate: Date = new Date(); // 默认为当前日期
   @State notes: string = '';
+  @State billType: 'expense' | 'income' = 'expense'; // 支出或收入
+  // 2. 新增用于存储列表和当前选项
+  @State allCategories: Array<Category> = [];
+  @State allAccounts: Array<Account> = [];
+
+  @State selectedCategoryId: number = 1;
+  @State selectedAccountId: number = 1;
+
+  @State categoryOptions: SelectOption[] = [];
+  //创建onPageShow 在页面显示的时候执行
+  onPageShow(){
+    this.loadData();
+  }
+
+  async loadData(){
+    try{
+      const userId = 1;
+      //添加支出分裂
+      const categories = await CategoryDAO.getByType(userId,this.billType);
+      const accounts = await AccountDAO.getAll();
+
+      this.allCategories = categories;
+      this.allAccounts = accounts;
+     // tOption 数组
+      this.categoryOptions = categories.map(cat => new SelectOption(cat.name));
+
+      //设置默认选中项
+      if (categories.length > 0) {
+        this.selectedCategoryId = categories[0].categoryId;
+      }
+      if (accounts.length > 0) {
+        this.selectedAccountId = accounts[0].accountId;
+      }
+      hilog.info(0x0000, 'AddBill', '分类和账户加载成功');
+
+    }catch(error){
+      hilog.error(0x0000, 'AddBill', '加载数据失败: %{public}s', JSON.stringify(error));
+      promptAction.showToast({ message: '加载分类/账户列表失败' });
+    }
+
+  }
   //创建一个辅助函数:将Date对象转换成相应的格式
 private formatDate(date:Date):string{
   return date.toISOString().split('T')[0];
 }
+
   build() {
+
     Navigation() {
       Column({ space: 15 }) {
         TextInput({ placeholder: '0.00' })
@@ -32,14 +89,19 @@ private formatDate(date:Date):string{
           Text('分类')
             .fontSize(16)
             .fontWeight(FontWeight.Bold)
+            // 使用Spacer()来填充剩余空间
+            .padding(10)
+          //使用Select组件
 
-          Text('餐饮 >') // 这是一个模拟的选择器
-            .fontSize(16)
-            .fontColor(Color.Gray)
-            .onClick(() => {
-              // TODO: 在 Sprint 2 中实现分类管理页面
-              console.info('弹出分类选择器');
+          Select(this.categoryOptions)
+            .value(this.allCategories.find(c => c.categoryId === this.selectedCategoryId)?.name ?? '请选择分类')
+            .onSelect((index: number) => {
+              this.selectedCategoryId = this.allCategories[index].categoryId;
             })
+            .fontColor(Color.Gray)
+
+
+
         }
         .width('100%')
         .padding(10)
@@ -80,7 +142,12 @@ private formatDate(date:Date):string{
           .onClick(async () => {
             const finalAmount = parseFloat(this.amount);
             if (isNaN(finalAmount) || finalAmount <= 0) {
-              promptAction.showToast({ message: '请输入有效的金额' });
+              try {
+                promptAction.showToast({ message: '请输入有效的金额' });
+              } catch (error) {
+                let e = error as BusinessError;
+                console.error(`showToast 失败: code=${e.code}, msg=${e.message}`);
+              }
               return;
             }
             //创建账单对象
@@ -118,7 +185,7 @@ private formatDate(date:Date):string{
       .padding(15)
       .width('100%')
       .height('100%')
-      .backgroundColor('#F1F3F5')
+      .backgroundColor($r('sys.color.point_color_checked'))
     }
     .title('记一笔')
     .titleMode(NavigationTitleMode.Mini)

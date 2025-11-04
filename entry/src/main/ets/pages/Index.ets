@@ -1,16 +1,41 @@
-import {MOCK_TRANSACTIONS} from '../mock/MockData';
-import {Transaction} from '../model/Transaction';
+
 
 
 // 使用新模块
 import { router } from '@kit.ArkUI';
-
+import { Bill } from '../model/Bill'; //
+import { BillDAO } from '../dao/BillDAO'; //
+import hilog from '@ohos.hilog'; // 用于日志
 import { BusinessError } from '@ohos.base';
+
 
 @Entry
 @Component
 struct Index {
-  @State transactions: Array<Transaction> = MOCK_TRANSACTIONS;
+  @State transactions: Array<Bill> = []; //定义一个变量，用于存储交易数据>;
+  @State isLoading: boolean = true;
+  //添加onPageShow 生命周期函数
+  onPageShow() {
+    hilog.info(0x0000, 'Index', 'onPageShow triggered');
+    this.loadBills();
+  }
+  async loadBills() {
+    this.isLoading = true;
+
+    try {
+      //使用BillDAO类中的getAllBills方法获取所有交易数据
+      const billsFromDB = await BillDAO.getAll();
+      this.transactions = billsFromDB;
+      this.isLoading = false;
+    } catch (error) {
+
+        // 处理业务错误
+        hilog.error(0x0000, 'Index','加载账单失败: %{public}s', JSON.stringify(error));
+
+    }  finally{
+      this.isLoading = false;
+    }
+  }
 
   build() {
     //使用Navigation函数来显示页面导航和标题栏
@@ -18,7 +43,7 @@ struct Index {
       Column() {
         //UI的依赖状态
         List({ space: 10 }) {
-          ForEach(this.transactions, (item: Transaction) => {
+          ForEach(this.transactions, (item: Bill) => {
             ListItem() {
               //将展示内容封装成函数
               this.TransactionRow(item);
@@ -52,7 +77,7 @@ struct Index {
 
   //自定义的展示行的函数
   @Builder
-  TransactionRow(item: Transaction) {
+  TransactionRow(item: Bill) {
     Row() {
         //暂时用图片代替资源
       Image(item.type=='expense'?$r('app.media.ic_expense_default'):$r('app.media.ic_income_default'))
@@ -61,8 +86,8 @@ struct Index {
         .margin({right:10})
         .objectFit(ImageFit.Contain)
       Column() {
-        Text(item.type).fontSize(16).fontWeight(FontWeight.Bold)
-        Text(item.notes).fontSize(14).fontColor(Color.Gray)
+        Text(item.type === 'expense' ? '支出' : '收入').fontSize(16).fontWeight(FontWeight.Bold) //
+        Text(item.note || '无备注').fontSize(14).fontColor(Color.Gray)
       }
       .alignItems(HorizontalAlign.Start)
 
