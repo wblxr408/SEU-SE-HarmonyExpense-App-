@@ -72,6 +72,12 @@ if (theBill) {
 
 // 7. 删除账单
 await BillDAO.delete(1);
+//8.按条件筛选账单
+const dateRange = { start: '2025-11-01', end: '2025-11-30' };
+const bills = await BillDAO.getBillsByFilters(CURRENT_USER_ID, dateRange);
+
+const categoryId = 1;
+const foodBills = await BillDAO.getBillsByFilters(CURRENT_USER_ID, dateRange, categoryId);
 ```
 
 ---
