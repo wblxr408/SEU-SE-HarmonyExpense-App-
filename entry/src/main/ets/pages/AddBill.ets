@@ -9,6 +9,9 @@ import { AccountDAO } from '../dao/AccountDAO' //
 import { Category } from '../model/Category' //
 import { CategoryDAO } from '../dao/CategoryDAO' //
 import { hilog } from '@kit.PerformanceAnalysisKit';
+import { CURRENT_USER_ID } from '../common/Constants';
+const HILOG_DOMAIN = 0x0001
+const LOG_TAG = 'AddBill'
 
 class SelectOption {
   value: string; // 'value' 是 Select 组件要求必须有的
@@ -40,9 +43,11 @@ struct AddBill{
   async loadData(){
     try{
       const userId = 1;
+      hilog.info(HILOG_DOMAIN, LOG_TAG, `开始加载数据，类型: ${this.billType}`);
       //添加支出分裂
+      const accounts = await AccountDAO.getByUserId(userId);
       const categories = await CategoryDAO.getByType(userId,this.billType);
-      const accounts = await AccountDAO.getAll();
+
 
       this.allCategories = categories;
       this.allAccounts = accounts;
@@ -72,6 +77,21 @@ private formatDate(date:Date):string{
   build() {
 
     Navigation() {
+      // --- 支出/收入 切换器 ---
+      Tabs({ index: this.billType === 'expense' ? 0 : 1 }) {
+        TabContent().tabBar('支出')
+        TabContent().tabBar('收入')
+      }
+      .barMode(BarMode.Fixed)
+      .width('60%')
+      .height(40)
+      .margin(10)
+      .onChange((index: number) => {
+        this.billType = (index === 0) ? 'expense' : 'income';
+        // 切换 Tab 时，必须重新调用 loadData
+        this.loadData();
+      })
+
       Column({ space: 15 }) {
         TextInput({ placeholder: '0.00' })
           .type(InputType.Number) // 使用数字输入法
@@ -84,7 +104,7 @@ private formatDate(date:Date):string{
         //画一条分割线
         Divider()
 
-        // 分类选择,在spring2中实现
+
         Row() {
           Text('分类')
             .fontSize(16)
@@ -160,13 +180,14 @@ private formatDate(date:Date):string{
             const newBill = new Bill();
 
             // 使用 @State 中的真实数据
+            newBill.userId = CURRENT_USER_ID;
             newBill.accountId = this.selectedAccountId;
             newBill.categoryId = this.selectedCategoryId;
             newBill.type = this.billType;
 
             // 从表单获取的数据
             newBill.amount = finalAmount;
-            newBill.type = 'expense'; // TODO: Sprint 2 需要添加类型选择
+            newBill.type = this.billType;
             newBill.note = this.notes;
             newBill.transactionDate = this.formatDate(this.selectedDate); // 'YYYY-MM-DD'
             newBill.createdAt = now;
@@ -179,7 +200,6 @@ private formatDate(date:Date):string{
 
               // TODO: Sprint 1 任务，通知首页刷新
               // (目前先直接返回)
-
               router.back();
             }catch (error){
               console.error('[添加账单] 保存失败: %{public}s', JSON.stringify(error));

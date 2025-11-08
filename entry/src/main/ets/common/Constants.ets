@@ -14,3 +14,4 @@
  */
 
 export let CIRCLE_RADIUS: number = 80
+export const CURRENT_USER_ID: number = 1;
