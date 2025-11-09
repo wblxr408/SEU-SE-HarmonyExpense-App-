@@ -77,20 +77,25 @@ export class AccountDAO {
    * @returns Account 对象
    */
   private static mapRowToAccount(resultSet: relationalStore.ResultSet): Account {
-    // 构造 JSON 对象
-    const row = {
-      accountId: resultSet.getLong(resultSet.getColumnIndex('account_id')),
-      userId: resultSet.getLong(resultSet.getColumnIndex('user_id')),
-      name: resultSet.getString(resultSet.getColumnIndex('name')),
-      type: resultSet.getString(resultSet.getColumnIndex('type')) as 'cash' | 'bank' | 'credit_card' | 'other',
-      balance: resultSet.getDouble(resultSet.getColumnIndex('balance')),
-      color: resultSet.getString(resultSet.getColumnIndex('color')),
-      createdAt: resultSet.getString(resultSet.getColumnIndex('created_at')),
-      updatedAt: resultSet.getString(resultSet.getColumnIndex('updated_at'))
-    } as AccountJSON;
+    try {
+      // 构造 JSON 对象
+      const row = {
+        accountId: resultSet.getLong(resultSet.getColumnIndex('account_id')),
+        userId: resultSet.getLong(resultSet.getColumnIndex('user_id')),
+        name: resultSet.getString(resultSet.getColumnIndex('name')),
+        type: resultSet.getString(resultSet.getColumnIndex('type')) as 'cash' | 'bank' | 'credit_card' | 'other',
+        balance: resultSet.getDouble(resultSet.getColumnIndex('balance')),
+        color: resultSet.getString(resultSet.getColumnIndex('color')),
+        createdAt: resultSet.getString(resultSet.getColumnIndex('created_at')),
+        updatedAt: resultSet.getString(resultSet.getColumnIndex('updated_at'))
+      } as AccountJSON;
 
-    // 使用 Account.fromJSON 方法生成 Account 对象
-    return Account.fromJSON(row);
+      // 使用 Account.fromJSON 方法生成 Account 对象
+      return Account.fromJSON(row);
+    } catch (error) {
+      console.error('[AccountDAO] 映射数据失败: ' + JSON.stringify(error));
+      throw new Error('[AccountDAO] 映射数据失败');
+    }
   }
 
   /**

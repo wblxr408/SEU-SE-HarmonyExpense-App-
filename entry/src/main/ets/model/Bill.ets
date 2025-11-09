@@ -1,6 +1,7 @@
 // model/Bill.ts
 export interface BillJSON {
   billId: number;
+  userId:number;
   accountId: number;
   categoryId: number;
   amount: number;
@@ -16,6 +17,7 @@ export class Bill {
   static readonly tableName: string = 'bills';
 
   billId: number = 0;
+  userId: number = 0;
   accountId: number = 0;   // FK -> Account
   categoryId: number = 0;  // FK -> Category
   amount: number = 0.0;
@@ -28,6 +30,7 @@ export class Bill {
 
   constructor(
     billId: number = 0,
+    userId: number = 0,
     accountId: number = 0,
     categoryId: number = 0,
     amount: number = 0.0,
@@ -53,6 +56,7 @@ export class Bill {
   toJSON(): BillJSON {
     return {
       billId: this.billId,
+      userId :this.userId,
       accountId: this.accountId,
       categoryId: this.categoryId,
       amount: this.amount,
@@ -68,6 +72,7 @@ export class Bill {
   static fromJSON(data: BillJSON): Bill {
     return new Bill(
       data.billId,
+      data.userId,
       data.accountId,
       data.categoryId,
       data.amount,
@@ -83,6 +88,7 @@ export class Bill {
   validate(): boolean {
     return (
       this.amount >= 0 &&
+        this.userId>0&&
         this.transactionDate !== '' &&
         (this.type === 'income' || this.type === 'expense') &&
         (this.isDeleted === 0 || this.isDeleted === 1)

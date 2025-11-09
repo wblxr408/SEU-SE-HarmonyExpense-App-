@@ -1,6 +1,7 @@
 {
   "src": [
-    "pages/Logo",
-    "pages/Home"
+    "pages/Index",
+    "pages/AddBill",
+    "pages/CategoryManagement"
   ]
 }

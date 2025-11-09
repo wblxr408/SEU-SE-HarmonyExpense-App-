@@ -34,9 +34,9 @@ export default class EntryAbility extends UIAbility {
     hilog.info(0x0000, 'testTag', '%{public}s', 'Ability onCreate')
     hilog.info(0x0000, 'testTag', '%{public}s', 'want param:' + JSON.stringify(want) ?? '')
     hilog.info(0x0000, 'testTag', '%{public}s', 'launchParam:' + JSON.stringify(launchParam) ?? '')
-    //初始化所有的数据库
+  //初始化所有的数据库
     try{
-      let context = this.context;
+    let context = this.context;
       await AccountDAO.initDatabase(context);
       await CategoryDAO.initDatabase(context);
       await BillDAO.initDatabase(context);
