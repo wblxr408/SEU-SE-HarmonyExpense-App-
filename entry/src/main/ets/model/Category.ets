@@ -6,6 +6,7 @@ export interface CategoryJSON {
   icon: string;
   color: string;
   parentCategoryId: number;
+  sortOrder: number;
   createdAt: string;
   updatedAt: string;
   is_deleted?: number;
@@ -21,6 +22,7 @@ export class Category {
   icon: string = '📦';
   color: string = '#1890FF';
   parentCategoryId: number = 0; // 0 表示一级分类
+  sortOrder: number = 0; // 排序序号
   createdAt: string = '';
   updatedAt: string = '';
   is_deleted: number = 0;
@@ -33,6 +35,7 @@ export class Category {
     icon: string = '📦',
     color: string = '#1890FF',
     parentCategoryId: number = 0,
+    sortOrder: number = 0,
     createdAt: string = '',
     updatedAt: string = '',
     is_deleted: number = 0
@@ -44,6 +47,7 @@ export class Category {
     this.icon = icon;
     this.color = color;
     this.parentCategoryId = parentCategoryId;
+    this.sortOrder = sortOrder;
     this.createdAt = createdAt;
     this.updatedAt = updatedAt;
     this.is_deleted = is_deleted;
@@ -58,6 +62,7 @@ export class Category {
       icon: this.icon,
       color: this.color,
       parentCategoryId: this.parentCategoryId,
+      sortOrder: this.sortOrder,
       createdAt: this.createdAt,
       updatedAt: this.updatedAt,
       is_deleted: this.is_deleted
@@ -73,6 +78,7 @@ export class Category {
       data.icon,
       data.color,
       data.parentCategoryId,
+      data.sortOrder,
       data.createdAt,
       data.updatedAt,
       data.is_deleted ?? 0
@@ -82,8 +88,9 @@ export class Category {
   validate(): boolean {
     return (
       this.name !== '' &&
+      this.name.length <= 50 &&
       ['expense', 'income'].includes(this.type) &&
-        (this.is_deleted === 0 || this.is_deleted === 1)
+      (this.is_deleted === 0 || this.is_deleted === 1)
     );
   }
 
@@ -96,6 +103,7 @@ export class Category {
       this.icon,
       this.color,
       this.parentCategoryId,
+      this.sortOrder,
       this.createdAt,
       this.updatedAt,
       this.is_deleted

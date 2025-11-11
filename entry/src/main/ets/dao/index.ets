@@ -10,3 +10,5 @@ export { CategoryDAO } from './CategoryDAO';
 export { BillDAO } from './BillDAO';
 export { BudgetDAO } from './BudgetDAO';
 export { StatisticsDAO } from './StatisticsDAO';
+export { TagDAO } from './TagDAO';
+export { QueryHelper } from './QueryHelper';

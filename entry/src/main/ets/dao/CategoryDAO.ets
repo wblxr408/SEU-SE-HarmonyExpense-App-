@@ -1,6 +1,7 @@
 import relationalStore from '@ohos.data.relationalStore';
 import common from '@ohos.app.ability.common';
 import { Category } from '../model/Category';
+import { CategoryTreeNode, CategoryAggregation } from '../model/AggregationTypes';
 
 let db: relationalStore.RdbStore | null = null;
 
@@ -39,6 +40,7 @@ export class CategoryDAO {
           icon TEXT DEFAULT '📦',
           color TEXT DEFAULT '#1890FF',
           parent_category_id INTEGER DEFAULT 0,
+          sort_order INTEGER DEFAULT 0,
           created_at TEXT NOT NULL,
           updated_at TEXT NOT NULL,
           is_deleted INTEGER DEFAULT 0 CHECK (is_deleted IN (0, 1)),
@@ -46,8 +48,9 @@ export class CategoryDAO {
         );
       `);
       // 索引
-      await store.executeSql(`CREATE INDEX IF NOT EXISTS idx_categories_user_type ON categories (user_id, type);`);
-      await store.executeSql(`CREATE INDEX IF NOT EXISTS idx_categories_user_parent ON categories (user_id, parent_category_id);`);
+      await store.executeSql(`CREATE INDEX IF NOT EXISTS idx_categories_user_type ON categories (user_id, type) WHERE is_deleted = 0;`);
+      await store.executeSql(`CREATE INDEX IF NOT EXISTS idx_categories_user_parent ON categories (user_id, parent_category_id) WHERE is_deleted = 0;`);
+      await store.executeSql(`CREATE INDEX IF NOT EXISTS idx_categories_sort ON categories (user_id, sort_order, category_id);`);
       console.log('[CategoryDAO] 分类表和索引创建完成');
     } catch (error) {
       console.error('[CategoryDAO] 创建表或索引失败: ' + JSON.stringify(error));
@@ -56,7 +59,7 @@ export class CategoryDAO {
   }
 
   /** 插入新分类 */
-  static async insert(category: Category) {
+  static async insert(category: Category): Promise<void> {
     if (!category.validate()) {
       throw new Error('[CategoryDAO] 无效分类数据');
     }
@@ -64,8 +67,8 @@ export class CategoryDAO {
     const now = new Date().toISOString();
     const sql = `
       INSERT INTO categories
-        (user_id, name, type, icon, color, parent_category_id, created_at, updated_at, is_deleted)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+        (user_id, name, type, icon, color, parent_category_id, sort_order, created_at, updated_at, is_deleted)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `;
     const params = [
       category.userId,
@@ -74,6 +77,7 @@ export class CategoryDAO {
       category.icon,
       category.color,
       category.parentCategoryId,
+      category.sortOrder,
       now,
       now,
       0
@@ -88,13 +92,39 @@ export class CategoryDAO {
   }
 
   /** 批量插入分类 */
-  static async bulkInsert(categories: Category[]) {
+  static async bulkInsert(categories: Category[]): Promise<void> {
+    if (categories.length === 0) {
+      return;
+    }
     const store = CategoryDAO.ensureDb();
     await store.beginTransaction();
     try {
+      const now = new Date().toISOString();
+      const sql = `
+        INSERT INTO categories
+          (user_id, name, type, icon, color, parent_category_id, sort_order, created_at, updated_at, is_deleted)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `;
+      
       for (const category of categories) {
-        await CategoryDAO.insert(category);
+        if (!category.validate()) {
+          throw new Error(`[CategoryDAO] 无效分类数据: ${category.name}`);
+        }
+        const params = [
+          category.userId,
+          category.name,
+          category.type,
+          category.icon,
+          category.color,
+          category.parentCategoryId,
+          category.sortOrder,
+          now,
+          now,
+          0
+        ];
+        await store.executeSql(sql, params);
       }
+      
       await store.commit();
       console.log(`[CategoryDAO] 批量插入成功: ${categories.length} 条`);
     } catch (error) {
@@ -103,8 +133,6 @@ export class CategoryDAO {
       throw error instanceof Error ? error : new Error(String(error));
     }
   }
-
-
 
   /** 根据 ID 查询分类（只返回未删除） */
   static async getById(userId: number, categoryId: number): Promise<Category | null> {
@@ -126,7 +154,7 @@ export class CategoryDAO {
   /** 查询用户所有未删除分类 */
   static async getAll(userId: number): Promise<Category[]> {
     const store = CategoryDAO.ensureDb();
-    const sql = `SELECT * FROM categories WHERE user_id = ? AND is_deleted = 0 ORDER BY category_id ASC`;
+    const sql = `SELECT * FROM categories WHERE user_id = ? AND is_deleted = 0 ORDER BY sort_order ASC, category_id ASC`;
     const categories: Category[] = [];
     let resultSet: relationalStore.ResultSet | null = null;
     try {
@@ -146,7 +174,7 @@ export class CategoryDAO {
   /** 按类型查询（收入/支出） */
   static async getByType(userId: number, type: 'expense' | 'income'): Promise<Category[]> {
     const store = CategoryDAO.ensureDb();
-    const sql = `SELECT * FROM categories WHERE user_id = ? AND type = ? AND is_deleted = 0 ORDER BY category_id ASC`;
+    const sql = `SELECT * FROM categories WHERE user_id = ? AND type = ? AND is_deleted = 0 ORDER BY sort_order ASC, category_id ASC`;
     const categories: Category[] = [];
     let resultSet: relationalStore.ResultSet | null = null;
     try {
@@ -155,6 +183,9 @@ export class CategoryDAO {
         categories.push(CategoryDAO.mapRowToCategory(resultSet));
       }
       return categories;
+    } catch (error) {
+      console.error('[CategoryDAO] 按类型查询失败: ' + JSON.stringify(error));
+      throw CategoryDAO.toError('[CategoryDAO] 按类型查询失败', error);
     } finally {
       resultSet?.close();
     }
@@ -163,7 +194,7 @@ export class CategoryDAO {
   /** 获取某个父分类的子分类 */
   static async getChildren(userId: number, parentId: number): Promise<Category[]> {
     const store = CategoryDAO.ensureDb();
-    const sql = `SELECT * FROM categories WHERE user_id = ? AND parent_category_id = ? AND is_deleted = 0 ORDER BY category_id ASC`;
+    const sql = `SELECT * FROM categories WHERE user_id = ? AND parent_category_id = ? AND is_deleted = 0 ORDER BY sort_order ASC, category_id ASC`;
     const categories: Category[] = [];
     let resultSet: relationalStore.ResultSet | null = null;
     try {
@@ -172,13 +203,16 @@ export class CategoryDAO {
         categories.push(CategoryDAO.mapRowToCategory(resultSet));
       }
       return categories;
+    } catch (error) {
+      console.error('[CategoryDAO] 查询子分类失败: ' + JSON.stringify(error));
+      throw CategoryDAO.toError('[CategoryDAO] 查询子分类失败', error);
     } finally {
       resultSet?.close();
     }
   }
 
   /** 更新分类信息 */
-  static async update(category: Category) {
+  static async update(category: Category): Promise<void> {
     if (!category.validate()) {
       throw new Error('[CategoryDAO] 无效分类数据');
     }
@@ -186,7 +220,7 @@ export class CategoryDAO {
     const now = new Date().toISOString();
     const sql = `
       UPDATE categories
-      SET name = ?, type = ?, icon = ?, color = ?, parent_category_id = ?, updated_at = ?, is_deleted = ?
+      SET name = ?, type = ?, icon = ?, color = ?, parent_category_id = ?, sort_order = ?, updated_at = ?, is_deleted = ?
       WHERE category_id = ? AND user_id = ?
     `;
     const params = [
@@ -195,6 +229,7 @@ export class CategoryDAO {
       category.icon,
       category.color,
       category.parentCategoryId,
+      category.sortOrder,
       now,
       category.is_deleted,
       category.categoryId,
@@ -210,7 +245,7 @@ export class CategoryDAO {
   }
 
   /** 软删除分类 */
-  static async softDelete(userId: number, categoryId: number) {
+  static async softDelete(userId: number, categoryId: number): Promise<void> {
     const store = CategoryDAO.ensureDb();
     const now = new Date().toISOString();
     const sql = `UPDATE categories SET is_deleted = 1, updated_at = ? WHERE category_id = ? AND user_id = ?`;
@@ -224,7 +259,7 @@ export class CategoryDAO {
   }
 
   /** 恢复已删除分类 */
-  static async restore(userId: number, categoryId: number) {
+  static async restore(userId: number, categoryId: number): Promise<void> {
     const store = CategoryDAO.ensureDb();
     const now = new Date().toISOString();
     const sql = `UPDATE categories SET is_deleted = 0, updated_at = ? WHERE category_id = ? AND user_id = ?`;
@@ -238,7 +273,7 @@ export class CategoryDAO {
   }
 
   /** 真删除分类（慎用） */
-  static async hardDelete(userId: number, categoryId: number) {
+  static async hardDelete(userId: number, categoryId: number): Promise<void> {
     const store = CategoryDAO.ensureDb();
     const sql = `DELETE FROM categories WHERE category_id = ? AND user_id = ?`;
     try {
@@ -250,6 +285,153 @@ export class CategoryDAO {
     }
   }
 
+  /**
+   * 获取分类树（包含子分类）
+   * @param userId 用户ID
+   * @param type 分类类型
+   * @returns 分类树结构
+   */
+  static async getCategoryTree(userId: number, type: 'expense' | 'income'): Promise<CategoryTreeNode[]> {
+    const store = CategoryDAO.ensureDb();
+    const sql = `
+      SELECT * FROM categories 
+      WHERE user_id = ? AND type = ? AND is_deleted = 0 
+      ORDER BY sort_order ASC, category_id ASC
+    `;
+    
+    let resultSet: relationalStore.ResultSet | null = null;
+    try {
+      resultSet = await store.querySql(sql, [userId, type]);
+      const allCategories: Category[] = [];
+      
+      while (resultSet.goToNextRow()) {
+        allCategories.push(CategoryDAO.mapRowToCategory(resultSet));
+      }
+      
+      // 构建树结构
+      return CategoryDAO.buildCategoryTree(allCategories);
+    } catch (error) {
+      console.error('[CategoryDAO] 获取分类树失败: ' + JSON.stringify(error));
+      throw CategoryDAO.toError('[CategoryDAO] 获取分类树失败', error);
+    } finally {
+      resultSet?.close();
+    }
+  }
+
+  /**
+   * 构建分类树结构
+   * @param categories 分类列表
+   * @returns 分类树节点数组
+   */
+  private static buildCategoryTree(categories: Category[]): CategoryTreeNode[] {
+    const map = new Map<number, CategoryTreeNode>();
+    const roots: CategoryTreeNode[] = [];
+    
+    // 初始化节点
+    categories.forEach(cat => {
+      map.set(cat.categoryId, {
+        category: cat,
+        children: []
+      });
+    });
+    
+    // 构建父子关系
+    categories.forEach(cat => {
+      const node = map.get(cat.categoryId);
+      if (node) {
+        if (cat.parentCategoryId === 0) {
+          roots.push(node);
+        } else {
+          const parent = map.get(cat.parentCategoryId);
+          if (parent) {
+            parent.children.push(node);
+          }
+        }
+      }
+    });
+    
+    return roots;
+  }
+
+  /**
+   * 按分类聚合统计
+   * @param userId 用户ID
+   * @param startDate 开始日期
+   * @param endDate 结束日期
+   * @returns 分类统计结果
+   */
+  static async aggregateByCategory(
+    userId: number,
+    startDate: string,
+    endDate: string
+  ): Promise<CategoryAggregation[]> {
+    const store = CategoryDAO.ensureDb();
+    
+    const sql = `
+      SELECT 
+        c.category_id,
+        c.name AS category_name,
+        c.type,
+        c.icon,
+        c.color,
+        c.parent_category_id,
+        COUNT(b.bill_id) AS transaction_count,
+        COALESCE(SUM(b.amount), 0) AS total_amount,
+        COALESCE(AVG(b.amount), 0) AS avg_amount,
+        COALESCE(MIN(b.amount), 0) AS min_amount,
+        COALESCE(MAX(b.amount), 0) AS max_amount
+      FROM categories c
+      LEFT JOIN bills b ON c.category_id = b.category_id 
+        AND b.is_deleted = 0
+        AND b.transaction_date >= ?
+        AND b.transaction_date <= ?
+      INNER JOIN accounts a ON b.account_id = a.account_id
+      WHERE c.user_id = ? AND c.is_deleted = 0 AND a.user_id = ?
+      GROUP BY c.category_id
+      ORDER BY total_amount DESC
+    `;
+    
+    let resultSet: relationalStore.ResultSet | null = null;
+    try {
+      resultSet = await store.querySql(sql, [startDate, endDate, userId, userId]);
+      const results: CategoryAggregation[] = [];
+      
+      while (resultSet.goToNextRow()) {
+        results.push({
+          categoryId: resultSet.getLong(resultSet.getColumnIndex('category_id')),
+          categoryName: resultSet.getString(resultSet.getColumnIndex('category_name')),
+          type: resultSet.getString(resultSet.getColumnIndex('type')) as 'expense' | 'income',
+          icon: resultSet.getString(resultSet.getColumnIndex('icon')),
+          color: resultSet.getString(resultSet.getColumnIndex('color')),
+          parentCategoryId: resultSet.getLong(resultSet.getColumnIndex('parent_category_id')),
+          transactionCount: resultSet.getLong(resultSet.getColumnIndex('transaction_count')),
+          totalAmount: resultSet.getDouble(resultSet.getColumnIndex('total_amount')),
+          avgAmount: resultSet.getDouble(resultSet.getColumnIndex('avg_amount')),
+          minAmount: resultSet.getDouble(resultSet.getColumnIndex('min_amount')),
+          maxAmount: resultSet.getDouble(resultSet.getColumnIndex('max_amount'))
+        });
+      }
+      
+      return results;
+    } catch (error) {
+      console.error('[CategoryDAO] 分类聚合统计失败: ' + JSON.stringify(error));
+      throw CategoryDAO.toError('[CategoryDAO] 分类聚合统计失败', error);
+    } finally {
+      resultSet?.close();
+    }
+  }
+
+  static async exists(categoryId: number): Promise<boolean> {
+    const sql = `SELECT 1 FROM categories WHERE category_id = ? AND is_deleted = 0`;
+    const store = CategoryDAO.ensureDb();
+    let rs: relationalStore.ResultSet | null = null;
+    try {
+      rs = await store.querySql(sql, [categoryId]);
+      return rs.goToNextRow();
+    } finally {
+      if (rs) rs.close();
+    }
+  }
 
   /** 确保数据库已初始化 */
   private static ensureDb(): relationalStore.RdbStore {
@@ -280,22 +462,10 @@ export class CategoryDAO {
     category.icon = resultSet.getString(resultSet.getColumnIndex('icon'));
     category.color = resultSet.getString(resultSet.getColumnIndex('color'));
     category.parentCategoryId = resultSet.getLong(resultSet.getColumnIndex('parent_category_id'));
+    category.sortOrder = resultSet.getLong(resultSet.getColumnIndex('sort_order'));
     category.createdAt = resultSet.getString(resultSet.getColumnIndex('created_at'));
     category.updatedAt = resultSet.getString(resultSet.getColumnIndex('updated_at'));
     category.is_deleted = resultSet.getLong(resultSet.getColumnIndex('is_deleted'));
     return category;
   }
-
-  static async exists(categoryId: number): Promise<boolean> {
-    const sql = `SELECT 1 FROM categories WHERE category_id = ? AND is_deleted = 0`;
-    const store = CategoryDAO.ensureDb();
-    let rs: relationalStore.ResultSet | null = null;
-    try {
-      rs = await store.querySql(sql, [categoryId]);
-      return rs.goToNextRow();
-    } finally {
-      if (rs) rs.close();
-    }
-  }
-
 }

@@ -105,13 +105,14 @@ export class DatabaseManager {
           category_id INTEGER PRIMARY KEY AUTOINCREMENT,
           user_id INTEGER NOT NULL,
           name TEXT NOT NULL,
-          type TEXT NOT NULL,
+          type TEXT NOT NULL CHECK (type IN ('expense', 'income')),
           icon TEXT NOT NULL DEFAULT '📦',
           color TEXT NOT NULL DEFAULT '#1890FF',
           parent_category_id INTEGER DEFAULT 0,
+          sort_order INTEGER DEFAULT 0,
           created_at TEXT NOT NULL,
           updated_at TEXT NOT NULL,
-          is_deleted INTEGER DEFAULT 0,
+          is_deleted INTEGER DEFAULT 0 CHECK (is_deleted IN (0, 1)),
           FOREIGN KEY (user_id) REFERENCES users(user_id),
           UNIQUE(user_id, name, type)
         );
@@ -120,11 +121,15 @@ export class DatabaseManager {
       // 创建分类表索引
       await store.executeSql(`
         CREATE INDEX IF NOT EXISTS idx_category_user_type 
-        ON categories(user_id, type);
+        ON categories(user_id, type) WHERE is_deleted = 0;
       `);
       await store.executeSql(`
         CREATE INDEX IF NOT EXISTS idx_category_user_parent 
-        ON categories(user_id, parent_category_id);
+        ON categories(user_id, parent_category_id) WHERE is_deleted = 0;
+      `);
+      await store.executeSql(`
+        CREATE INDEX IF NOT EXISTS idx_category_sort 
+        ON categories(user_id, sort_order, category_id);
       `);
       console.log('[DatabaseManager] 表 categories 及索引创建成功');
 
@@ -201,6 +206,56 @@ export class DatabaseManager {
         );
       `);
       console.log('[DatabaseManager] 表 category_statistics 创建成功');
+
+      // 8. 创建标签表（依赖 users）
+      await store.executeSql(`
+        CREATE TABLE IF NOT EXISTS tags (
+          tag_id INTEGER PRIMARY KEY AUTOINCREMENT,
+          user_id INTEGER NOT NULL,
+          name TEXT NOT NULL,
+          color TEXT DEFAULT '#52C41A',
+          usage_count INTEGER DEFAULT 0,
+          created_at TEXT NOT NULL,
+          updated_at TEXT NOT NULL,
+          is_deleted INTEGER DEFAULT 0 CHECK (is_deleted IN (0, 1)),
+          FOREIGN KEY (user_id) REFERENCES users(user_id),
+          UNIQUE (user_id, name)
+        );
+      `);
+      
+      // 创建标签表索引
+      await store.executeSql(`
+        CREATE INDEX IF NOT EXISTS idx_tags_user 
+        ON tags (user_id) WHERE is_deleted = 0;
+      `);
+      await store.executeSql(`
+        CREATE INDEX IF NOT EXISTS idx_tags_usage 
+        ON tags (user_id, usage_count DESC) WHERE is_deleted = 0;
+      `);
+      console.log('[DatabaseManager] 表 tags 及索引创建成功');
+
+      // 9. 创建账单标签关联表（多对多关系）
+      await store.executeSql(`
+        CREATE TABLE IF NOT EXISTS bill_tags (
+          bill_id INTEGER NOT NULL,
+          tag_id INTEGER NOT NULL,
+          created_at TEXT NOT NULL,
+          PRIMARY KEY (bill_id, tag_id),
+          FOREIGN KEY (bill_id) REFERENCES bills(bill_id) ON DELETE CASCADE,
+          FOREIGN KEY (tag_id) REFERENCES tags(tag_id) ON DELETE CASCADE
+        );
+      `);
+      
+      // 创建关联表索引
+      await store.executeSql(`
+        CREATE INDEX IF NOT EXISTS idx_bill_tags_bill 
+        ON bill_tags (bill_id);
+      `);
+      await store.executeSql(`
+        CREATE INDEX IF NOT EXISTS idx_bill_tags_tag 
+        ON bill_tags (tag_id);
+      `);
+      console.log('[DatabaseManager] 表 bill_tags 及索引创建成功');
 
       console.log('[DatabaseManager] 所有数据表创建完成');
     } catch (error) {

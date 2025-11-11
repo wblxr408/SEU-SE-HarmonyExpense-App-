@@ -8,3 +8,6 @@ export { Category } from './Category';
 export { Bill } from './Bill';
 export { Budget } from './Budget';
 export { MonthlyStatistics, CategoryStatistics } from './Statistics';
+export { Tag } from './Tag';
+export { BillTag } from './BillTag';
+export { CategoryTreeNode, CategoryAggregation, TagAggregation } from './AggregationTypes';
