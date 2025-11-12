@@ -233,18 +233,21 @@ export class BillDAO {
       }
 
       // 转换为 ValuesBucket 格式
-      const records: relationalStore.ValuesBucket[] = bills.map(bill => ({
-        user_id: bill.userId,
-        account_id: bill.accountId,
-        category_id: bill.categoryId,
-        amount: bill.amount,
-        type: bill.type,
-        note: bill.note,
-        transaction_date: bill.transactionDate,
-        created_at: bill.createdAt,
-        updated_at: bill.updatedAt,
-        is_deleted: bill.isDeleted
-      }));
+      const records: relationalStore.ValuesBucket[] = bills.map((bill: Bill): relationalStore.ValuesBucket => {
+        const record: relationalStore.ValuesBucket = {
+          'user_id': bill.userId,
+          'account_id': bill.accountId,
+          'category_id': bill.categoryId,
+          'amount': bill.amount,
+          'type': bill.type,
+          'note': bill.note,
+          'transaction_date': bill.transactionDate,
+          'created_at': bill.createdAt,
+          'updated_at': bill.updatedAt,
+          'is_deleted': bill.isDeleted
+        };
+        return record;
+      });
 
       // 调用批量插入辅助方法
       const insertedCount = await BatchQueryHelper.bulkInsert('bills', records);

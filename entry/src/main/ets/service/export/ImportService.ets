@@ -13,7 +13,7 @@ import { CategoryDAO } from '../../dao/CategoryDAO';
 import { BillDAO } from '../../dao/BillDAO';
 import { BudgetDAO } from '../../dao/BudgetDAO';
 import { TagDAO } from '../../dao/TagDAO';
-import { DatabaseManager } from '../../dao/DatabaseManager';
+import { DatabaseManager } from '../../database/DatabaseManager';
 import {
   ExportData,
   ImportResult,
@@ -114,11 +114,12 @@ export class ImportService {
         throw error;
       }
       ImportService.logError('导入数据失败', error as Object);
-      throw new ExportError(
+      const exportError = new ExportError(
         ExportErrorCode.UNKNOWN_ERROR,
         `导入数据失败: ${ImportService.formatError(error as Object)}`,
         error as Object
       );
+      throw exportError;
     }
   }
 
@@ -182,7 +183,7 @@ export class ImportService {
             await BillDAO.insert(bill);
             statistics.bills++;
           } catch (error) {
-            const errorMsg = `导入账单失败: ${bill.description} - ${ImportService.formatError(error as Object)}`;
+            const errorMsg = `导入账单失败: ${bill.note} - ${ImportService.formatError(error as Object)}`;
             errors.push(errorMsg);
             if (!skipErrors) {
               throw new ExportError(ExportErrorCode.DATABASE_ERROR, errorMsg, error as Object);
@@ -238,17 +239,26 @@ export class ImportService {
         // 回滚事务
         await store.rollBack();
         ImportService.logError('数据库事务回滚', error as Object);
-        throw error;
+        if (error instanceof Error) {
+          throw error;
+        } else {
+          throw new ExportError(
+            ExportErrorCode.DATABASE_ERROR,
+            `数据库操作失败: ${ImportService.formatError(error as Object)}`,
+            error as Object
+          );
+        }
       }
     } catch (error) {
       if (error instanceof ExportError) {
         throw error;
       }
-      throw new ExportError(
+      const exportError = new ExportError(
         ExportErrorCode.DATABASE_ERROR,
         `数据库操作失败: ${ImportService.formatError(error as Object)}`,
         error as Object
       );
+      throw exportError;
     }
   }
 

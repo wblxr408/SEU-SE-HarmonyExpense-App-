@@ -84,10 +84,11 @@ export class ExportService {
         throw error;
       }
       ExportService.logError('导出数据失败', error as Object);
+      const err = error instanceof Error ? error : new Error(String(error));
       throw new ExportError(
         ExportErrorCode.UNKNOWN_ERROR,
         `导出数据失败: ${ExportService.formatError(error as Object)}`,
-        error as Object
+        err
       );
     }
   }
@@ -102,15 +103,23 @@ export class ExportService {
       ExportService.logInfo(`开始收集用户数据: userId=${userId}`);
 
       // 并行查询所有数据
-      const [user, accounts, categories, bills, budgets, tags, billTags] = await Promise.all([
+      const results = await Promise.all([
         UserDAO.getById(userId),
         AccountDAO.getByUserId(userId),
-        CategoryDAO.getByUserId(userId),
-        BillDAO.getByUserId(userId),
-        BudgetDAO.getByUserId(userId),
-        TagDAO.getByUserId(userId),
+        CategoryDAO.getAll(userId),
+        BillDAO.getAll(),
+        BudgetDAO.getAll(),
+        TagDAO.getAll(userId),
         TagDAO.getBillTagsByUserId(userId)
       ]);
+
+      const user = results[0];
+      const accounts = results[1];
+      const categories = results[2];
+      const allBills = results[3];
+      const allBudgets = results[4];
+      const tags = results[5];
+      const billTags = results[6];
 
       if (!user) {
         throw new ExportError(
@@ -118,6 +127,10 @@ export class ExportService {
           `用户不存在: userId=${userId}`
         );
       }
+
+      // 过滤只属于该用户的账单和预算
+      const bills = allBills.filter(bill => bill.userId === userId);
+      const budgets = allBudgets.filter(budget => budget.userId === userId);
 
       const dataContent: ExportDataContent = {
         users: [user],
@@ -140,10 +153,11 @@ export class ExportService {
         throw error;
       }
       ExportService.logError('收集用户数据失败', error as Object);
+      const err = error instanceof Error ? error : new Error(String(error));
       throw new ExportError(
         ExportErrorCode.DATABASE_ERROR,
         `收集用户数据失败: ${ExportService.formatError(error as Object)}`,
-        error as Object
+        err
       );
     }
   }
