@@ -27,7 +27,7 @@ export default function StatisticsDAOTest(): void {
       stats.transactionCount = 12;
       stats.createdAt = new Date().toISOString();
       stats.updatedAt = new Date().toISOString();
-      stats.isDeleted = 0;
+      stats.is_deleted = 0;
       await StatisticsDAO.insertMonthly(stats);
       const retrieved = await StatisticsDAO.getMonthly(1, 2, '2025-11');
       expect(retrieved !== null).assertTrue();
@@ -55,7 +55,7 @@ export default function StatisticsDAOTest(): void {
       stats.color = '#FA0';
       stats.createdAt = new Date().toISOString();
       stats.updatedAt = new Date().toISOString();
-      stats.isDeleted = 0;
+      stats.is_deleted = 0;
       await StatisticsDAO.insertCategory(stats);
       const retrieved = await StatisticsDAO.getCategory(7);
       expect(retrieved !== null).assertTrue();
@@ -85,3 +85,4 @@ export default function StatisticsDAOTest(): void {
     });
   });
 }
+

@@ -23,8 +23,8 @@ export default function BillDAOTest(): void {
 
       // 创建测试用的账户和分类
       const now = new Date().toISOString();
-      const testAccount = new Account(0, 1, '测试账户', 'bank', 1000.0, '#1E90FF', now, 0);
-      const testCategory = new Category(0, 1, '测试分类', 'expense', '🍽️', '#FF6B6B', 0, now, now, 0);
+      const testAccount = new Account(0, 1, '测试账户', 'bank', 1000.0, '#1E90FF', now, now, 0);
+      const testCategory = new Category(0, 1, '测试分类', 'expense', '🍽️', '#FF6B6B', 0, 0, now, now, 0);
       
       try {
         await AccountDAO.insert(testAccount);
@@ -38,6 +38,7 @@ export default function BillDAOTest(): void {
       const now = new Date().toISOString();
       const bill = new Bill(
         0,
+        1, // userId
         1, // accountId
         1, // categoryId
         100.0,
@@ -49,7 +50,7 @@ export default function BillDAOTest(): void {
         0
       );
       await BillDAO.insert(bill);
-      const retrieved = await BillDAO.getById(1);
+      const retrieved = await BillDAO.getById(1, 1);
       expect(retrieved !== null).assertTrue();
       if (retrieved) {
         expect(retrieved.amount).assertEqual(100.0);
@@ -64,11 +65,11 @@ export default function BillDAOTest(): void {
     });
 
     it('should update bill', 0, async () => {
-      const bill = await BillDAO.getById(1);
+      const bill = await BillDAO.getById(1, 1);
       if (bill) {
         bill.amount = 150.0;
         await BillDAO.update(bill);
-        const updated = await BillDAO.getById(1);
+        const updated = await BillDAO.getById(1, 1);
         expect(updated !== null).assertTrue();
         if (updated) {
           expect(updated.amount).assertEqual(150.0);
@@ -78,7 +79,7 @@ export default function BillDAOTest(): void {
 
     it('should soft delete bill', 0, async () => {
       await BillDAO.delete(1);
-      const deleted = await BillDAO.getById(1);
+      const deleted = await BillDAO.getById(1, 1);
       expect(deleted === null).assertTrue();
     });
   });

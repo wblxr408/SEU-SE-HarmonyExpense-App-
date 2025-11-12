@@ -12,6 +12,7 @@ export default function CategoryTest(): void {
         '🍽️',
         '#FF6B6B',
         0,
+        0,
         '2025-11-05T10:00:00',
         '2025-11-05T10:00:00',
         0
@@ -27,6 +28,7 @@ export default function CategoryTest(): void {
         'expense',
         '🍽️',
         '#FF6B6B',
+        0,
         0,
         '',
         '',
@@ -45,6 +47,7 @@ export default function CategoryTest(): void {
         '🍽️',
         '#FF6B6B',
         0,
+        0,
         '',
         '',
         0
@@ -61,6 +64,7 @@ export default function CategoryTest(): void {
         '💰',
         '#52C41A',
         0,
+        0,
         '2025-11-05T10:00:00',
         '2025-11-05T10:00:00',
         0
@@ -76,6 +80,7 @@ export default function CategoryTest(): void {
         'expense',
         '🍽️',
         '#FF6B6B',
+        0,
         0,
         '2025-11-05T10:00:00',
         '2025-11-05T10:00:00',
@@ -94,6 +99,7 @@ export default function CategoryTest(): void {
         'expense',
         '🍽️',
         '#FF6B6B',
+        0,
         0,
         '2025-11-05T10:00:00',
         '2025-11-05T11:00:00',
@@ -114,9 +120,10 @@ export default function CategoryTest(): void {
         icon: '🚗',
         color: '#4ECDC4',
         parentCategoryId: 0,
+        sortOrder: 0,
         createdAt: '2025-11-05T10:00:00',
         updatedAt: '2025-11-05T11:00:00',
-        isDeleted: 0
+        is_deleted: 0
       };
       const cat = Category.fromJSON(json);
       expect(cat.categoryId).assertEqual(2);

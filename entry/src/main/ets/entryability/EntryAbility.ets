@@ -17,91 +17,89 @@ import hilog from '@ohos.hilog'
 import UIAbility from '@ohos.app.ability.UIAbility'
 import Window from '@ohos.window'
 import type Want  from '@ohos.app.ability.Want';
+import { DatabaseManager } from '../database/DatabaseManager'
 import { AccountDAO } from '../dao/AccountDAO'
-import { BillDAO } from '../dao/BillDAO'
 import { CategoryDAO } from '../dao/CategoryDAO'
-import { BudgetDAO } from '../dao/BudgetDAO'
-import { StatisticsDAO } from '../dao/StatisticsDAO'
-import { UserDAO } from '../dao/UserDAO'
 import { Account } from '../model/Account'
 import { Category } from '../model/Category'
 import { Ability, AbilityConstant } from '@kit.AbilityKit';
 import { BusinessError} from '@kit.BasicServicesKit';
+import { LogConfig } from '../common/AppConfig';
 
 export default class EntryAbility extends UIAbility {
   async onCreate(want:Want, launchParam:AbilityConstant.LaunchParam) {
-    hilog.isLoggable(0x0000, 'testTag', hilog.LogLevel.INFO)
-    hilog.info(0x0000, 'testTag', '%{public}s', 'Ability onCreate')
-    hilog.info(0x0000, 'testTag', '%{public}s', 'want param:' + JSON.stringify(want) ?? '')
-    hilog.info(0x0000, 'testTag', '%{public}s', 'launchParam:' + JSON.stringify(launchParam) ?? '')
-  //初始化所有的数据库
-    try{
-    let context = this.context;
-      await AccountDAO.initDatabase(context);
-      await CategoryDAO.initDatabase(context);
-      await BillDAO.initDatabase(context);
-      await BudgetDAO.initDatabase(context);
-      await StatisticsDAO.initDatabase(context);
-      await UserDAO.initDatabase(context);
+    hilog.isLoggable(LogConfig.DOMAIN, LogConfig.TAG, hilog.LogLevel.INFO)
+    hilog.info(LogConfig.DOMAIN, LogConfig.TAG, '%{public}s', 'Ability onCreate')
+    hilog.info(LogConfig.DOMAIN, LogConfig.TAG, '%{public}s', 'want param:' + JSON.stringify(want) ?? '')
+    hilog.info(LogConfig.DOMAIN, LogConfig.TAG, '%{public}s', 'launchParam:' + JSON.stringify(launchParam) ?? '')
+    
+    // 统一初始化数据库（使用DatabaseManager）
+    try {
+      const context = this.context;
+      
+      // 使用DatabaseManager统一初始化
+      await DatabaseManager.initDatabase(context);
+      
+      hilog.info(LogConfig.DOMAIN, LogConfig.TAG, '✅ 数据库初始化成功');
 
-      hilog.info(0x0000, 'testTag', '所有数据库和表初始化成功');
-
-      //添加临时的外键依赖数据，BillDAO里面有validateForeignKeys检查
-      //所以必须保证数据库当中至少有一个账户和分类否则失败
+      // 添加临时的外键依赖数据
+      // BillDAO里面有validateForeignKeys检查，需要至少一个账户和分类
       await this.insertMockPrerequisites();
 
-    }catch (error){
-      hilog.error(0x00,'testTag','数据库初始化失败: %{public}s', JSON.stringify(error));
+    } catch (error) {
+      hilog.error(LogConfig.DOMAIN, LogConfig.TAG, '❌ 数据库初始化失败: %{public}s', JSON.stringify(error));
     }
   }
 
   onDestroy() {
-    hilog.isLoggable(0x0000, 'testTag', hilog.LogLevel.INFO)
-    hilog.info(0x0000, 'testTag', '%{public}s', 'Ability onDestroy')
+    hilog.isLoggable(LogConfig.DOMAIN, LogConfig.TAG, hilog.LogLevel.INFO)
+    hilog.info(LogConfig.DOMAIN, LogConfig.TAG, '%{public}s', 'Ability onDestroy')
   }
 
   onWindowStageCreate(windowStage: Window.WindowStage) {
     // Main window is created, set main page for this ability
-    hilog.isLoggable(0x0000, 'testTag', hilog.LogLevel.INFO);
-    hilog.info(0x0000, 'testTag', '%{public}s', 'Ability onWindowStageCreate')
+    hilog.isLoggable(LogConfig.DOMAIN, LogConfig.TAG, hilog.LogLevel.INFO);
+    hilog.info(LogConfig.DOMAIN, LogConfig.TAG, '%{public}s', 'Ability onWindowStageCreate')
 
     windowStage.loadContent('pages/Index', (err, data) => {
       if (err.code) {
-        hilog.isLoggable(0x0000, 'testTag', hilog.LogLevel.ERROR);
-        hilog.error(0x0000, 'testTag', 'Failed to load the content. Cause: %{public}s', JSON.stringify(err) ?? '')
+        hilog.isLoggable(LogConfig.DOMAIN, LogConfig.TAG, hilog.LogLevel.ERROR);
+        hilog.error(LogConfig.DOMAIN, LogConfig.TAG, 'Failed to load the content. Cause: %{public}s', JSON.stringify(err) ?? '')
         return
       }
-      hilog.isLoggable(0x0000, 'testTag', hilog.LogLevel.INFO)
-      hilog.info(0x0000, 'testTag', 'Succeeded in loading the content. Data: %{public}s', JSON.stringify(data) ?? '')
+      hilog.isLoggable(LogConfig.DOMAIN, LogConfig.TAG, hilog.LogLevel.INFO)
+      hilog.info(LogConfig.DOMAIN, LogConfig.TAG, 'Succeeded in loading the content. Data: %{public}s', JSON.stringify(data) ?? '')
     })
   }
 
   onWindowStageDestroy() {
     // Main window is destroyed, release UI related resources
-    hilog.isLoggable(0x0000, 'testTag', hilog.LogLevel.INFO)
-    hilog.info(0x0000, 'testTag', '%{public}s', 'Ability onWindowStageDestroy')
+    hilog.isLoggable(LogConfig.DOMAIN, LogConfig.TAG, hilog.LogLevel.INFO)
+    hilog.info(LogConfig.DOMAIN, LogConfig.TAG, '%{public}s', 'Ability onWindowStageDestroy')
   }
 
   onForeground() {
     // Ability has brought to foreground
-    hilog.isLoggable(0x0000, 'testTag', hilog.LogLevel.INFO)
-    hilog.info(0x0000, 'testTag', '%{public}s', 'Ability onForeground')
+    hilog.isLoggable(LogConfig.DOMAIN, LogConfig.TAG, hilog.LogLevel.INFO)
+    hilog.info(LogConfig.DOMAIN, LogConfig.TAG, '%{public}s', 'Ability onForeground')
   }
 
   onBackground() {
     // Ability has back to background
-    hilog.isLoggable(0x0000, 'testTag', hilog.LogLevel.INFO)
-    hilog.info(0x0000, 'testTag', '%{public}s', 'Ability onBackground')
+    hilog.isLoggable(LogConfig.DOMAIN, LogConfig.TAG, hilog.LogLevel.INFO)
+    hilog.info(LogConfig.DOMAIN, LogConfig.TAG, '%{public}s', 'Ability onBackground')
   }
-  async insertMockPrerequisites() {
-    // 1. 插入一个模拟账户 (Account)
+  /**
+   * 插入模拟数据（用于开发测试）
+   * 确保数据库中至少有一个账户和分类，满足外键约束
+   */
+  private async insertMockPrerequisites(): Promise<void> {
+    // 1. 插入模拟账户
     try {
-      // 检查是否已经存在，避免重复插入 (使用 AccountDAO.ets 中的 getById)
-      const existingAccount = await AccountDAO.getById(1); // 假设我们用 ID 1
+      const existingAccount = await AccountDAO.getById(1);
       if (!existingAccount) {
         const mockAccount = new Account();
-        // 注意：DAO 里的 account_id 是自增主键，这里不需要设置
-        mockAccount.userId = 1; // 模拟用户1
+        mockAccount.userId = 1;
         mockAccount.name = '模拟现金账户';
         mockAccount.type = 'cash';
         mockAccount.balance = 10000;
@@ -109,24 +107,21 @@ export default class EntryAbility extends UIAbility {
         mockAccount.updatedAt = new Date().toISOString();
 
         await AccountDAO.insert(mockAccount);
-        hilog.info(0x0000, 'testTag', '模拟账户插入成功');
+        hilog.info(LogConfig.DOMAIN, LogConfig.TAG, '✅ 模拟账户插入成功');
       } else {
-        hilog.info(0x0000, 'testTag', '模拟账户已存在，跳过插入');
+        hilog.info(LogConfig.DOMAIN, LogConfig.TAG, 'ℹ️ 模拟账户已存在，跳过插入');
       }
     } catch (err) {
       const e = err as BusinessError;
-      hilog.error(0x0000, 'testTag', '插入模拟账户失败: %{public}s', `code=${e.code}, msg=${e.message}`);
+      hilog.error(LogConfig.DOMAIN, LogConfig.TAG, '❌ 插入模拟账户失败: code=%{public}d, msg=%{public}s', e.code, e.message);
     }
 
-    // 2. 插入一个模拟分类 (Category)
+    // 2. 插入模拟分类
     try {
-      // 检查是否已经存在 (使用 CategoryDAO.ets 中的 getById)
-      // 签名是: getById(userId: number, categoryId: number)
-      const existingCategory = await CategoryDAO.getById(1, 1); // 假设用户ID 1, 分类ID 1
+      const existingCategory = await CategoryDAO.getById(1, 1);
       if (!existingCategory) {
         const mockCategory = new Category();
-        // category_id 也是自增主键
-        mockCategory.userId = 1; // 模拟用户1
+        mockCategory.userId = 1;
         mockCategory.name = '模拟餐饮';
         mockCategory.type = 'expense';
         mockCategory.icon = '🍽️';
@@ -136,13 +131,13 @@ export default class EntryAbility extends UIAbility {
         mockCategory.updatedAt = new Date().toISOString();
 
         await CategoryDAO.insert(mockCategory);
-        hilog.info(0x0000, 'testTag', '模拟分类插入成功');
+        hilog.info(LogConfig.DOMAIN, LogConfig.TAG, '✅ 模拟分类插入成功');
       } else {
-        hilog.info(0x0000, 'testTag', '模拟分类已存在，跳过插入');
+        hilog.info(LogConfig.DOMAIN, LogConfig.TAG, 'ℹ️ 模拟分类已存在，跳过插入');
       }
     } catch (err) {
-      let e = err as BusinessError;
-      hilog.error(0x0000, 'testTag', '插入模拟分类失败: %{public}s', `code=${e.code}, msg=${e.message}`);
+      const e = err as BusinessError;
+      hilog.error(LogConfig.DOMAIN, LogConfig.TAG, '❌ 插入模拟分类失败: code=%{public}d, msg=%{public}s', e.code, e.message);
     }
   }
 }

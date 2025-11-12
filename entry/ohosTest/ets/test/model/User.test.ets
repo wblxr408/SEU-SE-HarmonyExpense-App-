@@ -94,7 +94,7 @@ export default function UserTest(): void {
         passwordHash: 'hashed_pwd2',
         createdAt: '2025-11-05T10:00:00',
         updatedAt: '2025-11-05T11:00:00',
-        isDeleted: 0
+        is_deleted: 0
       };
       const user = User.fromJSON(json);
       expect(user.userId).assertEqual(2);

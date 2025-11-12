@@ -8,6 +8,7 @@ export default function BillTest(): void {
         1,
         1,
         1,
+        1,
         88.5,
         '午餐',
         '2025-11-05',
@@ -24,6 +25,7 @@ export default function BillTest(): void {
         0,
         1,
         1,
+        1,
         -1,
         '',
         '2025-11-05',
@@ -38,6 +40,7 @@ export default function BillTest(): void {
     it('invalid bill should fail (empty date)', 0, () => {
       const bill = new Bill(
         0,
+        1,
         1,
         1,
         10,
@@ -57,6 +60,7 @@ export default function BillTest(): void {
         0,
         1,
         1,
+        1,
         10,
         '测试',
         '2025-11-05',
@@ -73,6 +77,7 @@ export default function BillTest(): void {
         2,
         1,
         2,
+        2,
         5000.0,
         '工资',
         '2025-11-01',
@@ -88,6 +93,7 @@ export default function BillTest(): void {
   describe('Bill.toJSON() and fromJSON()', () => {
     it('toJSON should return correct structure', 0, () => {
       const bill = new Bill(
+        1,
         1,
         1,
         1,
@@ -116,7 +122,7 @@ export default function BillTest(): void {
         type: 'expense',
         createdAt: '2025-11-05T18:00:00',
         updatedAt: '2025-11-05T18:00:00',
-        isDeleted: 0
+        is_deleted: 0
       };
       const bill = Bill.fromJSON(json);
       expect(bill.billId).assertEqual(2);

@@ -4,6 +4,8 @@
  */
 import relationalStore from '@ohos.data.relationalStore';
 import common from '@ohos.app.ability.common';
+import { IndexManager } from './IndexManager';
+import { DatabaseConfigOptimizer } from './DatabaseConfigOptimizer';
 
 export class DatabaseManager {
   private static db: relationalStore.RdbStore | null = null;
@@ -33,11 +35,20 @@ export class DatabaseManager {
       DatabaseManager.db = await relationalStore.getRdbStore(context, storeConfig);
       console.log('[DatabaseManager] 数据库连接成功');
       
+      // 应用数据库配置优化
+      await DatabaseConfigOptimizer.applyOptimizations();
+      
       // 按顺序创建所有表
       await DatabaseManager.createAllTables();
       
+      // 创建优化索引
+      await IndexManager.createAllIndexes();
+      
       DatabaseManager.isInitialized = true;
       console.log('[DatabaseManager] 数据库初始化完成');
+      
+      // 打印数据库配置信息
+      await DatabaseConfigOptimizer.printConfig();
     } catch (error) {
       DatabaseManager.isInitialized = false;
       throw DatabaseManager.toError('[DatabaseManager] 数据库初始化失败', error);
@@ -137,6 +148,7 @@ export class DatabaseManager {
       await store.executeSql(`
         CREATE TABLE IF NOT EXISTS bills (
           bill_id INTEGER PRIMARY KEY AUTOINCREMENT,
+          user_id INTEGER NOT NULL,
           account_id INTEGER NOT NULL,
           category_id INTEGER NOT NULL,
           amount REAL NOT NULL,
@@ -146,6 +158,7 @@ export class DatabaseManager {
           created_at TEXT NOT NULL,
           updated_at TEXT NOT NULL,
           is_deleted INTEGER DEFAULT 0,
+          FOREIGN KEY (user_id) REFERENCES users(user_id),
           FOREIGN KEY (account_id) REFERENCES accounts(account_id),
           FOREIGN KEY (category_id) REFERENCES categories(category_id)
         );

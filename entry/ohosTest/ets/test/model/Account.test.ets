@@ -126,7 +126,7 @@ export default function AccountTest(): void {
       expect(json.name).assertEqual('测试账户');
       expect(json.type).assertEqual('bank');
       expect(json.balance).assertEqual(5000.0);
-      expect(json.isDeleted).assertEqual(0);
+      expect(json.is_deleted).assertEqual(0);
     });
 
     it('fromJSON should create correct Account instance', 0, () => {
@@ -139,7 +139,7 @@ export default function AccountTest(): void {
         color: '#FF6B6B',
         createdAt: '2025-11-05T10:00:00',
         updatedAt: '2025-11-05T11:00:00',
-        isDeleted: 0
+        is_deleted: 0
       };
       const acc = Account.fromJSON(json);
       expect(acc.accountId).assertEqual(2);

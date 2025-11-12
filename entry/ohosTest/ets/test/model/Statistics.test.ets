@@ -13,7 +13,7 @@ export default function StatisticsTest(): void {
       stats.transactionCount = 12;
       stats.createdAt = '2025-11-05T10:00:00';
       stats.updatedAt = '2025-11-05T10:00:00';
-      stats.isDeleted = 0;
+      stats.is_deleted = 0;
       expect(stats.validate()).assertTrue();
     });
 
@@ -27,7 +27,7 @@ export default function StatisticsTest(): void {
       stats.transactionCount = 12;
       stats.createdAt = '';
       stats.updatedAt = '';
-      stats.isDeleted = 0;
+      stats.is_deleted = 0;
       expect(stats.validate()).assertFalse();
     });
 
@@ -41,7 +41,7 @@ export default function StatisticsTest(): void {
       stats.transactionCount = 12;
       stats.createdAt = '';
       stats.updatedAt = '';
-      stats.isDeleted = 0;
+      stats.is_deleted = 0;
       expect(stats.validate()).assertFalse();
     });
 
@@ -55,7 +55,7 @@ export default function StatisticsTest(): void {
       stats.transactionCount = 12;
       stats.createdAt = '';
       stats.updatedAt = '';
-      stats.isDeleted = 0;
+      stats.is_deleted = 0;
       expect(stats.validate()).assertFalse();
     });
   });
@@ -73,7 +73,7 @@ export default function StatisticsTest(): void {
       stats.color = '#FA0';
       stats.createdAt = '2025-11-05T10:00:00';
       stats.updatedAt = '2025-11-05T10:00:00';
-      stats.isDeleted = 0;
+      stats.is_deleted = 0;
       expect(stats.validate()).assertTrue();
     });
 
@@ -89,7 +89,7 @@ export default function StatisticsTest(): void {
       stats.color = '#FA0';
       stats.createdAt = '';
       stats.updatedAt = '';
-      stats.isDeleted = 0;
+      stats.is_deleted = 0;
       expect(stats.validate()).assertFalse();
     });
 
@@ -105,7 +105,7 @@ export default function StatisticsTest(): void {
       stats.color = '#FA0';
       stats.createdAt = '';
       stats.updatedAt = '';
-      stats.isDeleted = 0;
+      stats.is_deleted = 0;
       expect(stats.validate()).assertFalse();
     });
 
@@ -121,7 +121,7 @@ export default function StatisticsTest(): void {
       stats.color = '#FA0';
       stats.createdAt = '';
       stats.updatedAt = '';
-      stats.isDeleted = 0;
+      stats.is_deleted = 0;
       expect(stats.validate()).assertFalse();
     });
 
@@ -137,7 +137,7 @@ export default function StatisticsTest(): void {
       stats.color = '#52C41A';
       stats.createdAt = '2025-11-05T10:00:00';
       stats.updatedAt = '2025-11-05T10:00:00';
-      stats.isDeleted = 0;
+      stats.is_deleted = 0;
       expect(stats.validate()).assertTrue();
     });
   });
@@ -153,7 +153,7 @@ export default function StatisticsTest(): void {
       stats.transactionCount = 12;
       stats.createdAt = '2025-11-05T10:00:00';
       stats.updatedAt = '2025-11-05T11:00:00';
-      stats.isDeleted = 0;
+      stats.is_deleted = 0;
       const json = stats.toJSON();
       expect(json.userId).assertEqual(1);
       expect(json.month).assertEqual('2025-11');
@@ -172,7 +172,7 @@ export default function StatisticsTest(): void {
         color: '#FA0',
         createdAt: '2025-11-05T10:00:00',
         updatedAt: '2025-11-05T11:00:00',
-        isDeleted: 0
+        is_deleted: 0
       };
       const stats = CategoryStatistics.fromJSON(json);
       expect(stats.categoryId).assertEqual(7);
@@ -181,4 +181,6 @@ export default function StatisticsTest(): void {
     });
   });
 }
+
+
 

@@ -29,6 +29,7 @@ export default function CategoryDAOTest(): void {
         '🍽️',
         '#FF6B6B',
         0,
+        0,
         now,
         now,
         0

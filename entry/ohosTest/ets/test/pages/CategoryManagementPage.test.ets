@@ -36,6 +36,7 @@ export default function CategoryManagementPageTest(): void {
         '🧪',
         '#FF6B6B',
         0,
+        0,
         now,
         now,
         0
@@ -78,6 +79,7 @@ export default function CategoryManagementPageTest(): void {
         'expense',
         '🗑️',
         '#999999',
+        0,
         0,
         now,
         now,
@@ -122,6 +124,7 @@ export default function CategoryManagementPageTest(): void {
         '🧪',
         '#FF6B6B',
         0,
+        0,
         '',
         '',
         0
@@ -139,6 +142,7 @@ export default function CategoryManagementPageTest(): void {
         'expense',
         '🧪',
         '#FF6B6B',
+        0,
         0,
         '2025-11-08',
         '2025-11-08',

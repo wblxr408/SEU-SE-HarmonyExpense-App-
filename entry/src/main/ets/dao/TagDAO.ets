@@ -1,5 +1,5 @@
 import relationalStore from '@ohos.data.relationalStore';
-import { DatabaseManager } from './DatabaseManager';
+import { DatabaseManager } from '../database/DatabaseManager';
 import { Tag } from '../model/Tag';
 import { BillTag } from '../model/BillTag';
 import { TagAggregation } from '../model/AggregationTypes';
