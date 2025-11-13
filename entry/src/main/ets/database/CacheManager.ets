@@ -31,11 +31,21 @@ interface CacheEntry<T> {
 }
 
 /**
+ * 缓存统计接口
+ */
+interface CacheStats {
+  totalCount: number;
+  validCount: number;
+  expiredCount: number;
+  keys: string[];
+}
+
+/**
  * 缓存管理器
  */
 export class CacheManager {
   // 缓存存储（使用 Map 实现）
-  private static cache: Map<string, CacheEntry<any>> = new Map();
+  private static cache: Map<string, CacheEntry<Object>> = new Map();
   
   // 默认 TTL：5 分钟（毫秒）
   private static readonly DEFAULT_TTL = 5 * 60 * 1000;
@@ -83,7 +93,7 @@ export class CacheManager {
    * - 设置过期时间
    * - 支持自定义 TTL
    */
-  static set<T>(key: string, value: T, ttl: number = CacheManager.DEFAULT_TTL): void {
+  static set<T extends Object>(key: string, value: T, ttl: number = CacheManager.DEFAULT_TTL): void {
     const expireAt = Date.now() + ttl;
     
     CacheManager.cache.set(key, {
@@ -136,7 +146,7 @@ export class CacheManager {
     let count = 0;
     const keysToDelete: string[] = [];
 
-    CacheManager.cache.forEach((_, key) => {
+    CacheManager.cache.forEach((_: CacheEntry<Object>, key: string) => {
       if (pattern.test(key)) {
         keysToDelete.push(key);
       }
@@ -179,18 +189,13 @@ export class CacheManager {
    * 
    * @returns 缓存统计数据
    */
-  static getStats(): {
-    totalCount: number;
-    validCount: number;
-    expiredCount: number;
-    keys: string[];
-  } {
+  static getStats(): CacheStats {
     const now = Date.now();
     let validCount = 0;
     let expiredCount = 0;
     const keys: string[] = [];
 
-    CacheManager.cache.forEach((entry, key) => {
+    CacheManager.cache.forEach((entry: CacheEntry<Object>, key: string) => {
       if (now > entry.expireAt) {
         expiredCount++;
       } else {
@@ -219,7 +224,7 @@ export class CacheManager {
     let count = 0;
     const keysToDelete: string[] = [];
 
-    CacheManager.cache.forEach((entry, key) => {
+    CacheManager.cache.forEach((entry: CacheEntry<Object>, key: string) => {
       if (now > entry.expireAt) {
         keysToDelete.push(key);
       }
@@ -280,7 +285,7 @@ export class CacheManager {
    * );
    * ```
    */
-  static async getOrSet<T>(
+  static async getOrSet<T extends Object>(
     key: string,
     fetcher: () => Promise<T>,
     ttl: number = CacheManager.DEFAULT_TTL
@@ -295,8 +300,10 @@ export class CacheManager {
     console.log(`[CacheManager] 缓存未命中，从数据源获取: ${key}`);
     const value = await fetcher();
     
-    // 存入缓存
-    CacheManager.set(key, value, ttl);
+    // 存入缓存（确保 value 不为 null/undefined）
+    if (value !== null && value !== undefined) {
+      CacheManager.set(key, value, ttl);
+    }
     
     return value;
   }

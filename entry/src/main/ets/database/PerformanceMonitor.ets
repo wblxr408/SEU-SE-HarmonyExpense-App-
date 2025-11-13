@@ -40,57 +40,33 @@
  * @param propertyKey 方法名
  * @param descriptor 方法描述符
  */
+/**
+ * 性能监控装饰器
+ * 
+ * 注意：由于 ArkTS 限制，装饰器功能受限
+ * 建议使用 PerformanceMonitor.measure() 方法代替
+ */
 export function measureQueryTime(
-  target: any,
-  propertyKey: string,
+  _target: Object,
+  _propertyKey: string,
   descriptor: PropertyDescriptor
 ): PropertyDescriptor {
-  const originalMethod = descriptor.value;
-
-  descriptor.value = async function (...args: any[]) {
-    const className = target.constructor.name;
-    const methodName = propertyKey;
-    const startTime = Date.now();
-
-    console.log(`[PerformanceMonitor] 🚀 开始执行: ${className}.${methodName}()`);
-
-    try {
-      // 执行原始方法
-      const result = await originalMethod.apply(this, args);
-      
-      // 计算执行时间
-      const endTime = Date.now();
-      const duration = endTime - startTime;
-
-      // 慢查询警告（> 100ms）
-      if (duration > 100) {
-        console.warn(
-          `[PerformanceMonitor] ⚠️ 慢查询警告: ${className}.${methodName}() ` +
-          `耗时 ${duration}ms (超过 100ms 阈值)`
-        );
-      } else {
-        console.log(
-          `[PerformanceMonitor] ✅ 执行完成: ${className}.${methodName}() ` +
-          `耗时 ${duration}ms`
-        );
-      }
-
-      return result;
-    } catch (error) {
-      // 错误捕获和日志记录
-      const endTime = Date.now();
-      const duration = endTime - startTime;
-      
-      console.error(
-        `[PerformanceMonitor] ❌ 执行失败: ${className}.${methodName}() ` +
-        `耗时 ${duration}ms, 错误:`, error
-      );
-      
-      throw error;
-    }
-  };
-
+  // ArkTS 不支持装饰器中使用 apply/call 和 this
+  // 这里保留装饰器定义，但实际使用时建议用 PerformanceMonitor.measure()
+  console.warn('[PerformanceMonitor] 装饰器在 ArkTS 中受限，建议使用 PerformanceMonitor.measure() 方法');
   return descriptor;
+}
+
+/**
+ * 性能统计数据接口
+ */
+interface PerformanceStats {
+  count: number;
+  totalTime: number;
+  avgTime: number;
+  maxTime: number;
+  minTime: number;
+  slowQueryCount: number;
 }
 
 /**
@@ -106,14 +82,7 @@ export class PerformanceMonitor {
   private static readonly SLOW_QUERY_THRESHOLD = 100;
   
   // 性能统计数据
-  private static stats: Map<string, {
-    count: number;
-    totalTime: number;
-    avgTime: number;
-    maxTime: number;
-    minTime: number;
-    slowQueryCount: number;
-  }> = new Map();
+  private static stats: Map<string, PerformanceStats> = new Map();
 
   /**
    * 记录查询性能
@@ -149,7 +118,7 @@ export class PerformanceMonitor {
    * 
    * @returns 性能统计数据
    */
-  static getStats(): Map<string, any> {
+  static getStats(): Map<string, PerformanceStats> {
     return new Map(PerformanceMonitor.stats);
   }
 
@@ -164,7 +133,7 @@ export class PerformanceMonitor {
       return;
     }
 
-    PerformanceMonitor.stats.forEach((stats, methodName) => {
+    PerformanceMonitor.stats.forEach((stats: PerformanceStats, methodName: string) => {
       console.log(`\n方法: ${methodName}`);
       console.log(`  调用次数: ${stats.count}`);
       console.log(`  总耗时: ${stats.totalTime.toFixed(2)}ms`);
@@ -230,7 +199,8 @@ export class PerformanceMonitor {
       }
 
       return result;
-    } catch (error) {
+    } catch (err) {
+      const error = err as Error;
       const endTime = Date.now();
       const duration = endTime - startTime;
       

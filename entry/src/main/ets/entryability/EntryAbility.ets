@@ -22,11 +22,14 @@ import { AccountDAO } from '../dao/AccountDAO'
 import { CategoryDAO } from '../dao/CategoryDAO'
 import { Account } from '../model/Account'
 import { Category } from '../model/Category'
-import { Ability, AbilityConstant } from '@kit.AbilityKit';
+import { AbilityConstant } from '@kit.AbilityKit';
 import { BusinessError} from '@kit.BasicServicesKit';
 import { LogConfig } from '../common/AppConfig';
+import { BreakpointSystem } from '../common/BreakpointSystem';
 
 export default class EntryAbility extends UIAbility {
+  private breakpointSystem: BreakpointSystem = new BreakpointSystem();
+
   async onCreate(want:Want, launchParam:AbilityConstant.LaunchParam) {
     hilog.isLoggable(LogConfig.DOMAIN, LogConfig.TAG, hilog.LogLevel.INFO)
     hilog.info(LogConfig.DOMAIN, LogConfig.TAG, '%{public}s', 'Ability onCreate')
@@ -60,6 +63,9 @@ export default class EntryAbility extends UIAbility {
     // Main window is created, set main page for this ability
     hilog.isLoggable(LogConfig.DOMAIN, LogConfig.TAG, hilog.LogLevel.INFO);
     hilog.info(LogConfig.DOMAIN, LogConfig.TAG, '%{public}s', 'Ability onWindowStageCreate')
+    
+    // 注册响应式断点系统
+    this.breakpointSystem.register();
 
     windowStage.loadContent('pages/Index', (err, data) => {
       if (err.code) {
@@ -76,6 +82,9 @@ export default class EntryAbility extends UIAbility {
     // Main window is destroyed, release UI related resources
     hilog.isLoggable(LogConfig.DOMAIN, LogConfig.TAG, hilog.LogLevel.INFO)
     hilog.info(LogConfig.DOMAIN, LogConfig.TAG, '%{public}s', 'Ability onWindowStageDestroy')
+    
+    // 注销响应式断点系统
+    this.breakpointSystem.unregister();
   }
 
   onForeground() {

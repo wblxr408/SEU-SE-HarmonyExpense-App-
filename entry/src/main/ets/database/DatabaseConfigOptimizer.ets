@@ -19,6 +19,18 @@
  */
 import { DatabaseManager } from './DatabaseManager';
 
+import relationalStore from '@ohos.data.relationalStore';
+
+/**
+ * 数据库配置接口
+ */
+interface DatabaseConfig {
+  journalMode: string;
+  cacheSize: number;
+  synchronous: string;
+  tempStore: string;
+}
+
 export class DatabaseConfigOptimizer {
   /**
    * 应用所有数据库优化配置
@@ -44,7 +56,8 @@ export class DatabaseConfigOptimizer {
       await DatabaseConfigOptimizer.setTempStore(store);
 
       console.log('[DatabaseConfigOptimizer] ✅ 所有优化配置已应用');
-    } catch (error) {
+    } catch (err) {
+      const error = err as Error;
       console.error('[DatabaseConfigOptimizer] ❌ 应用优化配置失败:', error);
       throw error;
     }
@@ -66,7 +79,7 @@ export class DatabaseConfigOptimizer {
    * - WAL 模式会创建额外的 .wal 和 .shm 文件
    * - 需要定期执行 checkpoint 将 WAL 合并到主数据库
    */
-  private static async enableWALMode(store: any): Promise<void> {
+  private static async enableWALMode(store: relationalStore.RdbStore): Promise<void> {
     try {
       await store.executeSql('PRAGMA journal_mode=WAL;');
       console.log('[DatabaseConfigOptimizer] ✓ WAL 模式已启用');
@@ -98,7 +111,7 @@ export class DatabaseConfigOptimizer {
    * - 优点：性能提升明显
    * - 缺点：占用更多内存（约 40MB）
    */
-  private static async optimizeCacheSize(store: any): Promise<void> {
+  private static async optimizeCacheSize(store: relationalStore.RdbStore): Promise<void> {
     try {
       await store.executeSql('PRAGMA cache_size=10000;');
       console.log('[DatabaseConfigOptimizer] ✓ 缓存大小已优化');
@@ -131,7 +144,7 @@ export class DatabaseConfigOptimizer {
    * - 缺点：极端情况下（如系统崩溃）可能丢失最后几个事务
    * - 移动设备场景：风险可接受
    */
-  private static async setSynchronousMode(store: any): Promise<void> {
+  private static async setSynchronousMode(store: relationalStore.RdbStore): Promise<void> {
     try {
       await store.executeSql('PRAGMA synchronous=NORMAL;');
       console.log('[DatabaseConfigOptimizer] ✓ 同步模式已设置为 NORMAL');
@@ -164,7 +177,7 @@ export class DatabaseConfigOptimizer {
    * - 临时表创建
    * - 复杂的 JOIN 查询
    */
-  private static async setTempStore(store: any): Promise<void> {
+  private static async setTempStore(store: relationalStore.RdbStore): Promise<void> {
     try {
       await store.executeSql('PRAGMA temp_store=MEMORY;');
       console.log('[DatabaseConfigOptimizer] ✓ 临时存储已设置为内存');
@@ -181,12 +194,7 @@ export class DatabaseConfigOptimizer {
    * 
    * @returns 配置信息对象
    */
-  static async getConfig(): Promise<{
-    journalMode: string;
-    cacheSize: number;
-    synchronous: string;
-    tempStore: string;
-  }> {
+  static async getConfig(): Promise<DatabaseConfig> {
     try {
       const store = DatabaseManager.getDatabase();
       
@@ -241,7 +249,8 @@ export class DatabaseConfigOptimizer {
         synchronous,
         tempStore
       };
-    } catch (error) {
+    } catch (err) {
+      const error = err as Error;
       console.error('[DatabaseConfigOptimizer] ❌ 获取配置信息失败:', error);
       throw error;
     }

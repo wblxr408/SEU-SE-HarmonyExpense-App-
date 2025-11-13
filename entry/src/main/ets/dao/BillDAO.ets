@@ -5,8 +5,7 @@ import { Bill } from '../model/Bill';
 import { AccountDAO } from './AccountDAO';
 import { CategoryDAO } from './CategoryDAO';
 import { BatchQueryHelper } from '../database/BatchQueryHelper';
-import { measureQueryTime } from '../database/PerformanceMonitor';
-import hilog from '@ohos.hilog';
+import { DAOHelper } from '../common/DAOHelper';
 
 export interface DateRangeFilter {
   start: string;
@@ -38,6 +37,7 @@ export interface TotalStats {
 
 /**
  * 月度统计结果接口
+ *
  */
 export interface MonthlyStats {
   month: string;            // 月份（格式：YYYY-MM）
@@ -48,16 +48,9 @@ export interface MonthlyStats {
 }
 
 export class BillDAO {
-
-  private static toError(msg: string, err: Error | string | object): Error {
-    let detail = '';
-    try {
-      detail = typeof err === 'string' ? err : JSON.stringify(err);
-    } catch {}
-    return new Error(`${msg}${detail ? ' -> ' + detail : ''}`);
-  }
-
-
+  /**
+   * @throws
+   */
   private static mapRow(rs: relationalStore.ResultSet): Bill {
     return new Bill(
       // rs.getLong(0),
@@ -107,16 +100,15 @@ export class BillDAO {
     if (!categoryExists) throw new Error(`[BillDAO] Category ${bill.categoryId} does not exist`);
   }
 
-  static async getById(billId: number,userId:number): Promise<Bill | null> {
-    const sql = `SELECT * FROM bills WHERE bill_id = ? AND is_deleted = 0`;
-    const rs = await DatabaseManager.getDatabase().querySql(sql, [billId]);
+  static async getById(billId: number, userId: number): Promise<Bill | null> {
+    const sql = `SELECT * FROM bills WHERE bill_id = ? AND user_id = ? AND is_deleted = 0`;
+    const rs = await DatabaseManager.getDatabase().querySql(sql, [billId, userId]);
     try {
       if (!rs.goToNextRow()) return null;
       return BillDAO.mapRow(rs);
     } finally { rs.close(); }
   }
 
-  @measureQueryTime
   static async getAll(): Promise<Bill[]> {
     const sql = `SELECT * FROM bills WHERE is_deleted = 0 ORDER BY bill_id ASC`;
     const rs = await DatabaseManager.getDatabase().querySql(sql);
@@ -142,19 +134,23 @@ export class BillDAO {
     await DatabaseManager.getDatabase().executeSql(sql, params);
   }
 
-  // 软删除
-  static async delete(billId: number,userId:number) {
-    const sql = `UPDATE bills SET is_deleted = 1 WHERE bill_id = ?`;
-    await DatabaseManager.getDatabase().executeSql(sql, [billId,userId]);
+  // 软删除 - 需要验证 userId 以确保数据安全
+  static async delete(billId: number, userId: number) {
+    const store = DatabaseManager.getDatabase();
+    const now = new Date().toISOString();
+    const sql = `UPDATE bills SET is_deleted = 1, updated_at = ? WHERE bill_id = ? AND user_id = ?`;
+    await store.executeSql(sql, [now, billId, userId]);
   }
 
-  static async restore(billId: number,userId:number) {
-    const sql = `UPDATE bills SET is_deleted = 0 WHERE bill_id = ?`;
-    await DatabaseManager.getDatabase().executeSql(sql, [billId,userId]);
+  // 恢复软删除 - 需要验证 userId 以确保数据安全
+  static async restore(billId: number, userId: number) {
+    const store = DatabaseManager.getDatabase();
+    const now = new Date().toISOString();
+    const sql = `UPDATE bills SET is_deleted = 0, updated_at = ? WHERE bill_id = ? AND user_id = ?`;
+    await store.executeSql(sql, [now, billId, userId]);
   }
 
 
-  @measureQueryTime
   static async getBillsByFilters(
     userId: number,
     dateRange:DateRangeFilter ,
@@ -187,24 +183,16 @@ export class BillDAO {
       }
       return bills;
     } catch (error) {
-      throw BillDAO.toError('getBillsByFilters 查询失败', error);
+      throw DAOHelper.toError('[BillDAO] getBillsByFilters 查询失败', error);
     } finally {
       if (resultSet) {
         resultSet.close();
       }
     }
   }
-  // 事务封装
+  // 事务封装 - 使用 DAOHelper 统一方法
   static async transaction(fn: () => Promise<void>) {
-    const store = DatabaseManager.getDatabase();
-    await store.beginTransaction();
-    try {
-      await fn();
-      await store.commit();
-    } catch (err) {
-      await store.rollBack();
-      throw BillDAO.toError('[BillDAO] Transaction failed', err);
-    }
+    await DAOHelper.transaction(fn, '[BillDAO]');
   }
 
   /**
@@ -256,7 +244,7 @@ export class BillDAO {
       return insertedCount;
     } catch (error) {
       console.error('[BillDAO] ❌ 批量插入失败:', error);
-      throw BillDAO.toError('[BillDAO] 批量插入账单失败', error);
+      throw DAOHelper.toError('[BillDAO] 批量插入账单失败', error);
     }
   }
 
@@ -286,7 +274,7 @@ export class BillDAO {
       return deletedCount;
     } catch (error) {
       console.error('[BillDAO] ❌ 批量软删除失败:', error);
-      throw BillDAO.toError('[BillDAO] 批量软删除账单失败', error);
+      throw DAOHelper.toError('[BillDAO] 批量软删除账单失败', error);
     }
   }
 
@@ -299,13 +287,12 @@ export class BillDAO {
    * @param dateRange 可选的日期范围过滤
    * @param categoryId 可选的分类 ID 过滤
    * @returns 分页结果
-   * 
+   * @throws
    * 性能优化：
    * - 使用 idx_bills_date 索引优化排序
    * - 使用 LIMIT + OFFSET 实现分页
    * - 单次查询同时获取总数和数据
    */
-  @measureQueryTime
   static async getByPage(
     userId: number,
     page: number = 1,
@@ -383,7 +370,7 @@ export class BillDAO {
       return result;
     } catch (error) {
       console.error('[BillDAO] ❌ 分页查询失败:', error);
-      throw BillDAO.toError('[BillDAO] 分页查询账单失败', error);
+      throw DAOHelper.toError('[BillDAO] 分页查询账单失败', error);
     }
   }
 
@@ -393,13 +380,12 @@ export class BillDAO {
    * @param userId 用户 ID
    * @param dateRange 可选的日期范围过滤
    * @returns 总体统计结果
-   * 
+   * @throws
    * 性能优化：
    * - 使用 CASE 表达式在单个查询中计算收入和支出
    * - 使用 idx_bills_stat 覆盖索引优化查询性能（避免回表）
    * - 单次查询完成所有统计计算
    */
-  @measureQueryTime
   static async getTotalStats(
     userId: number,
     dateRange?: DateRangeFilter
@@ -461,7 +447,7 @@ export class BillDAO {
       }
     } catch (error) {
       console.error('[BillDAO] ❌ 总体统计查询失败:', error);
-      throw BillDAO.toError('[BillDAO] 总体统计查询失败', error);
+      throw DAOHelper.toError('[BillDAO] 总体统计查询失败', error);
     }
   }
 
@@ -472,13 +458,12 @@ export class BillDAO {
    * @param startMonth 开始月份（格式：YYYY-MM）
    * @param endMonth 结束月份（格式：YYYY-MM）
    * @returns 月度统计结果数组
-   * 
+   * @throws
    * 性能优化：
    * - 使用 strftime 函数提取月份
    * - 使用 GROUP BY 按月聚合
    * - 使用 idx_bills_date 索引优化日期范围查询
    */
-  @measureQueryTime
   static async getMonthlyStats(
     userId: number,
     startMonth: string,
@@ -538,7 +523,7 @@ export class BillDAO {
       return monthlyStats;
     } catch (error) {
       console.error('[BillDAO] ❌ 月度统计查询失败:', error);
-      throw BillDAO.toError('[BillDAO] 月度统计查询失败', error);
+      throw DAOHelper.toError('[BillDAO] 月度统计查询失败', error);
     }
   }
 }

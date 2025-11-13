@@ -10,6 +10,7 @@ import { Category } from '../model/Category' //
 import { CategoryDAO } from '../dao/CategoryDAO' //
 import { hilog } from '@kit.PerformanceAnalysisKit';
 import { CURRENT_USER_ID } from '../common/Constants';
+import { BreakPointType } from '../common/BreakpointSystem';
 const HILOG_DOMAIN = 0x0001
 const LOG_TAG = 'AddBill'
 
@@ -35,6 +36,13 @@ struct AddBill{
   @State selectedAccountId: number = 1;
 
   @State categoryOptions: SelectOption[] = [];
+  @StorageProp('currentBreakpoint') currentBreakpoint: string = 'md';
+  
+  // 响应式配置
+  private inputFontSize = new BreakPointType({ xs: 20, sm: 22, md: 24, lg: 28, xl: 32, xxl: 36 });
+  private labelFontSize = new BreakPointType({ xs: 14, sm: 15, md: 16, lg: 18, xl: 20, xxl: 22 });
+  private buttonWidth = new BreakPointType({ xs: '95%', sm: '92%', md: '90%', lg: '80%', xl: '70%', xxl: '60%' });
+  private contentPadding = new BreakPointType({ xs: 10, sm: 12, md: 15, lg: 18, xl: 20, xxl: 24 });
   //创建onPageShow 在页面显示的时候执行
   onPageShow(){
     this.loadData();
@@ -95,7 +103,7 @@ private formatDate(date:Date):string{
       Column({ space: 15 }) {
         TextInput({ placeholder: '0.00' })
           .type(InputType.Number) // 使用数字输入法
-          .fontSize(24)
+          .fontSize(this.inputFontSize.getValue(this.currentBreakpoint) as number)
           .fontWeight(FontWeight.Bold)
           .onChange((value) => {
             this.amount = value;
@@ -107,7 +115,7 @@ private formatDate(date:Date):string{
 
         Row() {
           Text('分类')
-            .fontSize(16)
+            .fontSize(this.labelFontSize.getValue(this.currentBreakpoint) as number)
             .fontWeight(FontWeight.Bold)
             // 使用Spacer()来填充剩余空间
             .padding(10)
@@ -155,7 +163,7 @@ private formatDate(date:Date):string{
 
         //保存按钮
         Button('保存')
-          .width('90%')
+          .width(this.buttonWidth.getValue(this.currentBreakpoint) as string)
           .height(50)
           .type(ButtonType.Capsule)
           .margin(15)
@@ -207,7 +215,7 @@ private formatDate(date:Date):string{
             }
           })
       }
-      .padding(15)
+      .padding(this.contentPadding.getValue(this.currentBreakpoint) as number)
       .width('100%')
       .height('100%')
       .backgroundColor($r('sys.color.point_color_checked'))

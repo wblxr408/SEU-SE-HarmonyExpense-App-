@@ -3,6 +3,7 @@ import { DatabaseManager } from '../database/DatabaseManager';
 import { Category } from '../model/Category';
 import { CategoryTreeNode, CategoryAggregation } from '../model/AggregationTypes';
 import { CacheManager } from '../database/CacheManager';
+import { DAOHelper } from '../common/DAOHelper';
 
 /**
  * 分类数据访问对象 - CategoryDAO
@@ -49,19 +50,22 @@ export class CategoryDAO {
       CacheManager.clear(new RegExp(`^categories:user:${category.userId}:`));
     } catch (error) {
       console.error('[CategoryDAO] 插入失败: ' + JSON.stringify(error));
-      throw CategoryDAO.toError('[CategoryDAO] 插入失败', error);
+      throw DAOHelper.toError('[CategoryDAO] 插入失败', error);
     }
   }
 
-  /** 批量插入分类 */
+  /** 
+   * 批量插入分类 - 使用 DAOHelper 统一事务处理
+   * @throws
+   */
   static async bulkInsert(categories: Category[]): Promise<void> {
     if (categories.length === 0) {
       return;
     }
-    const store = DatabaseManager.getDatabase();
-    await store.beginTransaction();
-    try {
+    
+    await DAOHelper.transaction(async () => {
       const now = new Date().toISOString();
+      const store = DatabaseManager.getDatabase();
       const sql = `
         INSERT INTO categories
           (user_id, name, type, icon, color, parent_category_id, sort_order, created_at, updated_at, is_deleted)
@@ -86,14 +90,9 @@ export class CategoryDAO {
         ];
         await store.executeSql(sql, params);
       }
-      
-      await store.commit();
-      console.log(`[CategoryDAO] 批量插入成功: ${categories.length} 条`);
-    } catch (error) {
-      await store.rollBack();
-      console.error('[CategoryDAO] 批量插入失败: ' + JSON.stringify(error));
-      throw error instanceof Error ? error : new Error(String(error));
-    }
+    }, '[CategoryDAO] 批量插入');
+    
+    console.log(`[CategoryDAO] 批量插入成功: ${categories.length} 条`);
   }
 
   /** 根据 ID 查询分类（只返回未删除） */
@@ -107,7 +106,7 @@ export class CategoryDAO {
       return CategoryDAO.mapRowToCategory(resultSet);
     } catch (error) {
       console.error('[CategoryDAO] 查询失败: ' + JSON.stringify(error));
-      throw CategoryDAO.toError('[CategoryDAO] 查询失败', error);
+      throw DAOHelper.toError('[CategoryDAO] 查询失败', error);
     } finally {
       resultSet?.close();
     }
@@ -141,7 +140,7 @@ export class CategoryDAO {
           return categories;
         } catch (error) {
           console.error('[CategoryDAO] 查询全部失败: ' + JSON.stringify(error));
-          throw CategoryDAO.toError('[CategoryDAO] 查询全部失败', error);
+          throw DAOHelper.toError('[CategoryDAO] 查询全部失败', error);
         } finally {
           resultSet?.close();
         }
@@ -164,7 +163,7 @@ export class CategoryDAO {
       return categories;
     } catch (error) {
       console.error('[CategoryDAO] 按类型查询失败: ' + JSON.stringify(error));
-      throw CategoryDAO.toError('[CategoryDAO] 按类型查询失败', error);
+      throw DAOHelper.toError('[CategoryDAO] 按类型查询失败', error);
     } finally {
       resultSet?.close();
     }
@@ -184,7 +183,7 @@ export class CategoryDAO {
       return categories;
     } catch (error) {
       console.error('[CategoryDAO] 查询子分类失败: ' + JSON.stringify(error));
-      throw CategoryDAO.toError('[CategoryDAO] 查询子分类失败', error);
+      throw DAOHelper.toError('[CategoryDAO] 查询子分类失败', error);
     } finally {
       resultSet?.close();
     }
@@ -228,7 +227,7 @@ export class CategoryDAO {
       CacheManager.clear(new RegExp(`^categories:user:${category.userId}:`));
     } catch (error) {
       console.error('[CategoryDAO] 更新失败: ' + JSON.stringify(error));
-      throw CategoryDAO.toError('[CategoryDAO] 更新失败', error);
+      throw DAOHelper.toError('[CategoryDAO] 更新失败', error);
     }
   }
 
@@ -251,7 +250,7 @@ export class CategoryDAO {
       CacheManager.clear(new RegExp(`^categories:user:${userId}:`));
     } catch (error) {
       console.error('[CategoryDAO] 软删除失败: ' + JSON.stringify(error));
-      throw CategoryDAO.toError('[CategoryDAO] 软删除失败', error);
+      throw DAOHelper.toError('[CategoryDAO] 软删除失败', error);
     }
   }
 
@@ -265,7 +264,7 @@ export class CategoryDAO {
       console.log(`[CategoryDAO] 恢复成功: category_id=${categoryId}`);
     } catch (error) {
       console.error('[CategoryDAO] 恢复失败: ' + JSON.stringify(error));
-      throw CategoryDAO.toError('[CategoryDAO] 恢复失败', error);
+      throw DAOHelper.toError('[CategoryDAO] 恢复失败', error);
     }
   }
 
@@ -278,7 +277,7 @@ export class CategoryDAO {
       console.log(`[CategoryDAO] 硬删除成功: category_id=${categoryId}`);
     } catch (error) {
       console.error('[CategoryDAO] 删除失败: ' + JSON.stringify(error));
-      throw CategoryDAO.toError('[CategoryDAO] 删除失败', error);
+      throw DAOHelper.toError('[CategoryDAO] 删除失败', error);
     }
   }
 
@@ -309,7 +308,7 @@ export class CategoryDAO {
       return CategoryDAO.buildCategoryTree(allCategories);
     } catch (error) {
       console.error('[CategoryDAO] 获取分类树失败: ' + JSON.stringify(error));
-      throw CategoryDAO.toError('[CategoryDAO] 获取分类树失败', error);
+      throw DAOHelper.toError('[CategoryDAO] 获取分类树失败', error);
     } finally {
       resultSet?.close();
     }
@@ -356,6 +355,7 @@ export class CategoryDAO {
    * @param startDate 开始日期
    * @param endDate 结束日期
    * @returns 分类统计结果
+   * @throws
    */
   static async aggregateByCategory(
     userId: number,
@@ -412,7 +412,7 @@ export class CategoryDAO {
       return results;
     } catch (error) {
       console.error('[CategoryDAO] 分类聚合统计失败: ' + JSON.stringify(error));
-      throw CategoryDAO.toError('[CategoryDAO] 分类聚合统计失败', error);
+      throw DAOHelper.toError('[CategoryDAO] 分类聚合统计失败', error);
     } finally {
       resultSet?.close();
     }
@@ -430,18 +430,9 @@ export class CategoryDAO {
     }
   }
 
-  /** 统一错误转换 */
-  private static toError(message: string, err: Error | string | Record<string, Object>): Error {
-    let details = '';
-    try {
-      details = typeof err === 'string' ? err : JSON.stringify(err);
-    } catch (_) {
-      details = '';
-    }
-    return new Error(`${message}${details ? ' -> ' + details : ''}`);
-  }
-
-  /** 将查询结果映射为 Category 实例 */
+  /** 将查询结果映射为 Category 实例
+   * @throws
+   * */
   private static mapRowToCategory(resultSet: relationalStore.ResultSet): Category {
     const category = new Category();
     category.categoryId = resultSet.getLong(resultSet.getColumnIndex('category_id'));

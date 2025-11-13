@@ -27,7 +27,8 @@ export class IndexManager {
       await IndexManager.createBillTagsIndexes();
       
       console.log('[IndexManager] ✅ 所有索引创建完成');
-    } catch (error) {
+    } catch (err) {
+      const error = err as Error;
       console.error('[IndexManager] ❌ 索引创建失败:', error);
       throw error;
     }
@@ -90,7 +91,8 @@ export class IndexManager {
       `);
       console.log('[IndexManager] ✓ Bills 表账户日期索引创建成功 (idx_bills_account_date)');
 
-    } catch (error) {
+    } catch (err) {
+      const error = err as Error;
       console.error('[IndexManager] ❌ Bills 表索引创建失败:', error);
       throw error;
     }
@@ -121,7 +123,8 @@ export class IndexManager {
       `);
       console.log('[IndexManager] ✓ Accounts 表用户类型索引创建成功 (idx_accounts_user_type)');
 
-    } catch (error) {
+    } catch (err) {
+      const error = err as Error;
       console.error('[IndexManager] ❌ Accounts 表索引创建失败:', error);
       throw error;
     }
@@ -158,7 +161,8 @@ export class IndexManager {
       `);
       console.log('[IndexManager] ✓ Bill_Tags 表标签索引创建成功 (idx_bill_tags_tag)');
 
-    } catch (error) {
+    } catch (err) {
+      const error = err as Error;
       console.error('[IndexManager] ❌ Bill_Tags 表索引创建失败:', error);
       throw error;
     }
@@ -198,7 +202,8 @@ export class IndexManager {
       await IndexManager.createAllIndexes();
       
       console.log('[IndexManager] ✅ 索引重建完成');
-    } catch (error) {
+    } catch (err) {
+      const error = err as Error;
       console.error('[IndexManager] ❌ 索引重建失败:', error);
       throw error;
     }

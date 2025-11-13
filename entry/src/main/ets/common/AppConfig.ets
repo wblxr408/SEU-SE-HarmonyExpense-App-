@@ -11,7 +11,7 @@ export class DatabaseConfig {
   static readonly DB_NAME = 'harmony_expense.db';
   
   /** 数据库版本 */
-  static readonly DB_VERSION = 1;
+  static readonly DB_VERSION = 1.2;
   
   /** 批量操作的批次大小 */
   static readonly BATCH_SIZE = 100;
@@ -96,7 +96,7 @@ export class FileConfig {
   static readonly MAX_FILE_SIZE = 100 * 1024 * 1024;
   
   /** 导出文件版本号 */
-  static readonly EXPORT_VERSION = '1.0.0';
+  static readonly EXPORT_VERSION = '1.2.0';
 }
 
 /**

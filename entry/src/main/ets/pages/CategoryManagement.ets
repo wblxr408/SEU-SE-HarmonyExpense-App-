@@ -4,6 +4,7 @@ import { CategoryDAO } from '../dao/CategoryDAO' //
 import promptAction from '@ohos.promptAction'
 import hilog from '@ohos.hilog'
 import type { BusinessError } from '@ohos.base'
+import { BreakPointType } from '../common/BreakpointSystem';
 
 
 // HILOG 定义
@@ -117,6 +118,12 @@ struct CategoryEditDialog {
 struct CategoryManagement {
   @State categories: Array<Category> = []
   @State currentEditingCategory: Category | null = null
+  @StorageProp('currentBreakpoint') currentBreakpoint: string = 'md';
+  
+  // 响应式配置
+  private listPadding = new BreakPointType({ xs: 8, sm: 10, md: 12, lg: 16, xl: 20, xxl: 24 });
+  private itemFontSize = new BreakPointType({ xs: 14, sm: 15, md: 16, lg: 18, xl: 20, xxl: 22 });
+  private buttonWidth = new BreakPointType({ xs: '95%', sm: '92%', md: '90%', lg: '80%', xl: '70%', xxl: '60%' });
 
   // 自定义弹窗控制器
   dialogController: CustomDialogController = new CustomDialogController({
@@ -219,10 +226,14 @@ struct CategoryManagement {
             ListItem() {
               // (U) 列表项
               Row() {
-                Text(item.icon).fontSize(20).width(30)
-                Text(item.name).fontSize(16).layoutWeight(1)
+                Text(item.icon)
+                  .fontSize((this.itemFontSize.getValue(this.currentBreakpoint) as number) + 4)
+                  .width(30)
+                Text(item.name)
+                  .fontSize(this.itemFontSize.getValue(this.currentBreakpoint) as number)
+                  .layoutWeight(1)
                 Text(item.type === 'expense' ? '支出' : '收入')
-                  .fontSize(14)
+                  .fontSize((this.itemFontSize.getValue(this.currentBreakpoint) as number) - 2)
                   .fontColor(item.type === 'expense' ? Color.Red : Color.Green)
               }
               .padding(15)
@@ -239,11 +250,14 @@ struct CategoryManagement {
         }
         .layoutWeight(1)
         .width('100%') // ✅ 修复：添加 width 消除 List 警告
-        .padding({ left: 12, right: 12 })
+        .padding({ 
+          left: this.listPadding.getValue(this.currentBreakpoint) as number, 
+          right: this.listPadding.getValue(this.currentBreakpoint) as number 
+        })
 
         // (C) 新建按钮
         Button('新建分类')
-          .width('90%')
+          .width(this.buttonWidth.getValue(this.currentBreakpoint) as string)
           .height(50)
           .type(ButtonType.Capsule)
           .margin(15)

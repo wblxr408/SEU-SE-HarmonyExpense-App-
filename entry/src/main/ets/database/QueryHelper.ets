@@ -204,6 +204,7 @@ export class QueryHelper {
    * 将查询结果映射为 Bill 实例
    * @param resultSet 查询结果集
    * @returns Bill 对象
+   * @throws
    */
   private static mapRowToBill(resultSet: relationalStore.ResultSet): Bill {
     return new Bill(

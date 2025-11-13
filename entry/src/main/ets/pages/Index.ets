@@ -7,6 +7,7 @@ import { CURRENT_USER_ID } from '../common/Constants';
 import { BusinessError } from '@ohos.base';
 import { Category } from '../model';
 import { CategoryDAO } from '../dao/CategoryDAO';
+import { BreakPointType } from '../common/BreakpointSystem';
 interface DateFilter{
   start:string;
   end:string;
@@ -36,6 +37,13 @@ struct Index {
   @State allCategories: Array<Category> = [];
   @State selectedDate: Date = new Date(); // 用于月份选择器
   @State selectedCategoryId: number = 0; // 0 代表 "所有分类"
+  @StorageProp('currentBreakpoint') currentBreakpoint: string = 'md';
+  
+  // 响应式配置
+  private listPadding = new BreakPointType({ xs: 8, sm: 10, md: 12, lg: 16, xl: 20, xxl: 24 });
+  private buttonWidth = new BreakPointType({ xs: '90%', sm: '85%', md: '80%', lg: '70%', xl: '60%', xxl: '50%' });
+  private titleFontSize = new BreakPointType({ xs: 14, sm: 15, md: 16, lg: 18, xl: 20, xxl: 22 });
+  private amountFontSize = new BreakPointType({ xs: 16, sm: 17, md: 18, lg: 20, xl: 22, xxl: 24 });
   //添加onPageShow 生命周期函数
   async onPageShow() {
     hilog.info(HILOG_DOMAIN, LOG_TAG, 'onPageShow triggered');
@@ -156,13 +164,16 @@ struct Index {
           })
         }
         .layoutWeight(1) //列表占据剩余空间
-        .padding({ left: 12, right: 12 })
+        .padding({ 
+          left: this.listPadding.getValue(this.currentBreakpoint) as number, 
+          right: this.listPadding.getValue(this.currentBreakpoint) as number 
+        })
 
         //表格展示结束
         Button('管理分类 ')
           .type(ButtonType.Capsule)
-          .fontSize(18)
-          .width('80%')
+          .fontSize(this.titleFontSize.getValue(this.currentBreakpoint) as number)
+          .width(this.buttonWidth.getValue(this.currentBreakpoint) as string)
           .height(50)
           .margin(20)
           .onClick(() => {
@@ -172,8 +183,8 @@ struct Index {
           })
         Button('记一笔')
           .type(ButtonType.Capsule)
-          .fontSize(18)
-          .width('80%')
+          .fontSize(this.titleFontSize.getValue(this.currentBreakpoint) as number)
+          .width(this.buttonWidth.getValue(this.currentBreakpoint) as string)
           .height(50)
           .margin(20) //设置按钮外边框
           .onClick(() => {
@@ -203,15 +214,17 @@ struct Index {
         .margin({right:10})
         .objectFit(ImageFit.Contain)
       Column() {
-        Text(item.type === 'expense' ? '支出' : '收入').fontSize(16).fontWeight(FontWeight.Bold) //
-        Text(item.note || '无备注').fontSize(14).fontColor(Color.Gray)
+        Text(item.type === 'expense' ? '支出' : '收入')
+          .fontSize(this.titleFontSize.getValue(this.currentBreakpoint) as number)
+          .fontWeight(FontWeight.Bold)
+        Text(item.note || '无备注')
+          .fontSize((this.titleFontSize.getValue(this.currentBreakpoint) as number) - 2)
+          .fontColor(Color.Gray)
       }
       .alignItems(HorizontalAlign.Start)
 
-
-
       Text(item.type === 'expense' ? `-${item.amount.toFixed(2)}` : `+${item.amount.toFixed(2)}`)
-        .fontSize(18)
+        .fontSize(this.amountFontSize.getValue(this.currentBreakpoint) as number)
         .fontWeight(FontWeight.Bold)
         .fontColor(item.type === 'expense' ? Color.Red : Color.Green)
     }

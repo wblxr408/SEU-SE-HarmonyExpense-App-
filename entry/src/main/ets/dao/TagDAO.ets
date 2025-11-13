@@ -3,7 +3,7 @@ import { DatabaseManager } from '../database/DatabaseManager';
 import { Tag } from '../model/Tag';
 import { BillTag } from '../model/BillTag';
 import { TagAggregation } from '../model/AggregationTypes';
-import { Bill } from '../model/Bill';
+import { DAOHelper } from '../common/DAOHelper';
 
 /**
  * 标签数据访问对象 - TagDAO
@@ -40,22 +40,22 @@ export class TagDAO {
       console.log(`[TagDAO] 插入成功: ${tag.name}`);
     } catch (error) {
       console.error('[TagDAO] 插入失败: ' + JSON.stringify(error));
-      throw TagDAO.toError('[TagDAO] 插入失败', error);
+      throw DAOHelper.toError('[TagDAO] 插入失败', error);
     }
   }
 
   /**
-   * 批量插入标签
+   * 批量插入标签 - 使用 DAOHelper 统一事务处理
    * @param tags 标签数组
    */
   static async bulkInsert(tags: Tag[]): Promise<void> {
     if (tags.length === 0) {
       return;
     }
-    const store = DatabaseManager.getDatabase();
-    await store.beginTransaction();
-    try {
+    
+    await DAOHelper.transaction(async () => {
       const now = new Date().toISOString();
+      const store = DatabaseManager.getDatabase();
       const sql = `
         INSERT INTO tags
           (user_id, name, color, usage_count, created_at, updated_at, is_deleted)
@@ -77,14 +77,9 @@ export class TagDAO {
         ];
         await store.executeSql(sql, params);
       }
-      
-      await store.commit();
-      console.log(`[TagDAO] 批量插入成功: ${tags.length} 条`);
-    } catch (error) {
-      await store.rollBack();
-      console.error('[TagDAO] 批量插入失败: ' + JSON.stringify(error));
-      throw error instanceof Error ? error : new Error(String(error));
-    }
+    }, '[TagDAO] 批量插入');
+    
+    console.log(`[TagDAO] 批量插入成功: ${tags.length} 条`);
   }
 
   /**
@@ -105,7 +100,7 @@ export class TagDAO {
       return TagDAO.mapRowToTag(resultSet);
     } catch (error) {
       console.error('[TagDAO] 查询失败: ' + JSON.stringify(error));
-      throw TagDAO.toError('[TagDAO] 查询失败', error);
+      throw DAOHelper.toError('[TagDAO] 查询失败', error);
     } finally {
       resultSet?.close();
     }
@@ -129,7 +124,7 @@ export class TagDAO {
       return tags;
     } catch (error) {
       console.error('[TagDAO] 查询全部失败: ' + JSON.stringify(error));
-      throw TagDAO.toError('[TagDAO] 查询全部失败', error);
+      throw DAOHelper.toError('[TagDAO] 查询全部失败', error);
     } finally {
       resultSet?.close();
     }
@@ -162,7 +157,7 @@ export class TagDAO {
       return tags;
     } catch (error) {
       console.error('[TagDAO] 获取热门标签失败: ' + JSON.stringify(error));
-      throw TagDAO.toError('[TagDAO] 获取热门标签失败', error);
+      throw DAOHelper.toError('[TagDAO] 获取热门标签失败', error);
     } finally {
       resultSet?.close();
     }
@@ -196,12 +191,13 @@ export class TagDAO {
       console.log(`[TagDAO] 更新成功: ${tag.name}`);
     } catch (error) {
       console.error('[TagDAO] 更新失败: ' + JSON.stringify(error));
-      throw TagDAO.toError('[TagDAO] 更新失败', error);
+      throw DAOHelper.toError('[TagDAO] 更新失败', error);
     }
   }
 
   /**
-   * 软删除标签
+   * 软删除标签 - 使用 DAOHelper 统一方法
+   * 注意：TagDAO 的软删除需要同时检查 user_id，所以保留自定义实现
    * @param userId 用户ID
    * @param tagId 标签ID
    */
@@ -214,12 +210,12 @@ export class TagDAO {
       console.log(`[TagDAO] 软删除成功: tag_id=${tagId}`);
     } catch (error) {
       console.error('[TagDAO] 软删除失败: ' + JSON.stringify(error));
-      throw TagDAO.toError('[TagDAO] 软删除失败', error);
+      throw DAOHelper.toError('[TagDAO] 软删除失败', error);
     }
   }
 
   /**
-   * 恢复已删除标签
+   * 恢复已删除标签 - 保留自定义实现（需要检查 user_id）
    * @param userId 用户ID
    * @param tagId 标签ID
    */
@@ -232,30 +228,24 @@ export class TagDAO {
       console.log(`[TagDAO] 恢复成功: tag_id=${tagId}`);
     } catch (error) {
       console.error('[TagDAO] 恢复失败: ' + JSON.stringify(error));
-      throw TagDAO.toError('[TagDAO] 恢复失败', error);
+      throw DAOHelper.toError('[TagDAO] 恢复失败', error);
     }
   }
 
   /**
-   * 真删除标签（慎用）
+   * 真删除标签（慎用）- 使用 DAOHelper 统一事务处理
    * @param userId 用户ID
    * @param tagId 标签ID
    */
   static async hardDelete(userId: number, tagId: number): Promise<void> {
-    const store = DatabaseManager.getDatabase();
-    await store.beginTransaction();
-    try {
+    await DAOHelper.transaction(async () => {
+      const store = DatabaseManager.getDatabase();
       // 先删除关联记录
       await store.executeSql(`DELETE FROM bill_tags WHERE tag_id = ?`, [tagId]);
       // 再删除标签
       await store.executeSql(`DELETE FROM tags WHERE tag_id = ? AND user_id = ?`, [tagId, userId]);
-      await store.commit();
-      console.log(`[TagDAO] 硬删除成功: tag_id=${tagId}`);
-    } catch (error) {
-      await store.rollBack();
-      console.error('[TagDAO] 删除失败: ' + JSON.stringify(error));
-      throw TagDAO.toError('[TagDAO] 删除失败', error);
-    }
+    }, '[TagDAO] 硬删除');
+    console.log(`[TagDAO] 硬删除成功: tag_id=${tagId}`);
   }
 
   /**
@@ -277,7 +267,7 @@ export class TagDAO {
       console.log(`[TagDAO] 添加标签关联成功: bill_id=${billId}, tag_id=${tagId}`);
     } catch (error) {
       console.error('[TagDAO] 添加标签关联失败: ' + JSON.stringify(error));
-      throw TagDAO.toError('[TagDAO] 添加标签关联失败', error);
+      throw DAOHelper.toError('[TagDAO] 添加标签关联失败', error);
     }
   }
 
@@ -296,19 +286,18 @@ export class TagDAO {
       console.log(`[TagDAO] 移除标签关联成功: bill_id=${billId}, tag_id=${tagId}`);
     } catch (error) {
       console.error('[TagDAO] 移除标签关联失败: ' + JSON.stringify(error));
-      throw TagDAO.toError('[TagDAO] 移除标签关联失败', error);
+      throw DAOHelper.toError('[TagDAO] 移除标签关联失败', error);
     }
   }
 
   /**
-   * 批量为账单设置标签（替换现有标签）
+   * 批量为账单设置标签（替换现有标签）- 使用 DAOHelper 统一事务处理
    * @param billId 账单ID
    * @param tagIds 标签ID数组
    */
   static async setTagsForBill(billId: number, tagIds: number[]): Promise<void> {
-    const store = DatabaseManager.getDatabase();
-    await store.beginTransaction();
-    try {
+    await DAOHelper.transaction(async () => {
+      const store = DatabaseManager.getDatabase();
       // 获取当前标签
       const currentTags = await TagDAO.getTagsByBillId(billId);
       const currentTagIds = currentTags.map(bt => bt.tagId);
@@ -332,14 +321,9 @@ export class TagDAO {
         );
         await TagDAO.incrementUsageCount(tagId);
       }
-      
-      await store.commit();
-      console.log(`[TagDAO] 批量设置标签成功: bill_id=${billId}`);
-    } catch (error) {
-      await store.rollBack();
-      console.error('[TagDAO] 批量设置标签失败: ' + JSON.stringify(error));
-      throw TagDAO.toError('[TagDAO] 批量设置标签失败', error);
-    }
+    }, '[TagDAO] 批量设置标签');
+    
+    console.log(`[TagDAO] 批量设置标签成功: bill_id=${billId}`);
   }
 
   /**
@@ -362,7 +346,7 @@ export class TagDAO {
       return billTags;
     } catch (error) {
       console.error('[TagDAO] 查询账单标签失败: ' + JSON.stringify(error));
-      throw TagDAO.toError('[TagDAO] 查询账单标签失败', error);
+      throw DAOHelper.toError('[TagDAO] 查询账单标签失败', error);
     } finally {
       resultSet?.close();
     }
@@ -388,7 +372,7 @@ export class TagDAO {
       return billIds;
     } catch (error) {
       console.error('[TagDAO] 查询标签账单失败: ' + JSON.stringify(error));
-      throw TagDAO.toError('[TagDAO] 查询标签账单失败', error);
+      throw DAOHelper.toError('[TagDAO] 查询标签账单失败', error);
     } finally {
       resultSet?.close();
     }
@@ -420,7 +404,7 @@ export class TagDAO {
       return billTags;
     } catch (error) {
       console.error('[TagDAO] 查询所有账单标签失败: ' + JSON.stringify(error));
-      throw TagDAO.toError('[TagDAO] 查询所有账单标签失败', error);
+      throw DAOHelper.toError('[TagDAO] 查询所有账单标签失败', error);
     } finally {
       resultSet?.close();
     }
@@ -479,7 +463,7 @@ export class TagDAO {
       return results;
     } catch (error) {
       console.error('[TagDAO] 标签聚合统计失败: ' + JSON.stringify(error));
-      throw TagDAO.toError('[TagDAO] 标签聚合统计失败', error);
+      throw DAOHelper.toError('[TagDAO] 标签聚合统计失败', error);
     } finally {
       resultSet?.close();
     }
@@ -510,7 +494,7 @@ export class TagDAO {
       return billTags;
     } catch (error) {
       console.error('[TagDAO] 查询用户账单标签关联失败: ' + JSON.stringify(error));
-      throw TagDAO.toError('[TagDAO] 查询用户账单标签关联失败', error);
+      throw DAOHelper.toError('[TagDAO] 查询用户账单标签关联失败', error);
     } finally {
       resultSet?.close();
     }
@@ -561,22 +545,6 @@ export class TagDAO {
         rs.close();
       }
     }
-  }
-
-  /**
-   * 统一错误转换
-   * @param message 错误消息
-   * @param err 错误对象
-   * @returns Error 对象
-   */
-  private static toError(message: string, err: Error | string | Record<string, Object>): Error {
-    let details = '';
-    try {
-      details = typeof err === 'string' ? err : JSON.stringify(err);
-    } catch (_) {
-      details = '';
-    }
-    return new Error(`${message}${details ? ' -> ' + details : ''}`);
   }
 
   /**

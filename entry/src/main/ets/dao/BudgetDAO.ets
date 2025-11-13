@@ -1,6 +1,7 @@
 import relationalStore from '@ohos.data.relationalStore';
 import { DatabaseManager } from '../database/DatabaseManager';
 import { Budget, BudgetInit } from '../model/Budget';
+import { DAOHelper } from '../common/DAOHelper';
 
 export class BudgetDAO {
 
@@ -110,15 +111,11 @@ export class BudgetDAO {
     console.log(`[BudgetDAO] 删除成功 id=${budgetId}`);
   }
 
+  /**
+   * 软删除预算 - 使用 DAOHelper 统一方法
+   */
   static async softDelete(budgetId: number): Promise<void> {
-    const store: relationalStore.RdbStore = DatabaseManager.getDatabase();
-    const valueBucket: relationalStore.ValuesBucket = {
-      is_deleted: 1
-    };
-    const predicates: relationalStore.RdbPredicates = new relationalStore.RdbPredicates('budgets');
-    predicates.equalTo('budget_id', budgetId);
-    await store.update(valueBucket, predicates);
-    console.log(`[BudgetDAO] 软删除成功 id=${budgetId}`);
+    await DAOHelper.softDelete('budgets', 'budget_id', budgetId, '[BudgetDAO]');
   }
 
   static async getAllActive(): Promise<Budget[]> {
@@ -137,28 +134,17 @@ export class BudgetDAO {
     }
   }
 
+  /**
+   * 事务封装 - 使用 DAOHelper 统一方法
+   */
   static async transaction(fn: () => Promise<void>): Promise<void> {
-    const store: relationalStore.RdbStore = DatabaseManager.getDatabase();
-    try {
-      await store.beginTransaction();
-      await fn();
-      await store.commit();
-    } catch (err) {
-      await store.rollBack();
-      const error = err as Error;
-      console.error('[BudgetDAO] 事务失败: ' + JSON.stringify(error));
-      throw new Error('[BudgetDAO] 事务失败');
-    }
+    await DAOHelper.transaction(fn, '[BudgetDAO]');
   }
 
+  /**
+   * 检查预算是否存在 - 使用 DAOHelper 统一方法
+   */
   static async exists(budgetId: number): Promise<boolean> {
-    const store: relationalStore.RdbStore = DatabaseManager.getDatabase();
-    const sql: string = 'SELECT 1 FROM budgets WHERE budget_id = ?';
-    const rs: relationalStore.ResultSet = await store.querySql(sql, [budgetId]);
-    try {
-      return rs.goToNextRow();
-    } finally {
-      rs.close();
-    }
+    return await DAOHelper.exists('budgets', 'budget_id', budgetId);
   }
 }

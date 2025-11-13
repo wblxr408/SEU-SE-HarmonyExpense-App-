@@ -2,14 +2,9 @@
 import relationalStore from '@ohos.data.relationalStore';
 import { DatabaseManager } from '../database/DatabaseManager';
 import { User } from '../model/User';
+import { DAOHelper } from '../common/DAOHelper';
 
 export class UserDAO {
-
-  private static toError(message: string, err: Error | string | object): Error {
-    let details = '';
-    try { details = typeof err === 'string' ? err : JSON.stringify(err); } catch (_) {}
-    return new Error(`${message}${details ? ' -> ' + details : ''}`);
-  }
 
   /** 插入单条用户 */
   static async insert(user: User) {
@@ -27,17 +22,11 @@ export class UserDAO {
     await store.executeSql(sql, params);
   }
 
-  /** 批量插入 */
+  /** 批量插入 - 使用 DAOHelper 统一事务处理 */
   static async insertMany(users: User[]) {
-    const store = DatabaseManager.getDatabase();
-    await store.beginTransaction();
-    try {
+    await DAOHelper.transaction(async () => {
       for (const u of users) await UserDAO.insert(u);
-      await store.commit();
-    } catch (error) {
-      await store.rollBack();
-      throw UserDAO.toError('[UserDAO] 批量插入失败', error);
-    }
+    }, '[UserDAO] 批量插入');
   }
 
   /** 查询单条（未删除） */
@@ -105,30 +94,18 @@ export class UserDAO {
     await store.executeSql(sql, [userId]);
   }
 
-  /** 软删除 */
+  /** 软删除 - 使用 DAOHelper 统一方法 */
   static async softDelete(userId: number) {
-    const store = DatabaseManager.getDatabase();
-    const sql = `UPDATE users SET is_deleted = 1, updated_at = ? WHERE user_id = ?`;
-    await store.executeSql(sql, [new Date().toISOString(), userId]);
+    await DAOHelper.softDelete('users', 'user_id', userId, '[UserDAO]');
   }
 
-  /** 恢复软删除 */
+  /** 恢复软删除 - 使用 DAOHelper 统一方法 */
   static async restore(userId: number) {
-    const store = DatabaseManager.getDatabase();
-    const sql = `UPDATE users SET is_deleted = 0, updated_at = ? WHERE user_id = ?`;
-    await store.executeSql(sql, [new Date().toISOString(), userId]);
+    await DAOHelper.restore('users', 'user_id', userId, '[UserDAO]');
   }
 
-  /** 事务封装 */
+  /** 事务封装 - 使用 DAOHelper 统一方法 */
   static async transaction(fn: () => Promise<void>) {
-    const store = DatabaseManager.getDatabase();
-    await store.beginTransaction();
-    try {
-      await fn();
-      await store.commit();
-    } catch (error) {
-      await store.rollBack();
-      throw UserDAO.toError('[UserDAO] 事务失败', error);
-    }
+    await DAOHelper.transaction(fn, '[UserDAO]');
   }
 }

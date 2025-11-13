@@ -1,6 +1,7 @@
 import relationalStore from '@ohos.data.relationalStore';
 import { DatabaseManager } from '../database/DatabaseManager';
 import { MonthlyStatistics, CategoryStatistics } from '../model/Statistics';
+import { DAOHelper } from '../common/DAOHelper';
 
 export class StatisticsDAO {
 
@@ -26,16 +27,14 @@ export class StatisticsDAO {
     await store.executeSql(sql, params);
   }
 
+  /**
+   * 批量插入月度统计 - 使用 DAOHelper 统一事务处理
+   * @throws
+   */
   static async bulkInsertMonthly(stats: MonthlyStatistics[]) {
-    const store = DatabaseManager.getDatabase();
-    await store.beginTransaction();
-    try {
+    await DAOHelper.transaction(async () => {
       for (const s of stats) await StatisticsDAO.insertMonthly(s);
-      await store.commit();
-    } catch (err) {
-      await store.rollBack();
-      throw new Error('[StatisticsDAO] 批量插入月度统计失败');
-    }
+    }, '[StatisticsDAO] 批量插入月度统计');
   }
 
   static async getMonthly(userId: number, categoryId: number, month: string): Promise<MonthlyStatistics | null> {
@@ -140,16 +139,14 @@ export class StatisticsDAO {
     await store.executeSql(sql, params);
   }
 
+  /**
+   * 批量插入分类统计 - 使用 DAOHelper 统一事务处理
+   * @throws
+   */
   static async bulkInsertCategory(stats: CategoryStatistics[]) {
-    const store = DatabaseManager.getDatabase();
-    await store.beginTransaction();
-    try {
+    await DAOHelper.transaction(async () => {
       for (const s of stats) await StatisticsDAO.insertCategory(s);
-      await store.commit();
-    } catch (err) {
-      await store.rollBack();
-      throw new Error('[StatisticsDAO] 批量插入分类统计失败');
-    }
+    }, '[StatisticsDAO] 批量插入分类统计');
   }
 
   static async getCategory(categoryId: number): Promise<CategoryStatistics | null> {
@@ -229,16 +226,10 @@ export class StatisticsDAO {
     return stats;
   }
 
-  /** ================== 事务封装 ================== */
+  /** 
+   * 事务封装 - 使用 DAOHelper 统一方法
+   */
   static async transaction(fn: () => Promise<void>): Promise<void> {
-    const store = DatabaseManager.getDatabase();
-    await store.beginTransaction();
-    try {
-      await fn();
-      await store.commit();
-    } catch (err) {
-      await store.rollBack();
-      throw new Error('[StatisticsDAO] 事务失败');
-    }
+    await DAOHelper.transaction(fn, '[StatisticsDAO]');
   }
 }

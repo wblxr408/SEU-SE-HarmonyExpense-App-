@@ -35,7 +35,7 @@ export class DAOHelper {
    * 自动处理事务的开启、提交和回滚
    * 
    * @param fn 要在事务中执行的函数
-   * @param errorPrefix 错误消息前缀（如 '[UserDAO]'）
+   * @param errorPrefix 错误消息前缀
    */
   static async transaction(fn: () => Promise<void>, errorPrefix: string = '[DAO]'): Promise<void> {
     const store = DatabaseManager.getDatabase();

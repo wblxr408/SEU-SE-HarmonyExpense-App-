@@ -14,6 +14,14 @@
 import { DatabaseManager } from './DatabaseManager';
 import relationalStore from '@ohos.data.relationalStore';
 
+/**
+ * 更新项接口
+ */
+interface UpdateItem {
+  id: number;
+  values: relationalStore.ValuesBucket;
+}
+
 export class BatchQueryHelper {
   // 批量操作的默认批次大小
   private static readonly BATCH_SIZE: number = 100;
@@ -65,7 +73,8 @@ export class BatchQueryHelper {
           }
           await store.commit();
           console.log(`[BatchQueryHelper] ✓ 第 ${i + 1} 批插入成功`);
-        } catch (error) {
+        } catch (err) {
+          const error = err as Error;
           await store.rollBack();
           console.error(`[BatchQueryHelper] ❌ 第 ${i + 1} 批插入失败，已回滚:`, error);
           throw error;
@@ -74,7 +83,8 @@ export class BatchQueryHelper {
 
       console.log(`[BatchQueryHelper] ✅ 批量插入完成，共插入 ${insertedCount} 条数据`);
       return insertedCount;
-    } catch (error) {
+    } catch (err) {
+      const error = err as Error;
       console.error('[BatchQueryHelper] ❌ 批量插入失败:', error);
       throw error;
     }
@@ -136,7 +146,8 @@ export class BatchQueryHelper {
           deletedCount += batchIds.length;
           await store.commit();
           console.log(`[BatchQueryHelper] ✓ 第 ${i + 1} 批删除成功`);
-        } catch (error) {
+        } catch (err) {
+          const error = err as Error;
           await store.rollBack();
           console.error(`[BatchQueryHelper] ❌ 第 ${i + 1} 批删除失败，已回滚:`, error);
           throw error;
@@ -145,7 +156,8 @@ export class BatchQueryHelper {
 
       console.log(`[BatchQueryHelper] ✅ 批量软删除完成，共删除 ${deletedCount} 条数据`);
       return deletedCount;
-    } catch (error) {
+    } catch (err) {
+      const error = err as Error;
       console.error('[BatchQueryHelper] ❌ 批量软删除失败:', error);
       throw error;
     }
@@ -161,7 +173,7 @@ export class BatchQueryHelper {
    */
   static async bulkUpdate(
     tableName: string,
-    updates: Array<{ id: number; values: relationalStore.ValuesBucket }>,
+    updates: Array<UpdateItem>,
     idColumnName?: string
   ): Promise<number> {
     if (!updates || updates.length === 0) {
@@ -198,7 +210,8 @@ export class BatchQueryHelper {
           }
           await store.commit();
           console.log(`[BatchQueryHelper] ✓ 第 ${i + 1} 批更新成功`);
-        } catch (error) {
+        } catch (err) {
+          const error = err as Error;
           await store.rollBack();
           console.error(`[BatchQueryHelper] ❌ 第 ${i + 1} 批更新失败，已回滚:`, error);
           throw error;
@@ -207,7 +220,8 @@ export class BatchQueryHelper {
 
       console.log(`[BatchQueryHelper] ✅ 批量更新完成，共更新 ${updatedCount} 条数据`);
       return updatedCount;
-    } catch (error) {
+    } catch (err) {
+      const error = err as Error;
       console.error('[BatchQueryHelper] ❌ 批量更新失败:', error);
       throw error;
     }
@@ -236,7 +250,8 @@ export class BatchQueryHelper {
       await operations();
       await store.commit();
       console.log('[BatchQueryHelper] ✅ 事务提交成功');
-    } catch (error) {
+    } catch (err) {
+      const error = err as Error;
       await store.rollBack();
       console.error('[BatchQueryHelper] ❌ 事务执行失败，已回滚:', error);
       throw error;

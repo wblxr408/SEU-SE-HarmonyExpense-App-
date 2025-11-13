@@ -304,6 +304,7 @@ export class DatabaseManager {
 
   /**
    * 执行事务
+   * @throws
    */
   static async transaction(fn: () => Promise<void>): Promise<void> {
     const store = DatabaseManager.getDatabase();
