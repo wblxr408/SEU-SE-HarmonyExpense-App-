@@ -9,8 +9,8 @@ import type { BusinessError } from '@ohos.base'
 
 // HILOG 定义
 const LOG_TAG = 'CategoryManagement'
-const USER_ID = 1 // 假设当前用户ID为1
-const HILOG_DOMAIN = 0x0001 // ✅ 修复：hilog 需要一个数字 domain
+const HILOG_DOMAIN = 0x0001
+
 
 // ---------------------------------
 // (C/U) 新建/编辑分类的弹窗
@@ -20,6 +20,7 @@ struct CategoryEditDialog {
   controller: CustomDialogController
   // ✅ 修复 1 (闪退): 允许 editingCategory 为 null，以匹配父组件的类型
   @Link editingCategory: Category | null
+
   // onSave 默认值
   onSave: () => void = () => {}
 
@@ -118,7 +119,7 @@ struct CategoryEditDialog {
 struct CategoryManagement {
   @State categories: Array<Category> = []
   @State currentEditingCategory: Category | null = null
-
+  @StorageProp('currentUserId') currentUserId: number = 1;
   // 自定义弹窗控制器
   dialogController: CustomDialogController = new CustomDialogController({
     builder: CategoryEditDialog({
@@ -138,7 +139,7 @@ struct CategoryManagement {
 
   async loadCategories() {
     try {
-      const data = await CategoryDAO.getAll(USER_ID) //
+      const data = await CategoryDAO.getAll(this.currentUserId) //
       this.categories = data
       hilog.info(HILOG_DOMAIN, LOG_TAG, `成功加载 ${data.length} 条分类`)
     } catch (err) {
@@ -150,7 +151,7 @@ struct CategoryManagement {
   // (D) 删除逻辑
   async handleDelete(categoryId: number) {
     try {
-      await CategoryDAO.softDelete(USER_ID, categoryId) //
+      await CategoryDAO.softDelete(this.currentUserId, categoryId) //
       this.showToast('删除成功')
       this.loadCategories()
     } catch (err) {
@@ -175,7 +176,7 @@ struct CategoryManagement {
 
       if (this.currentEditingCategory.categoryId === 0) {
         // --- (C) Create 新建 ---
-        this.currentEditingCategory.userId = USER_ID
+        this.currentEditingCategory.userId = this.currentUserId
         this.currentEditingCategory.createdAt = now
         await CategoryDAO.insert(this.currentEditingCategory) //
         this.showToast('创建成功')
