@@ -56,7 +56,6 @@ export class CategoryDAO {
 
   /** 
    * 批量插入分类 - 使用 DAOHelper 统一事务处理
-   * @throws
    */
   static async bulkInsert(categories: Category[]): Promise<void> {
     if (categories.length === 0) {
@@ -355,7 +354,6 @@ export class CategoryDAO {
    * @param startDate 开始日期
    * @param endDate 结束日期
    * @returns 分类统计结果
-   * @throws
    */
   static async aggregateByCategory(
     userId: number,
@@ -430,9 +428,7 @@ export class CategoryDAO {
     }
   }
 
-  /** 将查询结果映射为 Category 实例
-   * @throws
-   * */
+  /** 将查询结果映射为 Category 实例 */
   private static mapRowToCategory(resultSet: relationalStore.ResultSet): Category {
     const category = new Category();
     category.categoryId = resultSet.getLong(resultSet.getColumnIndex('category_id'));

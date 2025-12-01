@@ -29,7 +29,6 @@ export class StatisticsDAO {
 
   /**
    * 批量插入月度统计 - 使用 DAOHelper 统一事务处理
-   * @throws
    */
   static async bulkInsertMonthly(stats: MonthlyStatistics[]) {
     await DAOHelper.transaction(async () => {
@@ -141,7 +140,6 @@ export class StatisticsDAO {
 
   /**
    * 批量插入分类统计 - 使用 DAOHelper 统一事务处理
-   * @throws
    */
   static async bulkInsertCategory(stats: CategoryStatistics[]) {
     await DAOHelper.transaction(async () => {

@@ -1,0 +1,188 @@
+@startuml HarmonyExpense-UseCaseDiagram
+!theme plain
+skinparam linetype ortho
+
+' 定义参与者
+actor "用户" as User #LightBlue
+
+' 定义用例 - 用户认证模块
+usecase "注册账户" as Register #LightGreen
+usecase "登录系统" as Login #LightGreen
+usecase "退出系统" as Logout #LightGreen
+
+' 定义用例 - 账户管理模块
+usecase "查看账户列表" as ViewAccounts #LightYellow
+usecase "创建账户" as CreateAccount #LightYellow
+usecase "编辑账户" as EditAccount #LightYellow
+usecase "删除账户" as DeleteAccount #LightYellow
+
+' 定义用例 - 分类管理模块
+usecase "查看分类树" as ViewCategories #LightYellow
+usecase "创建分类" as CreateCategory #LightYellow
+usecase "编辑分类" as EditCategory #LightYellow
+usecase "删除分类" as DeleteCategory #LightYellow
+
+' 定义用例 - 账单管理模块
+usecase "查看账单列表" as ViewBills #LightCoral
+usecase "添加账单" as AddBill #LightCoral
+usecase "编辑账单" as EditBill #LightCoral
+usecase "删除账单" as DeleteBill #LightCoral
+usecase "搜索账单" as SearchBills #LightCoral
+
+' 定义用例 - 预算管理模块
+usecase "查看预算状态" as ViewBudgets #LightSalmon
+usecase "设置预算" as SetBudget #LightSalmon
+usecase "编辑预算" as EditBudget #LightSalmon
+usecase "删除预算" as DeleteBudget #LightSalmon
+
+' 定义用例 - 标签管理模块
+usecase "创建标签" as CreateTag #LightYellow
+usecase "编辑标签" as EditTag #LightYellow
+usecase "删除标签" as DeleteTag #LightYellow
+usecase "为账单添加标签" as AddTagToBill #LightYellow
+
+' 定义用例 - 统计报表模块
+usecase "查看月度统计" as ViewMonthlyStats #LightSkyBlue
+usecase "查看分类统计" as ViewCategoryStats #LightSkyBlue
+usecase "查看标签统计" as ViewTagStats #LightSkyBlue
+usecase "生成报表" as GenerateReport #LightSkyBlue
+
+' 定义用例 - 数据管理模块
+usecase "导出数据" as ExportData #LightGray
+usecase "导入数据" as ImportData #LightGray
+usecase "数据备份" as BackupData #LightGray
+
+' 定义关系 - 用户认证
+User --> Register
+User --> Login
+User --> Logout
+
+' 定义关系 - 账户管理
+User --> ViewAccounts
+User --> CreateAccount
+User --> EditAccount
+User --> DeleteAccount
+
+' 定义关系 - 分类管理
+User --> ViewCategories
+User --> CreateCategory
+User --> EditCategory
+User --> DeleteCategory
+
+' 定义关系 - 账单管理
+User --> ViewBills
+User --> AddBill
+User --> EditBill
+User --> DeleteBill
+User --> SearchBills
+
+' 定义关系 - 预算管理
+User --> ViewBudgets
+User --> SetBudget
+User --> EditBudget
+User --> DeleteBudget
+
+' 定义关系 - 标签管理
+User --> CreateTag
+User --> EditTag
+User --> DeleteTag
+User --> AddTagToBill
+
+' 定义关系 - 统计报表
+User --> ViewMonthlyStats
+User --> ViewCategoryStats
+User --> ViewTagStats
+User --> GenerateReport
+
+' 定义关系 - 数据管理
+User --> ExportData
+User --> ImportData
+User --> BackupData
+
+' 定义包含关系
+ViewBills .> SearchBills : <<include>>
+
+' 定义扩展关系
+AddBill .> AddTagToBill : <<extend>>
+EditBill .> AddTagToBill : <<extend>>
+
+' 设置布局 - 创建更均衡的网格布局
+' 左侧列
+User -down-> Register
+Register -down-> Login
+Login -down-> Logout
+
+' 中左列
+User -down-> ViewAccounts
+ViewAccounts -down-> CreateAccount
+CreateAccount -down-> EditAccount
+EditAccount -down-> DeleteAccount
+
+' 中右列
+User -down-> ViewCategories
+ViewCategories -down-> CreateCategory
+CreateCategory -down-> EditCategory
+EditCategory -down-> DeleteCategory
+
+' 右侧列
+User -down-> ViewBills
+ViewBills -down-> AddBill
+AddBill -down-> EditBill
+EditBill -down-> DeleteBill
+DeleteBill -down-> SearchBills
+
+' 下方区域 - 预算管理
+User -down-> ViewBudgets
+ViewBudgets -down-> SetBudget
+SetBudget -down-> EditBudget
+EditBudget -down-> DeleteBudget
+
+' 下方区域 - 标签管理
+User -down-> CreateTag
+CreateTag -down-> EditTag
+EditTag -down-> DeleteTag
+DeleteTag -down-> AddTagToBill
+
+' 下方区域 - 统计报表
+User -down-> ViewMonthlyStats
+ViewMonthlyStats -down-> ViewCategoryStats
+ViewCategoryStats -down-> ViewTagStats
+ViewTagStats -down-> GenerateReport
+
+' 下方区域 - 数据管理
+User -down-> ExportData
+ExportData -down-> ImportData
+ImportData -down-> BackupData
+
+' 添加注释
+note top of Register
+  新用户注册功能
+  需要提供用户名、邮箱和密码
+end note
+
+note top of Login
+  已注册用户登录功能
+  需要提供邮箱和密码
+end note
+
+note top of AddBill
+  核心功能之一
+  记录收支明细
+end note
+
+note bottom of ViewMonthlyStats
+  提供图表化统计信息
+  帮助用户了解财务状况
+end note
+
+note bottom of ExportData
+  支持数据导出和备份
+  保障数据安全
+end note
+
+note right of User
+  系统的主要使用者
+  可以执行所有功能
+end note
+
+@enduml
