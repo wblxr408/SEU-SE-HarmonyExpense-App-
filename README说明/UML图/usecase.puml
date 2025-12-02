@@ -1,6 +1,7 @@
 @startuml HarmonyExpense-UseCaseDiagram
 !theme plain
 skinparam linetype ortho
+skinparam defaultFontName "Microsoft YaHei"
 
 ' 定义参与者
 actor "用户" as User #LightBlue
@@ -100,7 +101,7 @@ User --> ImportData
 User --> BackupData
 
 ' 定义包含关系
-ViewBills .> SearchBills : <<include>>
+ViewBills .[hidden] SearchBills : <<include>>
 
 ' 定义扩展关系
 AddBill .> AddTagToBill : <<extend>>
@@ -108,51 +109,51 @@ EditBill .> AddTagToBill : <<extend>>
 
 ' 设置布局 - 创建更均衡的网格布局
 ' 左侧列
-User -down-> Register
+User -[hidden]down-> Register
 Register -down-> Login
-Login -down-> Logout
+Login -[hidden]down-> Logout
 
 ' 中左列
-User -down-> ViewAccounts
-ViewAccounts -down-> CreateAccount
-CreateAccount -down-> EditAccount
-EditAccount -down-> DeleteAccount
+User -[hidden]down-> ViewAccounts
+ViewAccounts -[hidden]down-> CreateAccount
+CreateAccount -[hidden]down-> EditAccount
+EditAccount -[hidden]down-> DeleteAccount
 
 ' 中右列
-User -down-> ViewCategories
-ViewCategories -down-> CreateCategory
+User -[hidden]down-> ViewCategories
+ViewCategories -[hidden]down-> CreateCategory
 CreateCategory -down-> EditCategory
-EditCategory -down-> DeleteCategory
+EditCategory -[hidden]down-> DeleteCategory
 
 ' 右侧列
-User -down-> ViewBills
-ViewBills -down-> AddBill
+User -[hidden]down-> ViewBills
+ViewBills -[hidden]down-> AddBill
 AddBill -down-> EditBill
-EditBill -down-> DeleteBill
-DeleteBill -down-> SearchBills
+EditBill -[hidden]down-> DeleteBill
+DeleteBill -[hidden]down-> SearchBills
 
 ' 下方区域 - 预算管理
-User -down-> ViewBudgets
-ViewBudgets -down-> SetBudget
-SetBudget -down-> EditBudget
-EditBudget -down-> DeleteBudget
+User -[hidden]down-> ViewBudgets
+ViewBudgets -[hidden]down-> SetBudget
+SetBudget -[hidden]down-> EditBudget
+EditBudget -[hidden]down-> DeleteBudget
 
 ' 下方区域 - 标签管理
-User -down-> CreateTag
+User -[hidden]down-> CreateTag
 CreateTag -down-> EditTag
-EditTag -down-> DeleteTag
-DeleteTag -down-> AddTagToBill
+EditTag -[hidden]down-> DeleteTag
+DeleteTag -[hidden]down-> AddTagToBill
 
 ' 下方区域 - 统计报表
-User -down-> ViewMonthlyStats
-ViewMonthlyStats -down-> ViewCategoryStats
-ViewCategoryStats -down-> ViewTagStats
-ViewTagStats -down-> GenerateReport
+User -[hidden]down-> ViewMonthlyStats
+ViewMonthlyStats -[hidden]down-> ViewCategoryStats
+ViewCategoryStats -[hidden]down-> ViewTagStats
+ViewTagStats -[hidden]down-> GenerateReport
 
 ' 下方区域 - 数据管理
-User -down-> ExportData
-ExportData -down-> ImportData
-ImportData -down-> BackupData
+User -[hidden]down-> ExportData
+ExportData -[hidden]down-> ImportData
+ImportData -[hidden]down-> BackupData
 
 ' 添加注释
 note top of Register

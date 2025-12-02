@@ -1,0 +1,30 @@
+@startuml HarmonyExpense-Statistics-UseCase
+!theme plain
+skinparam linetype ortho
+skinparam defaultFontName "Microsoft YaHei"
+
+' 定义参与者
+actor "用户" as User #LightBlue
+
+' 定义用例 - 统计报表模块
+usecase "查看月度统计" as ViewMonthlyStats #LightSkyBlue
+usecase "查看分类统计" as ViewCategoryStats #LightSkyBlue
+usecase "查看标签统计" as ViewTagStats #LightSkyBlue
+usecase "生成报表" as GenerateReport #LightSkyBlue
+
+' 定义关系
+User --> ViewMonthlyStats
+User --> ViewCategoryStats
+User --> ViewTagStats
+User --> GenerateReport
+
+
+
+' 添加注释
+note bottom of ViewMonthlyStats
+  提供图表化统计信息
+  帮助用户了解财务状况
+end note
+
+@enduml
+

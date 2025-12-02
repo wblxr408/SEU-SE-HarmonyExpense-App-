@@ -1,0 +1,32 @@
+@startuml HarmonyExpense-Auth-UseCase
+!theme plain
+skinparam linetype ortho
+skinparam defaultFontName "Microsoft YaHei"
+
+' 定义参与者
+actor "用户" as User #LightBlue
+
+' 定义用例 - 用户认证模块
+usecase "注册账户" as Register #LightGreen
+usecase "登录系统" as Login #LightGreen
+usecase "退出系统" as Logout #LightGreen
+
+' 定义关系
+User --> Register
+User --> Login
+User --> Logout
+
+
+' 添加注释
+note top of Register
+  新用户注册功能
+  需要提供用户名、邮箱和密码
+end note
+
+note top of Login
+  已注册用户登录功能
+  需要提供邮箱和密码
+end note
+
+@enduml
+

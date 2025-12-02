@@ -1,0 +1,35 @@
+@startuml HarmonyExpense-Bill-UseCase
+!theme plain
+skinparam linetype ortho
+skinparam defaultFontName "Microsoft YaHei"
+
+' 定义参与者
+actor "用户" as User #LightBlue
+
+' 定义用例 - 账单管理模块
+usecase "查看账单列表" as ViewBills #LightCoral
+usecase "添加账单" as AddBill #LightCoral
+usecase "编辑账单" as EditBill #LightCoral
+usecase "删除账单" as DeleteBill #LightCoral
+usecase "搜索账单" as SearchBills #LightCoral
+
+
+
+' 定义包含关系
+ViewBills .> SearchBills : <<include>>
+
+' 设置布局
+User -down-> ViewBills
+ViewBills -right-> SearchBills
+ViewBills -down-> AddBill
+AddBill -down-> EditBill
+EditBill -down-> DeleteBill
+
+' 添加注释
+note top of AddBill
+  核心功能之一
+  记录收支明细
+end note
+
+@enduml
+

@@ -1,0 +1,24 @@
+@startuml HarmonyExpense-Account-UseCase
+!theme plain
+skinparam linetype ortho
+skinparam defaultFontName "Microsoft YaHei"
+
+' 定义参与者
+actor "用户" as User #LightBlue
+
+' 定义用例 - 账户管理模块
+usecase "查看账户列表" as ViewAccounts #LightYellow
+usecase "创建账户" as CreateAccount #LightYellow
+usecase "编辑账户" as EditAccount #LightYellow
+usecase "删除账户" as DeleteAccount #LightYellow
+
+' 定义关系
+User --> ViewAccounts
+User --> CreateAccount
+User --> EditAccount
+User --> DeleteAccount
+
+
+
+@enduml
+
