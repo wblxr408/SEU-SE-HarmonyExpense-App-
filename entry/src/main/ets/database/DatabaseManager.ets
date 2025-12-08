@@ -270,6 +270,83 @@ export class DatabaseManager {
       `);
       console.log('[DatabaseManager] 表 bill_tags 及索引创建成功');
 
+      // 10. 创建提醒表（依赖 users, categories, accounts, budgets）
+      await store.executeSql(`
+        CREATE TABLE IF NOT EXISTS reminders (
+          reminder_id INTEGER PRIMARY KEY AUTOINCREMENT,
+          user_id INTEGER NOT NULL,
+          type TEXT NOT NULL CHECK (type IN ('bill', 'budget')),
+          title TEXT NOT NULL,
+          description TEXT,
+          amount REAL,
+          category_id INTEGER,
+          account_id INTEGER,
+          budget_id INTEGER,
+          frequency TEXT NOT NULL CHECK (frequency IN ('once', 'daily', 'weekly', 'monthly', 'yearly')),
+          reminder_date TEXT NOT NULL,
+          next_reminder_date TEXT NOT NULL,
+          is_active INTEGER DEFAULT 1 CHECK (is_active IN (0, 1)),
+          created_at TEXT NOT NULL,
+          updated_at TEXT NOT NULL,
+          is_deleted INTEGER DEFAULT 0 CHECK (is_deleted IN (0, 1)),
+          FOREIGN KEY (user_id) REFERENCES users(user_id),
+          FOREIGN KEY (category_id) REFERENCES categories(category_id),
+          FOREIGN KEY (account_id) REFERENCES accounts(account_id),
+          FOREIGN KEY (budget_id) REFERENCES budgets(budget_id)
+        );
+      `);
+      
+      // 创建提醒表索引
+      await store.executeSql(`
+        CREATE INDEX IF NOT EXISTS idx_reminders_user 
+        ON reminders (user_id) WHERE is_deleted = 0;
+      `);
+      await store.executeSql(`
+        CREATE INDEX IF NOT EXISTS idx_reminders_next_date 
+        ON reminders (user_id, next_reminder_date) WHERE is_active = 1 AND is_deleted = 0;
+      `);
+      await store.executeSql(`
+        CREATE INDEX IF NOT EXISTS idx_reminders_type 
+        ON reminders (user_id, type) WHERE is_deleted = 0;
+      `);
+      console.log('[DatabaseManager] 表 reminders 及索引创建成功');
+
+      // 11. 创建云端同步记录表（依赖 users）
+      await store.executeSql(`
+        CREATE TABLE IF NOT EXISTS cloud_sync_records (
+          sync_id INTEGER PRIMARY KEY AUTOINCREMENT,
+          user_id INTEGER NOT NULL,
+          sync_type TEXT NOT NULL CHECK (sync_type IN ('full', 'incremental')),
+          sync_direction TEXT NOT NULL CHECK (sync_direction IN ('upload', 'download', 'bidirectional')),
+          status TEXT NOT NULL CHECK (status IN ('pending', 'in_progress', 'completed', 'failed')),
+          data_types TEXT NOT NULL,
+          record_count INTEGER DEFAULT 0,
+          start_time TEXT NOT NULL,
+          end_time TEXT,
+          error_message TEXT,
+          cloud_provider TEXT NOT NULL CHECK (cloud_provider IN ('huawei', 'custom')),
+          last_sync_hash TEXT,
+          created_at TEXT NOT NULL,
+          updated_at TEXT NOT NULL,
+          FOREIGN KEY (user_id) REFERENCES users(user_id)
+        );
+      `);
+      
+      // 创建云端同步记录表索引
+      await store.executeSql(`
+        CREATE INDEX IF NOT EXISTS idx_cloud_sync_user 
+        ON cloud_sync_records (user_id);
+      `);
+      await store.executeSql(`
+        CREATE INDEX IF NOT EXISTS idx_cloud_sync_status 
+        ON cloud_sync_records (user_id, status);
+      `);
+      await store.executeSql(`
+        CREATE INDEX IF NOT EXISTS idx_cloud_sync_time 
+        ON cloud_sync_records (user_id, created_at DESC);
+      `);
+      console.log('[DatabaseManager] 表 cloud_sync_records 及索引创建成功');
+
       console.log('[DatabaseManager] 所有数据表创建完成');
     } catch (error) {
       throw DatabaseManager.toError('[DatabaseManager] 创建数据表失败', error);

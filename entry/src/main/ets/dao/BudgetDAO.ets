@@ -135,6 +135,26 @@ export class BudgetDAO {
   }
 
   /**
+   * 根据用户ID查询预算
+   */
+  static async getByUserId(userId: number): Promise<Budget[]> {
+    const store: relationalStore.RdbStore = DatabaseManager.getDatabase();
+    const resultSet: relationalStore.ResultSet = await store.querySql(
+      'SELECT * FROM budgets WHERE user_id = ? AND is_deleted = 0 ORDER BY budget_id ASC',
+      [userId]
+    );
+    const list: Budget[] = [];
+    try {
+      while (resultSet.goToNextRow()) {
+        list.push(BudgetDAO.mapRowToBudget(resultSet));
+      }
+      return list;
+    } finally {
+      resultSet.close();
+    }
+  }
+
+  /**
    * 事务封装 - 使用 DAOHelper 统一方法
    */
   static async transaction(fn: () => Promise<void>): Promise<void> {

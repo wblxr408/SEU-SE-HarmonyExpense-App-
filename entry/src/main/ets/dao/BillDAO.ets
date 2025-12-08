@@ -151,6 +151,23 @@ export class BillDAO {
   }
 
 
+  /**
+   * 根据用户ID查询账单
+   */
+  static async getByUserId(userId: number): Promise<Bill[]> {
+    const sql = `SELECT * FROM bills WHERE user_id = ? AND is_deleted = 0 ORDER BY transaction_date DESC`;
+    const rs = await DatabaseManager.getDatabase().querySql(sql, [userId]);
+    const list: Bill[] = [];
+    try {
+      while (rs.goToNextRow()) {
+        list.push(BillDAO.mapRow(rs));
+      }
+      return list;
+    } finally {
+      rs.close();
+    }
+  }
+
   static async getBillsByFilters(
     userId: number,
     dateRange:DateRangeFilter ,
