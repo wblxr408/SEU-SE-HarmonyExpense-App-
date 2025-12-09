@@ -2,7 +2,7 @@ import { describe, beforeAll, it, expect } from '@ohos/hypium';
 import { BillDAO } from '../../../../src/main/ets/dao/BillDAO';
 import { AccountDAO } from '../../../../src/main/ets/dao/AccountDAO';
 import { CategoryDAO } from '../../../../src/main/ets/dao/CategoryDAO';
-import { DatabaseManager } from '../../../../src/main/ets/dao/DatabaseManager';
+import { DatabaseManager } from '../../../../src/main/ets/database/DatabaseManager';
 import { Bill } from '../../../../src/main/ets/model/Bill';
 import { Account } from '../../../../src/main/ets/model/Account';
 import { Category } from '../../../../src/main/ets/model/Category';
@@ -23,7 +23,8 @@ export default function BillDAOTest(): void {
 
       // 创建测试用的账户和分类
       const now = new Date().toISOString();
-      const testAccount = new Account(0, 1, '测试账户', 'bank', 1000.0, '#1E90FF', now, now, 0);
+      const testAccount = new Account(0, 1, '测试账户', 'bank', 1000.0, '#1E90FF', now, 0);
+      testAccount.updatedAt = now;
       const testCategory = new Category(0, 1, '测试分类', 'expense', '🍽️', '#FF6B6B', 0, 0, now, now, 0);
       
       try {
@@ -78,7 +79,7 @@ export default function BillDAOTest(): void {
     });
 
     it('should soft delete bill', 0, async () => {
-      await BillDAO.delete(1);
+      await BillDAO.delete(1, 1);
       const deleted = await BillDAO.getById(1, 1);
       expect(deleted === null).assertTrue();
     });

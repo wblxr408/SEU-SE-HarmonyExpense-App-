@@ -1,7 +1,7 @@
 import { describe, beforeAll, it, expect } from '@ohos/hypium';
 import { UserDAO } from '../../../../src/main/ets/dao/UserDAO';
 import { User } from '../../../../src/main/ets/model/User';
-import { DatabaseManager } from '../../../../src/main/ets/dao/DatabaseManager';
+import { DatabaseManager } from '../../../../src/main/ets/database/DatabaseManager';
 import common from '@ohos.app.ability.common';
 
 // 在测试环境中获取 Context 的辅助函数

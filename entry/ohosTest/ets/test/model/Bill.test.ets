@@ -114,6 +114,7 @@ export default function BillTest(): void {
     it('fromJSON should create correct Bill instance', 0, () => {
       const json: BillJSON = {
         billId: 2,
+        userId: 1,
         accountId: 1,
         categoryId: 1,
         amount: 200.0,
@@ -122,7 +123,7 @@ export default function BillTest(): void {
         type: 'expense',
         createdAt: '2025-11-05T18:00:00',
         updatedAt: '2025-11-05T18:00:00',
-        is_deleted: 0
+        isDeleted: 0
       };
       const bill = Bill.fromJSON(json);
       expect(bill.billId).assertEqual(2);

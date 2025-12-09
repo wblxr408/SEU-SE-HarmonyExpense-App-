@@ -1,13 +1,32 @@
 import { describe, beforeAll, it, expect } from '@ohos/hypium';
 import { CategoryDAO } from '../../../../src/main/ets/dao/CategoryDAO';
 import { Category } from '../../../../src/main/ets/model/Category';
-import { DatabaseManager } from '../../../../src/main/ets/dao/DatabaseManager';
+import { DatabaseManager } from '../../../../src/main/ets/database/DatabaseManager';
 import common from '@ohos.app.ability.common';
 
 // 在测试环境中获取 Context 的辅助函数
 function getTestContext(): common.Context {
-  // 在 stageMode 中，getContext 是全局函数
   return getContext() as common.Context;
+}
+
+// 验证结果接口
+interface ValidationResult {
+  valid: boolean;
+  message: string;
+}
+
+// 模拟CategoryManagement页面的保存验证逻辑
+function validateCategoryForSave(category: Category | null): ValidationResult {
+  if (!category) {
+    const result: ValidationResult = { valid: false, message: '分类对象为空' };
+    return result;
+  }
+  if (!category.name || category.name.trim() === '') {
+    const result: ValidationResult = { valid: false, message: '分类名称不能为空' };
+    return result;
+  }
+  const result: ValidationResult = { valid: true, message: '' };
+  return result;
 }
 
 export default function CategoryManagementPageTest(): void {
@@ -20,13 +39,11 @@ export default function CategoryManagementPageTest(): void {
     });
 
     it('should load categories successfully', 0, async () => {
-      // 测试加载分类列表
       const categories = await CategoryDAO.getAll(testUserId);
       expect(Array.isArray(categories)).assertTrue();
     });
 
     it('should create new category', 0, async () => {
-      // 测试创建新分类
       const now = new Date().toISOString();
       const newCategory = new Category(
         0,
@@ -49,7 +66,6 @@ export default function CategoryManagementPageTest(): void {
     });
 
     it('should update category', 0, async () => {
-      // 测试更新分类
       const categories = await CategoryDAO.getAll(testUserId);
       if (categories.length > 0) {
         const category = categories[0];
@@ -70,7 +86,6 @@ export default function CategoryManagementPageTest(): void {
     });
 
     it('should delete category (soft delete)', 0, async () => {
-      // 测试软删除分类
       const now = new Date().toISOString();
       const tempCategory = new Category(
         0,
@@ -98,14 +113,12 @@ export default function CategoryManagementPageTest(): void {
     });
 
     it('should filter categories by type', 0, async () => {
-      // 测试按类型筛选分类
       const expenseCategories = await CategoryDAO.getByType(testUserId, 'expense');
       const incomeCategories = await CategoryDAO.getByType(testUserId, 'income');
 
       expect(Array.isArray(expenseCategories)).assertTrue();
       expect(Array.isArray(incomeCategories)).assertTrue();
 
-      // 验证类型正确
       for (const cat of expenseCategories) {
         expect(cat.type).assertEqual('expense');
       }
@@ -115,11 +128,10 @@ export default function CategoryManagementPageTest(): void {
     });
 
     it('should validate category name is required', 0, () => {
-      // 测试分类名称验证
       const invalidCategory = new Category(
         0,
         testUserId,
-        '', // 空名称
+        '',
         'expense',
         '🧪',
         '#FF6B6B',
@@ -134,7 +146,6 @@ export default function CategoryManagementPageTest(): void {
     });
 
     it('should clone category correctly', 0, () => {
-      // 测试分类克隆功能
       const original = new Category(
         1,
         testUserId,
@@ -154,9 +165,65 @@ export default function CategoryManagementPageTest(): void {
       expect(cloned.name).assertEqual(original.name);
       expect(cloned.type).assertEqual(original.type);
 
-      // 修改克隆对象不应影响原对象
       cloned.name = '修改后的分类';
       expect(original.name).assertEqual('原始分类');
+    });
+  });
+
+  describe('CategoryManagement Page Save Validation', () => {
+    it('should validate category name is required', 0, () => {
+      const category = new Category(0, 1, '', 'expense', '🧪', '#FF6B6B', 0, 0, '', '', 0);
+      const validation = validateCategoryForSave(category);
+      expect(validation.valid).assertFalse();
+      expect(validation.message.includes('名称')).assertTrue();
+    });
+
+    it('should pass validation for valid category', 0, () => {
+      const category = new Category(0, 1, '有效分类', 'expense', '🧪', '#FF6B6B', 0, 0, '', '', 0);
+      const validation = validateCategoryForSave(category);
+      expect(validation.valid).assertTrue();
+    });
+
+    it('should reject null category', 0, () => {
+      const validation = validateCategoryForSave(null);
+      expect(validation.valid).assertFalse();
+    });
+
+    it('should reject category with whitespace-only name', 0, () => {
+      const category = new Category(0, 1, '   ', 'expense', '🧪', '#FF6B6B', 0, 0, '', '', 0);
+      const validation = validateCategoryForSave(category);
+      expect(validation.valid).assertFalse();
+    });
+  });
+
+  describe('CategoryManagement Page State Management', () => {
+    it('should handle create vs update mode', 0, () => {
+      // 新建模式：categoryId === 0
+      const newCategory = new Category(0, 1, '新分类', 'expense', '🧪', '#FF6B6B', 0, 0, '', '', 0);
+      const isCreate = newCategory.categoryId === 0;
+      expect(isCreate).assertTrue();
+
+      // 编辑模式：categoryId > 0
+      const existingCategory = new Category(1, 1, '现有分类', 'expense', '🧪', '#FF6B6B', 0, 0, '', '', 0);
+      const isUpdate = existingCategory.categoryId > 0;
+      expect(isUpdate).assertTrue();
+    });
+
+    it('should set timestamps correctly for create', 0, () => {
+      const now = new Date().toISOString();
+      const category = new Category(0, 1, '新分类', 'expense', '🧪', '#FF6B6B', 0, 0, '', '', 0);
+      category.createdAt = now;
+      category.updatedAt = now;
+      expect(category.createdAt).assertEqual(now);
+      expect(category.updatedAt).assertEqual(now);
+    });
+
+    it('should update timestamp for update', 0, () => {
+      const category = new Category(1, 1, '现有分类', 'expense', '🧪', '#FF6B6B', 0, 0, '2025-11-01', '2025-11-01', 0);
+      const newUpdatedAt = new Date().toISOString();
+      category.updatedAt = newUpdatedAt;
+      expect(category.updatedAt).assertEqual(newUpdatedAt);
+      expect(category.createdAt).assertEqual('2025-11-01'); // 创建时间不变
     });
   });
 }
