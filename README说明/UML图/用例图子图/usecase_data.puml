@@ -10,12 +10,13 @@ actor "用户" as User #LightBlue
 usecase "导出数据" as ExportData #LightGray
 usecase "导入数据" as ImportData #LightGray
 usecase "数据备份" as BackupData #LightGray
+ usecase "数据云端同步" as CloudSync #LightGray
 
 ' 定义关系
 User --> ExportData
 User --> ImportData
 User --> BackupData
-
+User --> CloudSync
 
 
 ' 添加注释

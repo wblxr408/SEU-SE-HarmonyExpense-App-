@@ -10,13 +10,15 @@ actor "用户" as User #LightBlue
 usecase "注册账户" as Register #LightGreen
 usecase "登录系统" as Login #LightGreen
 usecase "退出系统" as Logout #LightGreen
+usecase "切换用户" as Switchuser #LightGreen
 
 ' 定义关系
 User --> Register
 User --> Login
 User --> Logout
+User --> Switchuser
 
-
+User -[hidden]right-> Login
 ' 添加注释
 note top of Register
   新用户注册功能
@@ -29,4 +31,3 @@ note top of Login
 end note
 
 @enduml
-

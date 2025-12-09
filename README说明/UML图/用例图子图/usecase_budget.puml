@@ -11,13 +11,14 @@ usecase "查看预算状态" as ViewBudgets #LightSalmon
 usecase "设置预算" as SetBudget #LightSalmon
 usecase "编辑预算" as EditBudget #LightSalmon
 usecase "删除预算" as DeleteBudget #LightSalmon
+ usecase "预算提醒" as BudgetReminder #LightSalmon
 
 ' 定义关系
 User --> ViewBudgets
 User --> SetBudget
 User --> EditBudget
 User --> DeleteBudget
-
+User --> BudgetReminder
 
 
 @enduml

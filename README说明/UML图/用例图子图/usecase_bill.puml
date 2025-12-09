@@ -12,18 +12,27 @@ usecase "添加账单" as AddBill #LightCoral
 usecase "编辑账单" as EditBill #LightCoral
 usecase "删除账单" as DeleteBill #LightCoral
 usecase "搜索账单" as SearchBills #LightCoral
+usecase "账单提醒" as BillReminder #LightCoral
 
 
+' 定义关系
+User --> ViewBills
+User --> AddBill
+User --> EditBill
+User --> DeleteBill
+User --> SearchBills
+User --> BillReminder
 
 ' 定义包含关系
-ViewBills .> SearchBills : <<include>>
+ViewBills .[hidden] SearchBills : <<include>>
 
-' 设置布局
-User -down-> ViewBills
-ViewBills -right-> SearchBills
-ViewBills -down-> AddBill
-AddBill -down-> EditBill
-EditBill -down-> DeleteBill
+' 设置布局 - 水平排列
+User -[hidden]right-> ViewBills
+ViewBills -[hidden]right-> AddBill
+AddBill -[hidden]right-> EditBill
+EditBill -[hidden]right-> DeleteBill
+DeleteBill -[hidden]right-> SearchBills
+SearchBills -[hidden]right-> BillReminder
 
 ' 添加注释
 note top of AddBill
