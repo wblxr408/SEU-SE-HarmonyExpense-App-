@@ -195,6 +195,20 @@ export class BudgetDAO {
     }
   }
 
+  static async getByUserId(userId: number): Promise<Budget[]> {
+    const store = BudgetDAO.ensureDb();
+    const sql = `SELECT * FROM budgets WHERE user_id = ? AND is_deleted = 0 ORDER BY budget_id DESC`;
+    const resultSet = await store.querySql(sql, [userId]);
+    const list: Budget[] = [];
+    try {
+      while (resultSet.goToNextRow()) {
+        list.push(BudgetDAO.mapRowToBudget(resultSet));
+      }
+      return list;
+    } finally {
+      resultSet.close();
+    }
+  }
   static async exists(budgetId: number): Promise<boolean> {
     const store: relationalStore.RdbStore = BudgetDAO.ensureDb();
     const sql: string = 'SELECT 1 FROM budgets WHERE budget_id = ?';
@@ -205,4 +219,5 @@ export class BudgetDAO {
       rs.close();
     }
   }
+
 }

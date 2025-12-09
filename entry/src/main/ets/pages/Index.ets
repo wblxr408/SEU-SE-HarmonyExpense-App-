@@ -1,13 +1,9 @@
 
-
-
-
 import  router from '@ohos.router';
 import { Bill } from '../model/Bill'; //
 import { BillDAO } from '../dao/BillDAO'; //
 import { DateRangeFilter } from '../dao/BillDAO';
 import hilog from '@ohos.hilog'; // 用于日志
-import { CURRENT_USER_ID } from '../common/Constants';
 import { BusinessError } from '@ohos.base';
 import { Category } from '../model';
 import { CategoryDAO } from '../dao/CategoryDAO';
@@ -35,6 +31,7 @@ const LOG_TAG = 'AddBill'
 @Entry
 @Component
 struct Index {
+  @StorageLink('currentUserId') currentUserId: number = 1;
   @State transactions: Array<Bill> = []; //定义一个变量，用于存储交易数据>;
   @State isLoading: boolean = true;
   @State allCategories: Array<Category> = [];
@@ -54,14 +51,14 @@ struct Index {
 
     try {
       //使用BillDAO类中的getAllBills方法获取所有交易数据
-      // 1. 根据当前 @State selectedDate 计算日期范围
+
       const dateRangeObj = this.getDateRange(this.selectedDate);
       const dateRange = dateRangeObj as DateRangeFilter;
       hilog.info(HILOG_DOMAIN, LOG_TAG, `加载账单: DateRange=${JSON.stringify(dateRange)}, CategoryID=${this.selectedCategoryId}`);
 
-      // 2. 调用 B 成员提供的新 DAO 方法
+
       const billsFromDB = await BillDAO.getBillsByFilters(
-        CURRENT_USER_ID,
+        this.currentUserId,
         dateRange,
         this.selectedCategoryId
       );
@@ -79,7 +76,7 @@ struct Index {
   //辅助函数，加载分类筛选器
   async loadFilterData() {
     try {
-      const categories: Category[]= await CategoryDAO.getAll(CURRENT_USER_ID);
+      const categories: Category[]= await CategoryDAO.getAll(this.currentUserId);
       // 手动添加一个 "所有分类" 选项
       const allOption = new Category();
       allOption.categoryId = 0;
@@ -118,89 +115,107 @@ struct Index {
   }
 
   build() {
-
-    //使用Navigation函数来显示页面导航和标题栏
     Navigation() {
+      // 使用 Stack 布局，让操作栏悬浮在底部，或者直接用 Column 垂直排列
       Column() {
 
+        // --- 1. 顶部筛选栏 (保持不变) ---
         Row({ space: 10 }) {
-          // 月份选择器 (改成 Text + 弹窗)
+          // ... 月份选择器 ...
           Text(this.formatDateToYearMonth(this.selectedDate) + ' ▽')
-            .fontSize(16)
-            .padding(10)
-            .backgroundColor(Color.White)
-            .borderRadius(8)
-            .onClick(() => {
-              this.showMonthPicker(); // 调用弹窗
-            })
+          // ... 属性保持不变 ...
+            .onClick(() => { this.showMonthPicker(); })
             .layoutWeight(1)
 
-          // 分类筛选器
+          // ... 分类筛选器 ...
           Select(this.allCategories.map((c) => new CategoryOption(c.name)))
-            .value(this.allCategories.find(c => c.categoryId === this.selectedCategoryId)?.name ?? '所有分类')
-            .onSelect((index: number) => {
-              this.selectedCategoryId = this.allCategories[index].categoryId;
-              this.loadBills();
-            })
+          // ... 属性保持不变 ...
             .layoutWeight(1)
         }
         .padding(10)
         .width('100%')
-        .backgroundColor('#F1F3F5') // 改成和背景一致
+        .backgroundColor('#F1F3F5')
 
-        // 账单列表
-
-        //UI的依赖状态
+        // --- 2. 账单列表 (保持不变，layoutWeight 设为 1 自动占满剩余空间) ---
         List({ space: 10 }) {
           ForEach(this.transactions, (item: Bill) => {
             ListItem() {
-              //将展示内容封装成函数
               this.TransactionRow(item);
             }
           })
         }
-        .layoutWeight(1) //列表占据剩余空间
+        .layoutWeight(1) // 关键：让列表占据中间所有剩余空间
         .padding({ left: 12, right: 12 })
 
-        //表格展示结束
-        Button('管理分类 ')
-          .type(ButtonType.Capsule)
-          .fontSize(18)
-          .width('80%')
-          .height(50)
-          .margin(20)
-          .onClick(() => {
-            router.push({
-              url: 'pages/CategoryManagement' //
-            })
-          })
-        Button('记一笔')
-          .type(ButtonType.Capsule)
-          .fontSize(18)
-          .width('80%')
-          .height(50)
-          .margin(20) //设置按钮外边框
-          .onClick(() => {
-            router.push({
-              url: 'pages/AddBill'
+        // --- 3. 底部功能区 (优化部分) ---
+        // 将原来的大按钮改为一行小图标+文字
+        Row() {
+          // 3.1 记一笔 (最核心功能，放中间或醒目位置)
+          Column() {
+            Image($r('app.media.ic_expense_default')) // 建议换个 "加号" 或 "笔" 的图标
+              .width(24).height(24).margin({bottom: 4})
+            Text('记账').fontSize(12).fontColor('#666666')
+          }
+          .onClick(() => { router.pushUrl({ url: 'pages/AddBill' }) })
+          .layoutWeight(1) // 均分宽度
+          .alignItems(HorizontalAlign.Center)
 
-            })
-          })
+          // 3.2 统计分析
+          Column() {
+            Image($r('app.media.ic_income_default')) // 建议换个 "报表" 图标
+              .width(24).height(24).margin({bottom: 4})
+            Text('统计').fontSize(12).fontColor('#666666')
+          }
+          .onClick(() => { router.pushUrl({ url: 'pages/StatisticsPage' }) })
+          .layoutWeight(1)
+          .alignItems(HorizontalAlign.Center)
+
+          // 3.3 管理分类
+          Column() {
+            Image($r('app.media.ic_switch')) // 建议换个 "分类" 图标
+              .width(24).height(24).margin({bottom: 4})
+            Text('分类').fontSize(12).fontColor('#666666')
+          }
+          .onClick(() => { router.pushUrl({ url: 'pages/CategoryManagement' }) })
+          .layoutWeight(1)
+          .alignItems(HorizontalAlign.Center)
+
+          // 3.4 管理账户
+          Column() {
+            Image($r('app.media.ic_public_delete')) // 建议换个 "卡片" 图标
+              .width(24).height(24).margin({bottom: 4})
+            Text('账户').fontSize(12).fontColor('#666666')
+          }
+          .onClick(() => { router.pushUrl({ url: 'pages/AccountManagement' }) })
+          .layoutWeight(1)
+          .alignItems(HorizontalAlign.Center)
+        }
+        .width('100%')
+        .height(60) // 固定底部栏高度
+        .backgroundColor(Color.White)
+        .border({ width: { top: 1 }, color: '#EEEEEE' }) // 顶部加一条细线
+        .padding({ top: 8 })
       }
     }
-
     .width('100%')
     .height('100%')
-    .backgroundColor($r('sys.color.point_color_checked')) //设置一个浅灰色的背景
+    .backgroundColor('#F1F3F5') // 背景色
     .title('记账APP 首页')
     .titleMode(NavigationTitleMode.Mini)
+    .menus([
+      {
+        value: '设置',
+        action: () => {
+          router.pushUrl({ url: 'pages/SettingsPage' })
+        }
+      }
+    ])
   }
-
   //自定义的展示行的函数
   @Builder
   TransactionRow(item: Bill) {
     Row() {
-        //暂时用图片代替资源
+      //暂时用图片代替资源
       Image(item.type=='expense'?$r('app.media.ic_expense_default'):$r('app.media.ic_income_default'))
         .width(40)
         .height(40)
@@ -223,7 +238,7 @@ struct Index {
     .padding(12)
     .backgroundColor(Color.White)
     .borderRadius(8)
-    }
+  }
   formatDateToYearMonth(date: Date): string {
     const year = date.getFullYear();
     // getMonth() 返回 0-11，所以需要 +1

@@ -9,7 +9,7 @@ import { AccountDAO } from '../dao/AccountDAO' //
 import { Category } from '../model/Category' //
 import { CategoryDAO } from '../dao/CategoryDAO' //
 import { hilog } from '@kit.PerformanceAnalysisKit';
-import { CURRENT_USER_ID } from '../common/Constants';
+
 const HILOG_DOMAIN = 0x0001
 const LOG_TAG = 'AddBill'
 
@@ -33,6 +33,7 @@ struct AddBill{
 
   @State selectedCategoryId: number = 1;
   @State selectedAccountId: number = 1;
+  @StorageProp('currentUserId') currentUserId: number = 1;
 
   @State categoryOptions: SelectOption[] = [];
   //创建onPageShow 在页面显示的时候执行
@@ -40,34 +41,50 @@ struct AddBill{
     this.loadData();
   }
 
-  async loadData(){
-    try{
-      const userId = 1;
-      hilog.info(HILOG_DOMAIN, LOG_TAG, `开始加载数据，类型: ${this.billType}`);
-      //添加支出分裂
-      const accounts = await AccountDAO.getByUserId(userId);
-      const categories = await CategoryDAO.getByType(userId,this.billType);
+  async loadData() {
+    try {
 
+
+      hilog.info(HILOG_DOMAIN, LOG_TAG, `开始加载数据，类型: ${this.billType}, 用户ID: ${this.currentUserId}`);
+
+      // 2. 【修改】使用 this.currentUserId
+      const accounts = await AccountDAO.getByUserId(this.currentUserId);
+      const categories = await CategoryDAO.getByType(this.currentUserId, this.billType);
 
       this.allCategories = categories;
       this.allAccounts = accounts;
-     // tOption 数组
+
+      // 更新 Select 的选项数据
       this.categoryOptions = categories.map(cat => new SelectOption(cat.name));
 
-      //设置默认选中项
+      // 设置默认选中项
+      // 逻辑优化：只有当 selectedCategoryId 不在当前列表中时，才重置为第一个
+      // 这样切换 支出/收入 时体验更好
       if (categories.length > 0) {
-        this.selectedCategoryId = categories[0].categoryId;
+        const exists = categories.some(c => c.categoryId === this.selectedCategoryId);
+        if (!exists) {
+          this.selectedCategoryId = categories[0].categoryId;
+        }
+      } else {
+        this.selectedCategoryId = 0; // 没有分类时重置
       }
-      if (accounts.length > 0) {
-        this.selectedAccountId = accounts[0].accountId;
-      }
-      hilog.info(0x0000, 'AddBill', '分类和账户加载成功');
 
-    }catch(error){
+      if (accounts.length > 0) {
+        // 同样逻辑检查账户
+        const exists = accounts.some(a => a.accountId === this.selectedAccountId);
+        if (!exists) {
+          this.selectedAccountId = accounts[0].accountId;
+        }
+      } else {
+        this.selectedAccountId = 0;
+      }
+
+      hilog.info(0x0000, 'AddBill', `分类(${categories.length})和账户(${accounts.length})加载成功`);
+
+    } catch (error) {
       hilog.error(0x0000, 'AddBill', '加载数据失败: %{public}s', JSON.stringify(error));
       promptAction.showToast({ message: '加载分类/账户列表失败' });
     }
-
   }
   //创建一个辅助函数:将Date对象转换成相应的格式
 private formatDate(date:Date):string{
@@ -180,7 +197,7 @@ private formatDate(date:Date):string{
             const newBill = new Bill();
 
             // 使用 @State 中的真实数据
-            newBill.userId = CURRENT_USER_ID;
+            newBill.userId = this.currentUserId;
             newBill.accountId = this.selectedAccountId;
             newBill.categoryId = this.selectedCategoryId;
             newBill.type = this.billType;
@@ -217,6 +234,3 @@ private formatDate(date:Date):string{
   }
 }
 
-function Spacer() {
-  throw new Error('Function not implemented.');
-}

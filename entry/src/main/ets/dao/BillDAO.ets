@@ -130,7 +130,37 @@ export class BillDAO {
       return list;
     } finally { rs.close(); }
   }
+  static async getBillsByUserId(userId: number): Promise<Bill[]> {
+    const sql = `
+      SELECT * FROM bills
+      WHERE user_id = ? AND is_deleted = 0
+      ORDER BY transaction_date DESC
+    `;
 
+    const store = BillDAO.ensureDb();
+    let resultSet: relationalStore.ResultSet | null = null;
+    const bills: Bill[] = [];
+
+    try {
+      // 2. 执行查询
+      resultSet = await store.querySql(sql, [userId]);
+
+      // 3. 遍历结果集
+      while (resultSet.goToNextRow()) {
+        // 注意：这里调用 mapRow (或者你更新后的 mapRowToBill)
+        bills.push(BillDAO.mapRow(resultSet));
+      }
+      return bills;
+    } catch (error) {
+      console.error('[BillDAO] 查询用户账单失败: ' + JSON.stringify(error));
+      throw BillDAO.toError('[BillDAO] 查询用户账单失败', error);
+    } finally {
+      // 4. 释放资源
+      if (resultSet) {
+        resultSet.close();
+      }
+    }
+  }
   static async update(bill: Bill) {
     await BillDAO.validateForeignKeys(bill);
     const sql = `

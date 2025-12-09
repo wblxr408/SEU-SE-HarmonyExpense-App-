@@ -34,7 +34,7 @@ entry/src/main/ets/dao/
 * 数据库管理：初始化数据库，创建表。
 * 单条 CRUD：
     * 插入：insert
-    * 查询：getById, getAll
+    * 查询：getById, getAll,getByUserId
     * 更新：update
     * 删除：delete（逻辑删除）
 * 事务支持：transaction 封装异步操作。
