@@ -15,6 +15,7 @@
 
 ## 核心功能
 
+<<<<<<< HEAD
 ### 1. 基础 CRUD 操作
 所有 DAO 都提供标准的增删改查方法：
 - insert - 插入单条记录
@@ -22,6 +23,18 @@
 - getAll - 查询所有记录
 - update - 更新记录
 - delete - 删除记录
+=======
+## 这个 BillDAO 实现了：
+* 数据库管理：初始化数据库，创建表。
+* 单条 CRUD：
+    * 插入：insert
+    * 查询：getById, getAll,getByUserId
+    * 更新：update
+    * 删除：delete（逻辑删除）
+* 事务支持：transaction 封装异步操作。
+* 外键验证：在插入或更新前验证 account_id 与 category_id 是否存在。
+* 数据映射：ResultSet → Bill 对象。
+>>>>>>> main
 
 ### 2. 批量操作
 支持批量数据处理，提升性能：

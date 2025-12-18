@@ -13,6 +13,7 @@
  * limitations under the License.
  */
 
+<<<<<<< HEAD
 /**
  * 应用常量定义
  * 
@@ -47,4 +48,7 @@ export let CIRCLE_RADIUS: number = 80;
  * - README说明/高级功能实现文档.md
  * - README说明/高级功能快速开始.md
  */
+=======
+export let CIRCLE_RADIUS: number = 80
+>>>>>>> main
 export const CURRENT_USER_ID: number = 1;

@@ -48,6 +48,34 @@ export class UserDAO {
       return u;
     } finally { rs?.close(); }
   }
+  /**
+   * 根据用户名查询用户（用于登录验证）
+   */
+  static async getByUsername(username: string): Promise<User | null> {
+    const store = UserDAO.ensureDb();
+    const sql = `SELECT * FROM users WHERE username = ? AND is_deleted = 0`;
+
+    let rs: relationalStore.ResultSet | null = null;
+    try {
+      rs = await store.querySql(sql, [username]);
+      if (!rs.goToNextRow()) return null;
+
+      const u = new User();
+      u.userId = rs.getLong(rs.getColumnIndex('user_id'));
+      u.username = rs.getString(rs.getColumnIndex('username'));
+      u.email = rs.getString(rs.getColumnIndex('email'));
+      u.passwordHash = rs.getString(rs.getColumnIndex('password_hash'));
+      u.createdAt = rs.getString(rs.getColumnIndex('created_at'));
+      u.updatedAt = rs.getString(rs.getColumnIndex('updated_at'));
+      u.is_deleted = rs.getLong(rs.getColumnIndex('is_deleted'));
+      return u;
+    } catch (error) {
+      console.error('[UserDAO] getByUsername 失败: ' + JSON.stringify(error));
+      return null;
+    } finally {
+      if (rs) rs.close();
+    }
+  }
 
   /** 查询全部（未删除） */
   static async getAll(): Promise<User[]> {

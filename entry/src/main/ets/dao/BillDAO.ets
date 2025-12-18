@@ -4,13 +4,18 @@ import { DatabaseManager } from '../database/DatabaseManager';
 import { Bill } from '../model/Bill';
 import { AccountDAO } from './AccountDAO';
 import { CategoryDAO } from './CategoryDAO';
+<<<<<<< HEAD
 import { BatchQueryHelper } from '../database/BatchQueryHelper';
 import { DAOHelper } from '../common/DAOHelper';
+=======
+import hilog from '@ohos.hilog';
+>>>>>>> main
 
 export interface DateRangeFilter {
   start: string;
   end: string;
 }
+<<<<<<< HEAD
 
 /**
  * 分页查询结果接口
@@ -46,11 +51,67 @@ export interface MonthlyStats {
   balance: number;          // 当月净收支
   transactionCount: number; // 当月交易数
 }
+=======
+let db: relationalStore.RdbStore | null = null;
+>>>>>>> main
+
+interface GeneratedTypeLiteralInterface_1 {
+  start: string;
+  end: string;
+}
 
 export class BillDAO {
+<<<<<<< HEAD
   /**
    * @throws
    */
+=======
+
+  static async initDatabase(context: common.Context) {
+    const storeConfig: relationalStore.StoreConfig = {
+      name: 'harmony_expense.db',
+      securityLevel: relationalStore.SecurityLevel.S1
+    };
+    db = await relationalStore.getRdbStore(context, storeConfig);
+    console.log('[BillDAO] 数据库已初始化');
+    await BillDAO.createTables();
+  }
+
+  static async createTables() {
+    const store = BillDAO.ensureDb();
+    await store.executeSql(`
+      CREATE TABLE IF NOT EXISTS bills (
+        bill_id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id INTEGER NOT NULL,
+        account_id INTEGER NOT NULL,
+        category_id INTEGER NOT NULL,
+        amount REAL NOT NULL,
+        type TEXT NOT NULL,
+        note TEXT,
+        transaction_date TEXT NOT NULL,
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL,
+        is_deleted INTEGER DEFAULT 0
+      );
+    `);
+    await store.executeSql(`CREATE INDEX IF NOT EXISTS idx_bills_user_date ON bills (user_id, transaction_date);`);
+  }
+
+  private static ensureDb(): relationalStore.RdbStore {
+    if (!db) throw new Error('[BillDAO] Database not initialized');
+    return db;
+  }
+
+  private static toError(msg: string, err: Error | string | object): Error {
+    let detail = '';
+    try {
+      detail = typeof err === 'string' ? err : JSON.stringify(err);
+    } catch {}
+    return new Error(`${msg}${detail ? ' -> ' + detail : ''}`);
+  }
+
+
+>>>>>>> main
   private static mapRow(rs: relationalStore.ResultSet): Bill {
     return new Bill(
       // rs.getLong(0),
@@ -90,7 +151,15 @@ export class BillDAO {
       bill.accountId, bill.categoryId, bill.amount, bill.type, bill.note,
       bill.transactionDate, bill.createdAt, bill.updatedAt, bill.isDeleted
     ];
+<<<<<<< HEAD
     await DatabaseManager.getDatabase().executeSql(sql, params);
+=======
+    await BillDAO.ensureDb().executeSql(sql, params);
+    
+    // 更新账户余额
+    const delta = bill.type === 'expense' ? -bill.amount : bill.amount;
+    await AccountDAO.updateBalance(bill.accountId, delta);
+>>>>>>> main
   }
 
   static async validateForeignKeys(bill: Bill) {
@@ -100,9 +169,15 @@ export class BillDAO {
     if (!categoryExists) throw new Error(`[BillDAO] Category ${bill.categoryId} does not exist`);
   }
 
+<<<<<<< HEAD
   static async getById(billId: number, userId: number): Promise<Bill | null> {
     const sql = `SELECT * FROM bills WHERE bill_id = ? AND user_id = ? AND is_deleted = 0`;
     const rs = await DatabaseManager.getDatabase().querySql(sql, [billId, userId]);
+=======
+  static async getById(billId: number,userId:number): Promise<Bill | null> {
+    const sql = `SELECT * FROM bills WHERE bill_id = ? AND is_deleted = 0`;
+    const rs = await BillDAO.ensureDb().querySql(sql, [billId]);
+>>>>>>> main
     try {
       if (!rs.goToNextRow()) return null;
       return BillDAO.mapRow(rs);
@@ -118,7 +193,37 @@ export class BillDAO {
       return list;
     } finally { rs.close(); }
   }
+  static async getBillsByUserId(userId: number): Promise<Bill[]> {
+    const sql = `
+      SELECT * FROM bills
+      WHERE user_id = ? AND is_deleted = 0
+      ORDER BY transaction_date DESC
+    `;
 
+    const store = BillDAO.ensureDb();
+    let resultSet: relationalStore.ResultSet | null = null;
+    const bills: Bill[] = [];
+
+    try {
+      // 2. 执行查询
+      resultSet = await store.querySql(sql, [userId]);
+
+      // 3. 遍历结果集
+      while (resultSet.goToNextRow()) {
+        // 注意：这里调用 mapRow (或者你更新后的 mapRowToBill)
+        bills.push(BillDAO.mapRow(resultSet));
+      }
+      return bills;
+    } catch (error) {
+      console.error('[BillDAO] 查询用户账单失败: ' + JSON.stringify(error));
+      throw BillDAO.toError('[BillDAO] 查询用户账单失败', error);
+    } finally {
+      // 4. 释放资源
+      if (resultSet) {
+        resultSet.close();
+      }
+    }
+  }
   static async update(bill: Bill) {
     await BillDAO.validateForeignKeys(bill);
     const sql = `
@@ -134,6 +239,7 @@ export class BillDAO {
     await DatabaseManager.getDatabase().executeSql(sql, params);
   }
 
+<<<<<<< HEAD
   // 软删除 - 需要验证 userId 以确保数据安全
   static async delete(billId: number, userId: number) {
     const store = DatabaseManager.getDatabase();
@@ -158,6 +264,70 @@ export class BillDAO {
     const sql = `SELECT * FROM bills WHERE user_id = ? AND is_deleted = 0 ORDER BY transaction_date DESC`;
     const rs = await DatabaseManager.getDatabase().querySql(sql, [userId]);
     const list: Bill[] = [];
+=======
+  // 软删除
+  static async delete(billId: number,userId:number) {
+    const sql = `UPDATE bills SET is_deleted = 1 WHERE bill_id = ?`;
+    // 先查出来，因为要回滚余额
+    const bill = await BillDAO.getById(billId, userId);
+    if(bill) {
+        await BillDAO.ensureDb().executeSql(sql, [billId]);
+        // 回滚余额 (逻辑取反: 原来支出减少余额，现在就要增加回来)
+        const delta = bill.type === 'expense' ? bill.amount : -bill.amount;
+        await AccountDAO.updateBalance(bill.accountId, delta);
+    }
+  }
+
+  static async restore(billId: number,userId:number) {
+    const sql = `UPDATE bills SET is_deleted = 0 WHERE bill_id = ?`;
+    await BillDAO.ensureDb().executeSql(sql, [billId,userId]);
+  }
+
+
+  static async getBillsByFilters(
+    userId: number,
+    dateRange:DateRangeFilter ,
+    categoryId?: number
+  ): Promise<Bill[]> {
+
+    let sql = `
+      SELECT * FROM bills
+      WHERE user_id = ?
+        AND transaction_date >= ?
+        AND transaction_date <= ?
+        AND is_deleted = 0
+    `;
+    const params: (string | number)[] = [userId, dateRange.start, dateRange.end];
+
+    if (categoryId !== undefined && categoryId > 0) {
+      sql += ` AND category_id = ?`;
+      params.push(categoryId);
+    }
+    sql += ` ORDER BY transaction_date DESC`;
+
+    const store = BillDAO.ensureDb();
+    let resultSet: relationalStore.ResultSet | null = null;
+    const bills: Bill[] = [];
+
+    try {
+      resultSet = await store.querySql(sql, params);
+      while (resultSet.goToNextRow()) {
+        bills.push(BillDAO.mapRow(resultSet));
+      }
+      return bills;
+    } catch (error) {
+      throw BillDAO.toError('getBillsByFilters 查询失败', error);
+    } finally {
+      if (resultSet) {
+        resultSet.close();
+      }
+    }
+  }
+  // 事务封装
+  static async transaction(fn: () => Promise<void>) {
+    const store = BillDAO.ensureDb();
+    await store.beginTransaction();
+>>>>>>> main
     try {
       while (rs.goToNextRow()) {
         list.push(BillDAO.mapRow(rs));

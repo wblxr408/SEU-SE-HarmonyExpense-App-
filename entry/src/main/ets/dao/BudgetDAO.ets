@@ -154,6 +154,7 @@ export class BudgetDAO {
     }
   }
 
+<<<<<<< HEAD
   /**
    * 事务封装 - 使用 DAOHelper 统一方法
    */
@@ -164,7 +165,24 @@ export class BudgetDAO {
   /**
    * 检查预算是否存在 - 使用 DAOHelper 统一方法
    */
+=======
+  static async getByUserId(userId: number): Promise<Budget[]> {
+    const store = BudgetDAO.ensureDb();
+    const sql = `SELECT * FROM budgets WHERE user_id = ? AND is_deleted = 0 ORDER BY budget_id DESC`;
+    const resultSet = await store.querySql(sql, [userId]);
+    const list: Budget[] = [];
+    try {
+      while (resultSet.goToNextRow()) {
+        list.push(BudgetDAO.mapRowToBudget(resultSet));
+      }
+      return list;
+    } finally {
+      resultSet.close();
+    }
+  }
+>>>>>>> main
   static async exists(budgetId: number): Promise<boolean> {
     return await DAOHelper.exists('budgets', 'budget_id', budgetId);
   }
+
 }
