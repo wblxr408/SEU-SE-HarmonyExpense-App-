@@ -2,6 +2,12 @@
   "src": [
     "pages/Index",
     "pages/AddBill",
-    "pages/CategoryManagement"
+    "pages/CategoryManagement",
+    "pages/LoginPage",
+    "pages/RegisterPage",
+    "pages/AccountManagementPage",
+    "pages/SyncSettingsPage",
+    "pages/BackupPage",
+    "pages/ReminderSettingsPage"
   ]
 }

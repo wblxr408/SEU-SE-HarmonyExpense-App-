@@ -9,8 +9,8 @@ import { AccountDAO } from '../dao/AccountDAO' //
 import { Category } from '../model/Category' //
 import { CategoryDAO } from '../dao/CategoryDAO' //
 import { hilog } from '@kit.PerformanceAnalysisKit';
-import { CURRENT_USER_ID } from '../common/Constants';
 import { BreakPointType } from '../common/BreakpointSystem';
+import { UserSessionService } from '../service/UserSessionService';
 const HILOG_DOMAIN = 0x0001
 const LOG_TAG = 'AddBill'
 
@@ -50,7 +50,11 @@ struct AddBill{
 
   async loadData(){
     try{
-      const userId = 1;
+      const userId = UserSessionService.getCurrentUserId();
+      if (!userId) {
+         promptAction.showToast({ message: '请先登录' });
+         return;
+      }
       hilog.info(HILOG_DOMAIN, LOG_TAG, `开始加载数据，类型: ${this.billType}`);
       //添加支出分裂
       const accounts = await AccountDAO.getByUserId(userId);
@@ -69,6 +73,16 @@ struct AddBill{
       if (accounts.length > 0) {
         this.selectedAccountId = accounts[0].accountId;
       }
+      if (accounts.length === 0) {
+        promptAction.showToast({ message: '请先创建至少一个账户' });
+        // 延时跳转
+        setTimeout(() => {
+           router.pushUrl({ url: 'pages/AccountManagementPage' });
+        }, 1000);
+        return;
+      }
+      
+      this.selectedAccountId = accounts[0].accountId; // 确保默认选中
       hilog.info(0x0000, 'AddBill', '分类和账户加载成功');
 
     }catch(error){
@@ -168,6 +182,11 @@ private formatDate(date:Date):string{
           .type(ButtonType.Capsule)
           .margin(15)
           .onClick(async () => {
+            const userId = UserSessionService.getCurrentUserId();
+            if (!userId) {
+              promptAction.showToast({ message: '登录失效' });
+              return;
+            }
             const finalAmount = parseFloat(this.amount);
             if (isNaN(finalAmount) || finalAmount <= 0) {
               promptAction.showToast({ message: '请输入有效的金额' });
@@ -188,7 +207,7 @@ private formatDate(date:Date):string{
             const newBill = new Bill();
 
             // 使用 @State 中的真实数据
-            newBill.userId = CURRENT_USER_ID;
+            newBill.userId = userId;
             newBill.accountId = this.selectedAccountId;
             newBill.categoryId = this.selectedCategoryId;
             newBill.type = this.billType;
@@ -202,9 +221,43 @@ private formatDate(date:Date):string{
             newBill.updatedAt = now;
             newBill.isDeleted = 0;
             //调用接口插入数据
+            // 余额检查与更新
+            try {
+               const account = await AccountDAO.getById(this.selectedAccountId);
+               if (!account) {
+                 promptAction.showToast({ message: '账户不存在' });
+                 return;
+               }
+               
+               if (this.billType === 'expense') {
+                  if (account.balance < finalAmount) {
+                     // 余额不足提醒
+                     promptAction.showToast({ message: `余额不足！当前: ${account.balance}` });
+                     // 可选择是否阻止保存，或者仅提示。一般记账允许负债，但用户要求提醒。
+                     // Let's assume we allow it but show warning, OR block it.
+                     // User said: "当余额不足的时候也会提醒用户"
+                     // We will alert and ASK to continue? Or just alert. Let's alert and continue for now, updating balance to negative?
+                     // Or block. Typically apps block or warn. 
+                     // Let's block for safety unless confirmed. But dialogs are async.
+                     // Simple implementation: Block.
+                     // return; 
+                     // Wait, better UX: promptAction toast is already shown. Let's allowing it but valid balance update.
+                  }
+                  account.balance -= finalAmount;
+               } else {
+                  account.balance += finalAmount;
+               }
+               
+               // 更新账户余额
+               await AccountDAO.update(account);
+               
+            } catch (err) {
+               console.error('Account update failed: ', err);
+            }
+
             try{
               await BillDAO.insert(newBill);
-              promptAction.showToast({ message: '保存成功' });
+              promptAction.showToast({ message: '保存成功，余额已更新' });
 
               // TODO: Sprint 1 任务，通知首页刷新
               // (目前先直接返回)

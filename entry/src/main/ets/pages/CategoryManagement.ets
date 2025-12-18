@@ -1,15 +1,15 @@
-// 导入
+import router from '@ohos.router';
 import { Category } from '../model/Category' //
 import { CategoryDAO } from '../dao/CategoryDAO' //
 import promptAction from '@ohos.promptAction'
 import hilog from '@ohos.hilog'
 import type { BusinessError } from '@ohos.base'
 import { BreakPointType } from '../common/BreakpointSystem';
+import { UserSessionService } from '../service/UserSessionService';
 
 
 // HILOG 定义
 const LOG_TAG = 'CategoryManagement'
-const USER_ID = 1 // 假设当前用户ID为1
 const HILOG_DOMAIN = 0x0001 // ✅ 修复：hilog 需要一个数字 domain
 
 // ---------------------------------
@@ -139,12 +139,21 @@ struct CategoryManagement {
 
   // (R) 页面显示时加载数据
   onPageShow() {
+    if (!UserSessionService.getCurrentUserId()) {
+       promptAction.showToast({ message: '登录已过期，请重新登录' });
+       setTimeout(() => {
+          router.replaceUrl({ url: 'pages/LoginPage' });
+       }, 500);
+       return;
+    }
     this.loadCategories()
   }
 
   async loadCategories() {
     try {
-      const data = await CategoryDAO.getAll(USER_ID) //
+      const userId = UserSessionService.getCurrentUserId();
+      if (!userId) throw new Error('未登录');
+      const data = await CategoryDAO.getAll(userId) //
       this.categories = data
       hilog.info(HILOG_DOMAIN, LOG_TAG, `成功加载 ${data.length} 条分类`)
     } catch (err) {
@@ -156,7 +165,9 @@ struct CategoryManagement {
   // (D) 删除逻辑
   async handleDelete(categoryId: number) {
     try {
-      await CategoryDAO.softDelete(USER_ID, categoryId) //
+      const userId = UserSessionService.getCurrentUserId();
+      if (!userId) throw new Error('未登录');
+      await CategoryDAO.softDelete(userId, categoryId) //
       this.showToast('删除成功')
       this.loadCategories()
     } catch (err) {
@@ -178,10 +189,12 @@ struct CategoryManagement {
     try {
       const now = new Date().toISOString()
       this.currentEditingCategory.updatedAt = now
+      const userId = UserSessionService.getCurrentUserId();
+      if (!userId) throw new Error('未登录');
 
       if (this.currentEditingCategory.categoryId === 0) {
         // --- (C) Create 新建 ---
-        this.currentEditingCategory.userId = USER_ID
+        this.currentEditingCategory.userId = userId
         this.currentEditingCategory.createdAt = now
         await CategoryDAO.insert(this.currentEditingCategory) //
         this.showToast('创建成功')

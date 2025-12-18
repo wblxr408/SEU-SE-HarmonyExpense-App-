@@ -24,6 +24,46 @@ export class CategoryDAO {
       throw new Error('[CategoryDAO] 无效分类数据');
     }
     const store = DatabaseManager.getDatabase();
+    
+    // 1. 检查是否存在同名同类型分类（包括已删除的）
+    const checkSql = `SELECT * FROM categories WHERE user_id = ? AND name = ? AND type = ?`;
+    const checkRs = await store.querySql(checkSql, [category.userId, category.name, category.type]);
+    
+    try {
+      if (checkRs.goToNextRow()) {
+        const existingId = checkRs.getLong(checkRs.getColumnIndex('category_id'));
+        const isDeleted = checkRs.getLong(checkRs.getColumnIndex('is_deleted'));
+        
+        if (isDeleted === 1) {
+          // A. 已存在但被软删除 -> 恢复并更新
+          console.log(`[CategoryDAO] 发现已软删除的同名分类 (ID: ${existingId})，执行恢复`);
+          const now = new Date().toISOString();
+          const updateSql = `
+            UPDATE categories 
+            SET icon = ?, color = ?, sort_order = ?, updated_at = ?, is_deleted = 0 
+            WHERE category_id = ?
+          `;
+          await store.executeSql(updateSql, [
+            category.icon, 
+            category.color, 
+            category.sortOrder, 
+            now, 
+            existingId
+          ]);
+          // 确保传入对象的 ID 被更新，以便 UI 使用
+          category.categoryId = existingId; 
+          CacheManager.clear(new RegExp(`^categories:user:${category.userId}:`));
+          return;
+        } else {
+          // B. 已存在且未删除 -> 抛出明确错误
+          throw new Error('该分类名称已存在');
+        }
+      }
+    } finally {
+      checkRs.close();
+    }
+
+    // 2. 不存在重复 -> 执行正常插入
     const now = new Date().toISOString();
     const sql = `
       INSERT INTO categories
@@ -44,8 +84,12 @@ export class CategoryDAO {
     ];
     try {
       await store.executeSql(sql, params);
-      console.log(`[CategoryDAO] 插入成功: ${category.name}`);
       
+      // 尝试获取新插入的 ID (需要再次查询，因为 executeSql 不返回 ID)
+      // 为简化，UI层通常会刷新列表，或者我们可以做一次查询
+      // 但这里最重要的是不报错。
+      
+      console.log(`[CategoryDAO] 插入成功: ${category.name}`);
       // 清除该用户的分类缓存
       CacheManager.clear(new RegExp(`^categories:user:${category.userId}:`));
     } catch (error) {

@@ -8,6 +8,10 @@ import { BusinessError } from '@ohos.base';
 import { Category } from '../model';
 import { CategoryDAO } from '../dao/CategoryDAO';
 import { BreakPointType } from '../common/BreakpointSystem';
+import { MinePage } from './MinePage';
+import { StatisticsPage } from './StatisticsPage';
+import { UserSessionService } from '../service/UserSessionService';
+
 interface DateFilter{
   start:string;
   end:string;
@@ -37,6 +41,7 @@ struct Index {
   @State allCategories: Array<Category> = [];
   @State selectedDate: Date = new Date(); // 用于月份选择器
   @State selectedCategoryId: number = 0; // 0 代表 "所有分类"
+  @State statRefreshTrigger: number = 0; // Trigger for statistics refresh
   @StorageProp('currentBreakpoint') currentBreakpoint: string = 'md';
   
   // 响应式配置
@@ -47,6 +52,13 @@ struct Index {
   //添加onPageShow 生命周期函数
   async onPageShow() {
     hilog.info(HILOG_DOMAIN, LOG_TAG, 'onPageShow triggered');
+
+    // 检查登录状态
+    if (!UserSessionService.isLoggedIn()) {
+      hilog.info(HILOG_DOMAIN, LOG_TAG, 'User not logged in, redirecting to login');
+      router.replaceUrl({ url: 'pages/LoginPage' });
+      return;
+    }
 
     await this.loadFilterData();
 
@@ -64,8 +76,13 @@ struct Index {
       hilog.info(HILOG_DOMAIN, LOG_TAG, `加载账单: DateRange=${JSON.stringify(dateRange)}, CategoryID=${this.selectedCategoryId}`);
 
       // 2. 调用 B 成员提供的新 DAO 方法
+      const userId = UserSessionService.getCurrentUserId();
+      if (!userId) { 
+        hilog.warn(HILOG_DOMAIN, LOG_TAG, 'loadBills skipped: No user logged in');
+        return; 
+      }
       const billsFromDB = await BillDAO.getBillsByFilters(
-        CURRENT_USER_ID,
+        userId,
         dateRange,
         this.selectedCategoryId
       );
@@ -83,7 +100,9 @@ struct Index {
   //辅助函数，加载分类筛选器
   async loadFilterData() {
     try {
-      const categories: Category[]= await CategoryDAO.getAll(CURRENT_USER_ID);
+      const userId = UserSessionService.getCurrentUserId();
+      if (!userId) return;
+      const categories: Category[]= await CategoryDAO.getAll(userId);
       // 手动添加一个 "所有分类" 选项
       const allOption = new Category();
       allOption.categoryId = 0;
@@ -121,21 +140,75 @@ struct Index {
     })
   }
 
-  build() {
+  @State currentIndex: number = 0;
+  private controller: TabsController = new TabsController();
 
-    //使用Navigation函数来显示页面导航和标题栏
+  build() {
+    Tabs({ barPosition: BarPosition.End, controller: this.controller }) {
+      // Tab 1: 账本 (Original Content)
+      TabContent() {
+        this.BillListContent()
+      }
+      .tabBar(this.TabBuilder('账本', 0, $r('app.media.ic_bottom_home')))
+
+      // Tab 2: 统计
+      TabContent() {
+        StatisticsPage({ refreshTrigger: this.statRefreshTrigger })
+      }
+      .tabBar(this.TabBuilder('统计', 1, $r('app.media.icon')))
+
+      // Tab 3: 我的 (User Center)
+      TabContent() {
+        MinePage()
+      }
+      .tabBar(this.TabBuilder('我的', 2, $r('app.media.icon')))
+    }
+    .onChange((index: number) => {
+      this.currentIndex = index;
+      if (index === 1) { // Statistics Tab
+         this.statRefreshTrigger++;
+      }
+    })
+    .backgroundColor('#FFFFFF')
+  }
+
+  @Builder
+  TabBuilder(title: string, targetIndex: number, selectedImg: Resource) {
+    Column() {
+      // 这里的图标逻辑可以优化，区分选中/未选中状态
+      // 暂时无论是否选中都显示相同图标，或者用颜色区分
+      Image(selectedImg)
+        .size({ width: 24, height: 24 })
+        .fillColor(this.currentIndex === targetIndex ? '#007DFF' : '#999999') // 如果图片支持着色
+        .objectFit(ImageFit.Contain)
+      Text(title)
+        .fontColor(this.currentIndex === targetIndex ? '#007DFF' : '#999999')
+        .fontSize(10)
+        .margin({ top: 4 })
+    }
+    .width('100%')
+    .height(50)
+    .justifyContent(FlexAlign.Center)
+    .onClick(() => {
+      this.currentIndex = targetIndex;
+      this.controller.changeIndex(targetIndex);
+    })
+  }
+
+  @Builder
+  BillListContent() {
     Navigation() {
       Column() {
 
         Row({ space: 10 }) {
-          // 月份选择器 (改成 Text + 弹窗)
+          // 月份选择器
           Text(this.formatDateToYearMonth(this.selectedDate) + ' ▽')
             .fontSize(16)
             .padding(10)
             .backgroundColor(Color.White)
             .borderRadius(8)
             .onClick(() => {
-              this.showMonthPicker(); // 调用弹窗
+              this.showMonthPicker();
             })
             .layoutWeight(1)
 
@@ -150,57 +223,51 @@ struct Index {
         }
         .padding(10)
         .width('100%')
-        .backgroundColor('#F1F3F5') // 改成和背景一致
+        .backgroundColor('#F1F3F5')
 
         // 账单列表
-
-        //UI的依赖状态
         List({ space: 10 }) {
           ForEach(this.transactions, (item: Bill) => {
             ListItem() {
-              //将展示内容封装成函数
               this.TransactionRow(item);
             }
           })
         }
-        .layoutWeight(1) //列表占据剩余空间
+        .layoutWeight(1)
         .padding({ 
           left: this.listPadding.getValue(this.currentBreakpoint) as number, 
           right: this.listPadding.getValue(this.currentBreakpoint) as number 
         })
 
-        //表格展示结束
-        Button('管理分类 ')
-          .type(ButtonType.Capsule)
-          .fontSize(this.titleFontSize.getValue(this.currentBreakpoint) as number)
-          .width(this.buttonWidth.getValue(this.currentBreakpoint) as string)
-          .height(50)
-          .margin(20)
-          .onClick(() => {
-            router.push({
-              url: 'pages/CategoryManagement' //
+        // 按钮区域
+        Row() {
+           Button('管理分类')
+            .type(ButtonType.Capsule)
+            .fontSize(this.titleFontSize.getValue(this.currentBreakpoint) as number)
+            .height(40)
+            .backgroundColor(Color.Gray)
+            .margin({ right: 10 })
+            .onClick(() => {
+              router.pushUrl({ url: 'pages/CategoryManagement' })
             })
-          })
-        Button('记一笔')
-          .type(ButtonType.Capsule)
-          .fontSize(this.titleFontSize.getValue(this.currentBreakpoint) as number)
-          .width(this.buttonWidth.getValue(this.currentBreakpoint) as string)
-          .height(50)
-          .margin(20) //设置按钮外边框
-          .onClick(() => {
-            router.push({
-              url: 'pages/AddBill'
-
+            
+           Button('记一笔')
+            .type(ButtonType.Capsule)
+            .fontSize(this.titleFontSize.getValue(this.currentBreakpoint) as number)
+            .height(40)
+            .onClick(() => {
+              router.pushUrl({ url: 'pages/AddBill' })
             })
-          })
+        }
+        .margin(20)
       }
     }
-
     .width('100%')
     .height('100%')
-    .backgroundColor($r('sys.color.point_color_checked')) //设置一个浅灰色的背景
-    .title('记账APP 首页')
+    .backgroundColor($r('sys.color.point_color_checked'))
+    .title('记账APP')
     .titleMode(NavigationTitleMode.Mini)
+    .hideBackButton(true) // 首页隐藏返回按钮
   }
 
   //自定义的展示行的函数
@@ -214,14 +281,25 @@ struct Index {
         .margin({right:10})
         .objectFit(ImageFit.Contain)
       Column() {
-        Text(item.type === 'expense' ? '支出' : '收入')
+        // Find category name
+        Text(this.allCategories.find(c => c.categoryId === item.categoryId)?.name || (item.type === 'expense' ? '支出' : '收入'))
           .fontSize(this.titleFontSize.getValue(this.currentBreakpoint) as number)
           .fontWeight(FontWeight.Bold)
-        Text(item.note || '无备注')
-          .fontSize((this.titleFontSize.getValue(this.currentBreakpoint) as number) - 2)
-          .fontColor(Color.Gray)
+        
+        Row() {
+           Text(item.transactionDate.replace('T', ' ').substring(5, 16)) // Display MM-DD HH:mm
+            .fontSize(12)
+            .fontColor(Color.Gray)
+            .margin({ right: 8 })
+           if (item.note) {
+             Text(item.note)
+               .fontSize((this.titleFontSize.getValue(this.currentBreakpoint) as number) - 2)
+               .fontColor(Color.Gray)
+           }
+        }
       }
       .alignItems(HorizontalAlign.Start)
+      .layoutWeight(1) // Push amount to right
 
       Text(item.type === 'expense' ? `-${item.amount.toFixed(2)}` : `+${item.amount.toFixed(2)}`)
         .fontSize(this.amountFontSize.getValue(this.currentBreakpoint) as number)
