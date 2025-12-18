@@ -26,11 +26,14 @@ class SelectData {
 // ---------------------------------
 // 新建预算弹窗
 // ---------------------------------
+const EMPTY_CONFIRM = (categoryId: number, amount: number) => {};
+
 @CustomDialog
 struct AddBudgetDialog {
   controller: CustomDialogController
+
   @Link allCategories: Category[]
-  onConfirm: (categoryId: number, amount: number) => void = () => {}
+  onConfirm: (categoryId: number, amount: number) => void = EMPTY_CONFIRM
 
   @State selectedCategoryId: number = 0
   @State amountStr: string = ''

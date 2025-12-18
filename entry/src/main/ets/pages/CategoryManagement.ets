@@ -15,59 +15,41 @@ const HILOG_DOMAIN = 0x0001
 // ---------------------------------
 // (C/U) 新建/编辑分类的弹窗
 // ---------------------------------
+const EMPTY_CALLBACK = () => {};
+
 @CustomDialog
 struct CategoryEditDialog {
   controller: CustomDialogController
-  // ✅ 修复 1 (闪退): 允许 editingCategory 为 null，以匹配父组件的类型
   @Link editingCategory: Category | null
 
+
   // onSave 默认值
-  onSave: () => void = () => {}
+  onSave: () => void = EMPTY_CALLBACK
 
   build() {
-    // ✅ 修复 2 (闪退):
-    // 必须检查 editingCategory 是否为 null。
-    // 当父组件在关闭弹窗时将其设为 null，这个 if 会保护弹窗不崩溃。
+
     if (this.editingCategory) {
       Scroll() {
-        Column({ space: 15 }) {
+        Column({ space: 10 }) {
           Text(this.editingCategory.categoryId === 0 ? '新建分类' : '编辑分类')
             .fontSize(20)
             .fontWeight(FontWeight.Bold)
             .width('100%')
-            .textAlign(TextAlign.Start) // 保持文本居左
+            .textAlign(TextAlign.Start)
 
           TextInput({
             placeholder: '分类名称',
             text: this.editingCategory.name
           })
-            .onChange((value: string) => { // ✅ 修复：添加 (value: string)
-              if (this.editingCategory) { // 再次检查，确保安全
+            .onChange((value: string) => { 
+              if (this.editingCategory) {
                 this.editingCategory.name = value
               }
             })
 
-          TextInput({
-            placeholder: '图标 🍽️',
-            text: this.editingCategory.icon
-          })
-            .onChange((value: string) => { // ✅ 修复：添加 (value: string)
-              if (this.editingCategory) {
-                this.editingCategory.icon = value
-              }
-            })
 
-          TextInput({
-            placeholder: '颜色 (例如: #FF6B6B)',
-            text: this.editingCategory.color
-          })
-            .onChange((value: string) => { // ✅ 修复：添加 (value: string)
-              if (this.editingCategory) {
-                this.editingCategory.color = value
-              }
-            })
 
-          // ✅ 修复：barMode 是链式调用
+          //
           Tabs({
             index: this.editingCategory.type === 'expense' ? 0 : 1
           }) {
@@ -75,7 +57,7 @@ struct CategoryEditDialog {
             TabContent().tabBar('收入')
           }
           .barMode(BarMode.Fixed)
-          .onChange((index: number) => { // ✅ 修复：添加 (index: number)
+          .onChange((index: number) => {
             if (this.editingCategory) {
               this.editingCategory.type = (index === 0) ? 'expense' : 'income'
             }
@@ -97,15 +79,15 @@ struct CategoryEditDialog {
               .type(ButtonType.Capsule)
           }
           .width('100%')
-          .margin({ top: 10 })
+          .margin({ top: 5 })
         }
-        .padding(20)
+        .padding(15)
         .width('90%')
       } // Scroll 结束
       .backgroundColor(Color.White)
       .borderRadius(15)
     } else {
-      // 当 editingCategory 为 null 时 (例如父组件正在关闭它)
+      // 当 editingCategory 为 null 时
       // 渲染一个空的 Column 来避免崩溃
       Column()
     }
@@ -132,7 +114,7 @@ struct CategoryManagement {
     alignment: DialogAlignment.Bottom
   })
 
-  // (R) 页面显示时加载数据
+  // 页面显示时加载数据
   onPageShow() {
     this.loadCategories()
   }
@@ -148,7 +130,7 @@ struct CategoryManagement {
     }
   }
 
-  // (D) 删除逻辑
+  // 删除逻辑
   async handleDelete(categoryId: number) {
     try {
       await CategoryDAO.softDelete(this.currentUserId, categoryId) //
@@ -160,7 +142,7 @@ struct CategoryManagement {
     }
   }
 
-  // (C / U) 保存逻辑
+  //  保存逻辑
   async handleSave() {
     if (!this.currentEditingCategory) return
 
@@ -175,13 +157,24 @@ struct CategoryManagement {
       this.currentEditingCategory.updatedAt = now
 
       if (this.currentEditingCategory.categoryId === 0) {
-        // --- (C) Create 新建 ---
+        // Create 新建 
         this.currentEditingCategory.userId = this.currentUserId
         this.currentEditingCategory.createdAt = now
+
+        // 默认值处理
+        if (!this.currentEditingCategory.icon) {
+           this.currentEditingCategory.icon = ''; // 不需要图标
+        }
+        if (!this.currentEditingCategory.color) {
+           // 生成随机颜色
+           const randomColor = '#' + Math.floor(Math.random() * 16777215).toString(16).padStart(6, '0');
+           this.currentEditingCategory.color = randomColor;
+        }
+
         await CategoryDAO.insert(this.currentEditingCategory) //
         this.showToast('创建成功')
       } else {
-        // --- (U) Update 更新 ---
+        //Update 更新
         await CategoryDAO.update(this.currentEditingCategory) //
         this.showToast('更新成功')
       }
@@ -201,7 +194,7 @@ struct CategoryManagement {
     }
   }
 
-  // ✅ 修复：封装一个安全的 showToast 函数
+  // 封装一个安全的 showToast 函数
   showToast(message: string) {
     try {
       promptAction.showToast({ message: message });
@@ -217,7 +210,7 @@ struct CategoryManagement {
         // (R) 列表展示
         List({ space: 10 }) {
           ForEach(this.categories, (item: Category) => {
-            // ✅ 修复：使用 .swipeAction 属性，而不是 SwipeAction() 组件
+            //  修复：使用 .swipeAction 属性，而不是 SwipeAction() 组件
             ListItem() {
               // (U) 列表项
               Row() {
@@ -240,10 +233,10 @@ struct CategoryManagement {
           })
         }
         .layoutWeight(1)
-        .width('100%') // ✅ 修复：添加 width 消除 List 警告
+        .width('100%') // 修复：添加 width 消除 List 警告
         .padding({ left: 12, right: 12 })
 
-        // (C) 新建按钮
+        // 新建按钮
         Button('新建分类')
           .width('90%')
           .height(50)
@@ -263,7 +256,7 @@ struct CategoryManagement {
     .titleMode(NavigationTitleMode.Mini)
   }
 
-  // (D) 滑动删除的按钮
+  //
   @Builder
   SwipeDeleteButton(categoryId: number) {
     Button('删除')

@@ -36,6 +36,7 @@ struct AddBill{
   @StorageProp('currentUserId') currentUserId: number = 1;
 
   @State categoryOptions: SelectOption[] = [];
+  @State accountOptions: SelectOption[] = [];
   //创建onPageShow 在页面显示的时候执行
   onPageShow(){
     this.loadData();
@@ -56,6 +57,7 @@ struct AddBill{
 
       // 更新 Select 的选项数据
       this.categoryOptions = categories.map(cat => new SelectOption(cat.name));
+      this.accountOptions = accounts.map(acc => new SelectOption(acc.name));
 
       // 设置默认选中项
       // 逻辑优化：只有当 selectedCategoryId 不在当前列表中时，才重置为第一个
@@ -88,7 +90,10 @@ struct AddBill{
   }
   //创建一个辅助函数:将Date对象转换成相应的格式
 private formatDate(date:Date):string{
-  return date.toISOString().split('T')[0];
+  const y = date.getFullYear();
+  const m = (date.getMonth() + 1).toString().padStart(2, '0');
+  const d = date.getDate().toString().padStart(2, '0');
+  return `${y}-${m}-${d}`;
 }
 
   build() {
@@ -139,6 +144,35 @@ private formatDate(date:Date):string{
 
 
 
+        }
+        .width('100%')
+        .padding(10)
+        .backgroundColor(Color.White)
+
+        Divider()
+
+        // 账户选择行
+        Row() {
+          Text('账户')
+            .fontSize(16)
+            .fontWeight(FontWeight.Bold)
+            .padding(10)
+
+          if (this.allAccounts.length > 0) {
+            Select(this.accountOptions)
+              .value(this.allAccounts.find(a => a.accountId === this.selectedAccountId)?.name ?? '请选择账户')
+              .onSelect((index: number) => {
+                this.selectedAccountId = this.allAccounts[index].accountId;
+              })
+              .fontColor(Color.Gray)
+          } else {
+             Text('暂无账户，去创建 >')
+               .fontSize(14)
+               .fontColor(Color.Blue)
+               .onClick(() => {
+                 router.pushUrl({ url: 'pages/AccountManagement' })
+               })
+          }
         }
         .width('100%')
         .padding(10)

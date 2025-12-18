@@ -10,11 +10,14 @@ const LOG_TAG = 'AccountManagement';
 const HILOG_DOMAIN = 0x0001;
 
 
+
+const EMPTY_CALLBACK = () => {};
+
 @CustomDialog
 struct AccountEditDialog {
   controller: CustomDialogController;
   @Link editingAccount: Account | null;
-  onSave: () => void = () => {};
+  onSave: () => void = EMPTY_CALLBACK;
 
   // 账户类型选项
   accountTypes: SelectOption[] = [

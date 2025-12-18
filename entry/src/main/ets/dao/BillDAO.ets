@@ -103,6 +103,10 @@ export class BillDAO {
       bill.transactionDate, bill.createdAt, bill.updatedAt, bill.isDeleted
     ];
     await BillDAO.ensureDb().executeSql(sql, params);
+    
+    // 更新账户余额
+    const delta = bill.type === 'expense' ? -bill.amount : bill.amount;
+    await AccountDAO.updateBalance(bill.accountId, delta);
   }
 
   static async validateForeignKeys(bill: Bill) {
@@ -179,7 +183,14 @@ export class BillDAO {
   // 软删除
   static async delete(billId: number,userId:number) {
     const sql = `UPDATE bills SET is_deleted = 1 WHERE bill_id = ?`;
-    await BillDAO.ensureDb().executeSql(sql, [billId,userId]);
+    // 先查出来，因为要回滚余额
+    const bill = await BillDAO.getById(billId, userId);
+    if(bill) {
+        await BillDAO.ensureDb().executeSql(sql, [billId]);
+        // 回滚余额 (逻辑取反: 原来支出减少余额，现在就要增加回来)
+        const delta = bill.type === 'expense' ? bill.amount : -bill.amount;
+        await AccountDAO.updateBalance(bill.accountId, delta);
+    }
   }
 
   static async restore(billId: number,userId:number) {

@@ -1,9 +1,11 @@
 import router from '@ohos.router';
 import { Bill } from '../model/Bill';
-import { BillDAO } from '../dao/BillDAO'; // 确保这里没有 DateRangeFilter 的报错，如果有，直接在代码里定义接口
-import { CategoryDAO } from '../dao/CategoryDAO'; // 引入 CategoryDAO
+import { BillDAO } from '../dao/BillDAO'; 
+import { CategoryDAO } from '../dao/CategoryDAO';
 import { Category } from '../model/Category';
 import { DailyChartData, MonthSummary, CategoryStat } from '../model/ChartData';
+import { AppTheme } from '../common/AppTheme';
+import { DailyBarChart } from '../components/DailyBarChart';
 import hilog from '@ohos.hilog';
 
 const LOG_TAG = 'StatisticsPage';
@@ -20,6 +22,8 @@ struct StatisticsPage {
   @State currentMonth: Date = new Date();
   @State allCategories: Category[] = []; // 缓存分类信息
   @StorageProp('currentUserId') currentUserId: number = 1;
+  // 新增：统计类型 'expense' | 'income'
+  @State statType: 'expense' | 'income' = 'expense';
 
   onPageShow() {
     this.loadData();
@@ -60,22 +64,25 @@ struct StatisticsPage {
     const categoryMap = new Map<number, number>(); // categoryId -> amount
 
     bills.forEach(bill => {
+      // 1. 计算总收支
       if (bill.type === 'expense') {
         expenseTotal += bill.amount;
+      } else {
+        incomeTotal += bill.amount;
+      }
 
+      // 2. 根据当前统计类型 (statType) 聚合数据
+      if (bill.type === this.statType) {
         const dateParts = bill.transactionDate.split('-');
-        // 取最后一部分，并补零，确保 "1" 变成 "01"
-        const day = bill.transactionDate.split('-')[2].padStart(2, '0');
+        const day = dateParts[2].padStart(2, '0');
 
+        // 每日趋势
         const currentDaily = dailyMap.get(day) || 0;
         dailyMap.set(day, currentDaily + bill.amount);
 
-        // 2. 分类
+        // 分类排行
         const currentCat = categoryMap.get(bill.categoryId) || 0;
         categoryMap.set(bill.categoryId, currentCat + bill.amount);
-
-      } else {
-        incomeTotal += bill.amount;
       }
     });
 
@@ -108,7 +115,9 @@ struct StatisticsPage {
       const icon = catInfo ? catInfo.icon : '❓';
 
       const stat = new CategoryStat(catId, name, icon, amount);
-      stat.percentage = expenseTotal > 0 ? (amount / expenseTotal) * 100 : 0;
+      // 计算百分比
+      const total = this.statType === 'expense' ? expenseTotal : incomeTotal;
+      stat.percentage = total > 0 ? (amount / total) * 100 : 0;
       catStats.push(stat);
     });
 
@@ -139,7 +148,7 @@ struct StatisticsPage {
                 .onClick(() => router.back())
 
               Text('统计报表')
-                .fontSize(20).fontWeight(FontWeight.Bold).fontColor(Color.White)
+                .fontSize(20).fontWeight(FontWeight.Bold).fontColor(AppTheme.DarkTextMain)
                 .margin({ left: 12 })
             }
             .width('100%').height(56).padding({ left: 4 })
@@ -147,7 +156,7 @@ struct StatisticsPage {
             // 月份总览
             Row() { // 包裹在一个 Row 里方便点击
               Text(`${this.currentMonth.getFullYear()}年${this.currentMonth.getMonth() + 1}月`)
-                .fontSize(14).fontColor('#999999')
+                .fontSize(14).fontColor(AppTheme.DarkTextSub)
               Image($r('app.media.back')) // 假设你有一个下拉箭头图标
                 .width(12).height(12).margin({ left: 4 }).colorFilter(
                 [
@@ -175,15 +184,28 @@ struct StatisticsPage {
               })
             })
 
-            Text(`¥${this.summary.totalExpense.toFixed(2)}`)
-              .fontSize(32).fontWeight(FontWeight.Bold).fontColor(Color.White)
-            Text('总支出')
-              .fontSize(12).fontColor('#999999').margin({ bottom: 20 })
+
+            Column() {
+              Text(this.statType === 'expense' ? `¥${this.summary.totalExpense.toFixed(2)}` : `¥${this.summary.totalIncome.toFixed(2)}`)
+                .fontSize(32).fontWeight(FontWeight.Bold).fontColor(AppTheme.DarkTextMain)
+              Text(this.statType === 'expense' ? '总支出 (点击切换)' : '总收入 (点击切换)')
+                .fontSize(12).fontColor(AppTheme.DarkTextSub)
+            }
+            .margin({ bottom: 20 })
+            .onClick(() => {
+              // 切换逻辑
+              this.statType = this.statType === 'expense' ? 'income' : 'expense';
+              // 重新计算数据
+              const year = this.currentMonth.getFullYear();
+              const month = this.currentMonth.getMonth() + 1;
+              const lastDay = new Date(year, month, 0).getDate();
+              this.processData(this.billList, lastDay);
+            })
 
             // 柱状图区域
             Column() {
               Row() {
-                Text('每日趋势').fontSize(14).fontColor(Color.White).fontWeight(FontWeight.Medium)
+                Text('每日趋势').fontSize(14).fontColor(AppTheme.DarkTextMain).fontWeight(FontWeight.Medium)
                 Blank()
               }.width('100%').margin({ bottom: 10 })
 
@@ -197,21 +219,21 @@ struct StatisticsPage {
 
             }
             .padding(16)
-            .backgroundColor('#1C1C1E')
+            .backgroundColor(AppTheme.DarkCardBg)
             .borderRadius(16)
           }
           .width('100%')
           .padding(16)
-          .backgroundColor(Color.Black)
+          .backgroundColor(AppTheme.DarkBackground)
 
           // --- 2. 分类支出排行 (新功能) ---
           Column() {
-            Text('支出分类排行')
-              .fontSize(16).fontWeight(FontWeight.Bold).fontColor(Color.White)
+            Text(this.statType === 'expense' ? '支出分类排行' : '收入分类排行')
+              .fontSize(16).fontWeight(FontWeight.Bold).fontColor(AppTheme.DarkTextMain)
               .width('100%').margin({ bottom: 12, top: 20, left: 4 })
 
             if (this.categoryStats.length === 0) {
-              Text('本月暂无支出').fontColor('#666666').fontSize(14).margin({top: 20}).width('100%').textAlign(TextAlign.Center)
+              Text(this.statType === 'expense' ? '本月暂无支出' : '本月暂无收入').fontColor(AppTheme.TextSub).fontSize(14).margin({top: 20}).width('100%').textAlign(TextAlign.Center)
             } else {
               List({ space: 12 }) {
                 ForEach(this.categoryStats, (item: CategoryStat) => {
@@ -223,22 +245,22 @@ struct StatisticsPage {
                       // 名字和进度条
                       Column({ space: 6 }) {
                         Row() {
-                          Text(item.categoryName).fontColor(Color.White).fontSize(14)
+                          Text(item.categoryName).fontColor(AppTheme.DarkTextMain).fontSize(14)
                           Blank()
-                          Text(`${item.percentage.toFixed(1)}%`).fontColor('#666666').fontSize(12)
-                          Text(` ¥${item.totalAmount.toFixed(0)}`).fontColor(Color.White).fontSize(14).fontWeight(FontWeight.Bold)
+                          Text(`${item.percentage.toFixed(1)}%`).fontColor(AppTheme.DarkTextSub).fontSize(12)
+                          Text(` ¥${item.totalAmount.toFixed(0)}`).fontColor(AppTheme.DarkTextMain).fontSize(14).fontWeight(FontWeight.Bold)
                         }.width('100%')
 
                         // 简单的进度条
                         Progress({ value: item.percentage, total: 100, type: ProgressType.Linear })
-                          .color('#4D8DFF') // 蓝色进度条
-                          .backgroundColor('#333333')
+                          .color(AppTheme.ChartHighlight) // 蓝色进度条
+                          .backgroundColor(AppTheme.ChartInactive) // Dark gray bg
                           .height(6)
                       }
                       .layoutWeight(1)
                     }
                     .padding(12)
-                    .backgroundColor('#1C1C1E')
+                    .backgroundColor(AppTheme.DarkCardBg)
                     .borderRadius(12)
                   }
                 })
@@ -253,68 +275,9 @@ struct StatisticsPage {
       .scrollBar(BarState.Off)
       .edgeEffect(EdgeEffect.Spring)
       .height('100%')
-      .backgroundColor(Color.Black) // 确保全屏深色背景
+      .backgroundColor(AppTheme.DarkBackground) // 确保全屏深色背景
     }
     .hideTitleBar(true)
   }
 }
-@Component
-struct DailyBarChart {
-  @Prop dataList: DailyChartData[] = [];
-  @Prop maxAmount: number = 1;
 
-  // 1. 定义滚动控制器
-  private scroller: Scroller = new Scroller();
-
-  build() {
-    Column() {
-      if (this.dataList.length === 0) {
-        Text("等待数据加载...")
-          .fontColor(Color.White).fontSize(12).margin(20)
-      }
-
-      List({ space: 12, scroller: this.scroller }) { // 2. 绑定控制器
-        ForEach(this.dataList, (item: DailyChartData, index: number) => {
-          ListItem() {
-            Column() {
-              // --- 柱子 ---
-              Column() {
-                Column()
-                  .width('100%')
-                  .height(`${(item.amount / (this.maxAmount || 1)) * 100}%`)
-                  .backgroundColor(item.isHighest ? '#4D8DFF' : '#555555')
-                  .borderRadius({ topLeft: 4, topRight: 4 })
-                  .constraintSize({ minHeight: 4 }) // 0金额也显示一个小底座
-              }
-              .width(12)
-              .height('80%')
-              .justifyContent(FlexAlign.End)
-
-              // --- 日期 ---
-              Text(item.day)
-                .fontSize(10)
-                .fontColor(item.isHighest ? '#FFFFFF' : '#999999')
-                .margin({ top: 6 })
-            }
-            .height('100%')
-            .justifyContent(FlexAlign.End)
-          }
-        }, (item: DailyChartData) => item.day)
-      }
-      .listDirection(Axis.Horizontal)
-      .scrollBar(BarState.Off)
-      .width('100%')
-      .height('100%')
-      .alignListItem(ListItemAlign.Start)
-      .onAppear(() => {
-        // 3. 【关键优化】组件显示时，自动滚动到最后一天（或者今天）
-        //稍微延迟一下确保数据渲染完了
-        setTimeout(() => {
-          this.scroller.scrollToIndex(this.dataList.length - 1);
-        }, 100);
-      })
-    }
-    .width('100%')
-    .height('100%')
-  }
-}
