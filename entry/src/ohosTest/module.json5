@@ -1,0 +1,24 @@
+{
+  "module": {
+    "name": "ohosTest",
+    "type": "feature",
+    "description": "Test module for entry",
+    "deviceTypes": [
+      "phone"
+    ],
+    "deliveryWithInstall": true,
+    "installationFree": false,
+    "abilities": [
+      {
+        "name": "TestAbility",
+        "srcEntry": "./ets/test/testability/TestAbility.ets",
+        "description": "Test Ability for Hypium",
+        "icon": "$media:icon",
+        "label": "$string:test_label",
+        "startWindowIcon": "$media:icon",
+        "startWindowBackground": "$color:start_window_background",
+        "exported": false
+      }
+    ]
+  }
+}
