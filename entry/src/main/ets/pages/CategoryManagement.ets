@@ -1,14 +1,9 @@
-<<<<<<< HEAD
 import router from '@ohos.router';
-=======
-// 导入
->>>>>>> main
 import { Category } from '../model/Category' //
 import { CategoryDAO } from '../dao/CategoryDAO' //
 import promptAction from '@ohos.promptAction'
 import hilog from '@ohos.hilog'
 import type { BusinessError } from '@ohos.base'
-<<<<<<< HEAD
 import { BreakPointType } from '../common/BreakpointSystem';
 import { UserSessionService } from '../service/UserSessionService';
 
@@ -16,20 +11,10 @@ import { UserSessionService } from '../service/UserSessionService';
 // HILOG 定义
 const LOG_TAG = 'CategoryManagement'
 const HILOG_DOMAIN = 0x0001 // ✅ 修复：hilog 需要一个数字 domain
-=======
-// ✅ 修复：删除未使用的 router 导入
-// import router from '@ohos.router'
-
-// HILOG 定义
-const LOG_TAG = 'CategoryManagement'
-const HILOG_DOMAIN = 0x0001
-
->>>>>>> main
 
 // ---------------------------------
 // (C/U) 新建/编辑分类的弹窗
 // ---------------------------------
-<<<<<<< HEAD
 @CustomDialog
 struct CategoryEditDialog {
   controller: CustomDialogController
@@ -39,56 +24,21 @@ struct CategoryEditDialog {
   onSave: () => void = () => {}
 
   build() {
-    // ✅ 修复 2 (闪退):
     // 必须检查 editingCategory 是否为 null。
     // 当父组件在关闭弹窗时将其设为 null，这个 if 会保护弹窗不崩溃。
     if (this.editingCategory) {
       Scroll() {
         Column({ space: 15 }) {
-=======
-const EMPTY_CALLBACK = () => {};
-
-@CustomDialog
-struct CategoryEditDialog {
-  controller: CustomDialogController
-  @Link editingCategory: Category | null
-
-
-  // onSave 默认值
-  onSave: () => void = EMPTY_CALLBACK
-
-  build() {
-
-    if (this.editingCategory) {
-      Scroll() {
-        Column({ space: 10 }) {
->>>>>>> main
-          Text(this.editingCategory.categoryId === 0 ? '新建分类' : '编辑分类')
-            .fontSize(20)
-            .fontWeight(FontWeight.Bold)
-            .width('100%')
-<<<<<<< HEAD
-            .textAlign(TextAlign.Start) // 保持文本居左
-=======
-            .textAlign(TextAlign.Start)
->>>>>>> main
-
           TextInput({
             placeholder: '分类名称',
             text: this.editingCategory.name
           })
-<<<<<<< HEAD
             .onChange((value: string) => { // ✅ 修复：添加 (value: string)
               if (this.editingCategory) { // 再次检查，确保安全
-=======
-            .onChange((value: string) => { 
-              if (this.editingCategory) {
->>>>>>> main
                 this.editingCategory.name = value
               }
             })
 
-<<<<<<< HEAD
           TextInput({
             placeholder: '图标 🍽️',
             text: this.editingCategory.icon
@@ -110,11 +60,6 @@ struct CategoryEditDialog {
             })
 
           // ✅ 修复：barMode 是链式调用
-=======
-
-
-          //
->>>>>>> main
           Tabs({
             index: this.editingCategory.type === 'expense' ? 0 : 1
           }) {
@@ -122,11 +67,7 @@ struct CategoryEditDialog {
             TabContent().tabBar('收入')
           }
           .barMode(BarMode.Fixed)
-<<<<<<< HEAD
           .onChange((index: number) => { // ✅ 修复：添加 (index: number)
-=======
-          .onChange((index: number) => {
->>>>>>> main
             if (this.editingCategory) {
               this.editingCategory.type = (index === 0) ? 'expense' : 'income'
             }
@@ -148,25 +89,15 @@ struct CategoryEditDialog {
               .type(ButtonType.Capsule)
           }
           .width('100%')
-<<<<<<< HEAD
           .margin({ top: 10 })
         }
         .padding(20)
-=======
-          .margin({ top: 5 })
-        }
-        .padding(15)
->>>>>>> main
         .width('90%')
       } // Scroll 结束
       .backgroundColor(Color.White)
       .borderRadius(15)
     } else {
-<<<<<<< HEAD
       // 当 editingCategory 为 null 时 (例如父组件正在关闭它)
-=======
-      // 当 editingCategory 为 null 时
->>>>>>> main
       // 渲染一个空的 Column 来避免崩溃
       Column()
     }
@@ -180,7 +111,6 @@ struct CategoryEditDialog {
 struct CategoryManagement {
   @State categories: Array<Category> = []
   @State currentEditingCategory: Category | null = null
-<<<<<<< HEAD
   @StorageProp('currentBreakpoint') currentBreakpoint: string = 'md';
   
   // 响应式配置
@@ -188,9 +118,6 @@ struct CategoryManagement {
   private itemFontSize = new BreakPointType({ xs: 14, sm: 15, md: 16, lg: 18, xl: 20, xxl: 22 });
   private buttonWidth = new BreakPointType({ xs: '95%', sm: '92%', md: '90%', lg: '80%', xl: '70%', xxl: '60%' });
 
-=======
-  @StorageProp('currentUserId') currentUserId: number = 1;
->>>>>>> main
   // 自定义弹窗控制器
   dialogController: CustomDialogController = new CustomDialogController({
     builder: CategoryEditDialog({
@@ -203,7 +130,6 @@ struct CategoryManagement {
     alignment: DialogAlignment.Bottom
   })
 
-<<<<<<< HEAD
   // (R) 页面显示时加载数据
   onPageShow() {
     if (!UserSessionService.getCurrentUserId()) {
@@ -213,22 +139,14 @@ struct CategoryManagement {
        }, 500);
        return;
     }
-=======
-  // 页面显示时加载数据
-  onPageShow() {
->>>>>>> main
     this.loadCategories()
   }
 
   async loadCategories() {
     try {
-<<<<<<< HEAD
       const userId = UserSessionService.getCurrentUserId();
       if (!userId) throw new Error('未登录');
       const data = await CategoryDAO.getAll(userId) //
-=======
-      const data = await CategoryDAO.getAll(this.currentUserId) //
->>>>>>> main
       this.categories = data
       hilog.info(HILOG_DOMAIN, LOG_TAG, `成功加载 ${data.length} 条分类`)
     } catch (err) {
@@ -237,19 +155,12 @@ struct CategoryManagement {
     }
   }
 
-<<<<<<< HEAD
   // (D) 删除逻辑
   async handleDelete(categoryId: number) {
     try {
       const userId = UserSessionService.getCurrentUserId();
       if (!userId) throw new Error('未登录');
       await CategoryDAO.softDelete(userId, categoryId) //
-=======
-  // 删除逻辑
-  async handleDelete(categoryId: number) {
-    try {
-      await CategoryDAO.softDelete(this.currentUserId, categoryId) //
->>>>>>> main
       this.showToast('删除成功')
       this.loadCategories()
     } catch (err) {
@@ -258,11 +169,7 @@ struct CategoryManagement {
     }
   }
 
-<<<<<<< HEAD
   // (C / U) 保存逻辑
-=======
-  //  保存逻辑
->>>>>>> main
   async handleSave() {
     if (!this.currentEditingCategory) return
 
@@ -275,23 +182,12 @@ struct CategoryManagement {
     try {
       const now = new Date().toISOString()
       this.currentEditingCategory.updatedAt = now
-<<<<<<< HEAD
       const userId = UserSessionService.getCurrentUserId();
       if (!userId) throw new Error('未登录');
 
       if (this.currentEditingCategory.categoryId === 0) {
         // --- (C) Create 新建 ---
         this.currentEditingCategory.userId = userId
-        this.currentEditingCategory.createdAt = now
-        await CategoryDAO.insert(this.currentEditingCategory) //
-        this.showToast('创建成功')
-      } else {
-        // --- (U) Update 更新 ---
-=======
-
-      if (this.currentEditingCategory.categoryId === 0) {
-        // Create 新建 
-        this.currentEditingCategory.userId = this.currentUserId
         this.currentEditingCategory.createdAt = now
 
         // 默认值处理
@@ -307,8 +203,7 @@ struct CategoryManagement {
         await CategoryDAO.insert(this.currentEditingCategory) //
         this.showToast('创建成功')
       } else {
-        //Update 更新
->>>>>>> main
+        // --- (U) Update 更新 ---
         await CategoryDAO.update(this.currentEditingCategory) //
         this.showToast('更新成功')
       }
@@ -328,11 +223,7 @@ struct CategoryManagement {
     }
   }
 
-<<<<<<< HEAD
   // ✅ 修复：封装一个安全的 showToast 函数
-=======
-  // 封装一个安全的 showToast 函数
->>>>>>> main
   showToast(message: string) {
     try {
       promptAction.showToast({ message: message });
@@ -348,7 +239,6 @@ struct CategoryManagement {
         // (R) 列表展示
         List({ space: 10 }) {
           ForEach(this.categories, (item: Category) => {
-<<<<<<< HEAD
             // ✅ 修复：使用 .swipeAction 属性，而不是 SwipeAction() 组件
             ListItem() {
               // (U) 列表项
@@ -361,16 +251,6 @@ struct CategoryManagement {
                   .layoutWeight(1)
                 Text(item.type === 'expense' ? '支出' : '收入')
                   .fontSize((this.itemFontSize.getValue(this.currentBreakpoint) as number) - 2)
-=======
-            //  修复：使用 .swipeAction 属性，而不是 SwipeAction() 组件
-            ListItem() {
-              // (U) 列表项
-              Row() {
-                Text(item.icon).fontSize(20).width(30)
-                Text(item.name).fontSize(16).layoutWeight(1)
-                Text(item.type === 'expense' ? '支出' : '收入')
-                  .fontSize(14)
->>>>>>> main
                   .fontColor(item.type === 'expense' ? Color.Red : Color.Green)
               }
               .padding(15)
@@ -386,7 +266,6 @@ struct CategoryManagement {
           })
         }
         .layoutWeight(1)
-<<<<<<< HEAD
         .width('100%') // ✅ 修复：添加 width 消除 List 警告
         .padding({ 
           left: this.listPadding.getValue(this.currentBreakpoint) as number, 
@@ -396,14 +275,6 @@ struct CategoryManagement {
         // (C) 新建按钮
         Button('新建分类')
           .width(this.buttonWidth.getValue(this.currentBreakpoint) as string)
-=======
-        .width('100%') // 修复：添加 width 消除 List 警告
-        .padding({ left: 12, right: 12 })
-
-        // 新建按钮
-        Button('新建分类')
-          .width('90%')
->>>>>>> main
           .height(50)
           .type(ButtonType.Capsule)
           .margin(15)
@@ -421,11 +292,7 @@ struct CategoryManagement {
     .titleMode(NavigationTitleMode.Mini)
   }
 
-<<<<<<< HEAD
   // (D) 滑动删除的按钮
-=======
-  //
->>>>>>> main
   @Builder
   SwipeDeleteButton(categoryId: number) {
     Button('删除')

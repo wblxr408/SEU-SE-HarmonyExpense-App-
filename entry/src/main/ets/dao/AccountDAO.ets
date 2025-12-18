@@ -269,9 +269,6 @@ export class AccountDAO {
   static async exists(accountId: number): Promise<boolean> {
     return await DAOHelper.exists('accounts', 'account_id', accountId);
   }
-<<<<<<< HEAD
-}
-=======
 
   /**
    * 更新账户余额 (原子的)
@@ -279,11 +276,10 @@ export class AccountDAO {
    * @param amount 变动金额 (正数增加，负数减少)
    */
   static async updateBalance(accountId: number, amount: number) {
-    const store = AccountDAO.ensureDb();
+    const store = DatabaseManager.getDatabase();
     const sql = `UPDATE accounts SET balance = balance + ? WHERE account_id = ?`;
     await store.executeSql(sql, [amount, accountId]);
     console.log(`[AccountDAO] 余额更新: accountId=${accountId}, delta=${amount}`);
   }
 
 }
->>>>>>> main

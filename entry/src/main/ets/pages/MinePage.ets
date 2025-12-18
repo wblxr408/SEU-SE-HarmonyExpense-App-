@@ -6,7 +6,7 @@ import promptAction from '@ohos.promptAction';
 export struct MinePage {
   @State currentUser: SessionInfo | null = null;
 
-  onPageShow() {
+  aboutToAppear() {
     this.currentUser = UserSessionService.getCurrentSession();
   }
 

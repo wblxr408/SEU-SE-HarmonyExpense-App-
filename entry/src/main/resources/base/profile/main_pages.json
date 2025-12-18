@@ -3,20 +3,15 @@
     "pages/Index",
     "pages/AddBill",
     "pages/CategoryManagement",
-<<<<<<< HEAD
     "pages/LoginPage",
     "pages/RegisterPage",
     "pages/AccountManagementPage",
     "pages/SyncSettingsPage",
     "pages/BackupPage",
-    "pages/ReminderSettingsPage"
-=======
-    "pages/StatisticsPage",
+    "pages/ReminderSettingsPage",
     "pages/AccountManagement",
     "pages/SettingsPage",
     "pages/BudgetManagement",
-    "pages/ExportImportPage",
-    "pages/LoginPage"
->>>>>>> main
+    "pages/ExportImportPage"
   ]
 }

@@ -52,13 +52,13 @@ export class UserDAO {
    * 根据用户名查询用户（用于登录验证）
    */
   static async getByUsername(username: string): Promise<User | null> {
-    const store = UserDAO.ensureDb();
+    const store = DatabaseManager.getDatabase();
     const sql = `SELECT * FROM users WHERE username = ? AND is_deleted = 0`;
 
     let rs: relationalStore.ResultSet | null = null;
     try {
       rs = await store.querySql(sql, [username]);
-      if (!rs.goToNextRow()) return null;
+      if (!rs || !rs.goToNextRow()) return null;
 
       const u = new User();
       u.userId = rs.getLong(rs.getColumnIndex('user_id'));
