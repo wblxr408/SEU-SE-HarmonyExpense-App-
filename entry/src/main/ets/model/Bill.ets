@@ -42,6 +42,7 @@ export class Bill {
     isDeleted: number = 0
   ) {
     this.billId = billId;
+    this.userId = userId;
     this.accountId = accountId;
     this.categoryId = categoryId;
     this.amount = amount;

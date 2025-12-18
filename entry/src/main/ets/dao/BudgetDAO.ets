@@ -1,52 +1,9 @@
 import relationalStore from '@ohos.data.relationalStore';
-import common from '@ohos.app.ability.common';
+import { DatabaseManager } from '../database/DatabaseManager';
 import { Budget, BudgetInit } from '../model/Budget';
-
-let db: relationalStore.RdbStore | null = null;
+import { DAOHelper } from '../common/DAOHelper';
 
 export class BudgetDAO {
-
-  static async initDatabase(context: common.Context): Promise<void> {
-    const storeConfig: relationalStore.StoreConfig = {
-      name: 'harmony_expense.db',
-      securityLevel: relationalStore.SecurityLevel.S1
-    };
-
-    try {
-      db = await relationalStore.getRdbStore(context, storeConfig);
-      console.log('[BudgetDAO] 数据库已初始化');
-      await BudgetDAO.createTables();
-    } catch (err) {
-      const error = err as Error;
-      console.error('[BudgetDAO] 初始化数据库失败: ' + JSON.stringify(error));
-      throw new Error('[BudgetDAO] 初始化数据库失败');
-    }
-  }
-
-  static async createTables(): Promise<void> {
-    const store: relationalStore.RdbStore = BudgetDAO.ensureDb();
-    const sql: string = `
-      CREATE TABLE IF NOT EXISTS budgets (
-        budget_id INTEGER PRIMARY KEY AUTOINCREMENT,
-        user_id INTEGER,
-        category_id INTEGER,
-        amount REAL NOT NULL,
-        period TEXT NOT NULL,
-        start_date TEXT NOT NULL,
-        end_date TEXT,
-        is_active INTEGER NOT NULL,
-        is_deleted INTEGER NOT NULL DEFAULT 0,
-        created_at TEXT NOT NULL
-      );
-    `;
-    await store.executeSql(sql);
-    console.log('[BudgetDAO] 表 budgets 已创建或存在');
-  }
-
-  private static ensureDb(): relationalStore.RdbStore {
-    if (!db) throw new Error('[BudgetDAO] Database not initialized');
-    return db;
-  }
 
   private static mapRowToBudget(resultSet: relationalStore.ResultSet): Budget {
     const periodValue = resultSet.getString(resultSet.getColumnIndex('period'));
@@ -72,7 +29,7 @@ export class BudgetDAO {
     const now: string = new Date().toISOString();
     budget.createdAt = now;
 
-    const store: relationalStore.RdbStore = BudgetDAO.ensureDb();
+    const store: relationalStore.RdbStore = DatabaseManager.getDatabase();
     const valueBucket: relationalStore.ValuesBucket = {
       user_id: budget.userId,
       category_id: budget.categoryId,
@@ -97,7 +54,7 @@ export class BudgetDAO {
   }
 
   static async getById(budgetId: number): Promise<Budget | null> {
-    const store: relationalStore.RdbStore = BudgetDAO.ensureDb();
+    const store: relationalStore.RdbStore = DatabaseManager.getDatabase();
     const predicates: relationalStore.RdbPredicates = new relationalStore.RdbPredicates('budgets');
     predicates.equalTo('budget_id', budgetId);
 
@@ -111,7 +68,7 @@ export class BudgetDAO {
   }
 
   static async getAll(): Promise<Budget[]> {
-    const store: relationalStore.RdbStore = BudgetDAO.ensureDb();
+    const store: relationalStore.RdbStore = DatabaseManager.getDatabase();
     const resultSet: relationalStore.ResultSet = await store.querySql('SELECT * FROM budgets ORDER BY budget_id ASC');
     const list: Budget[] = [];
     try {
@@ -129,7 +86,7 @@ export class BudgetDAO {
       throw new Error('[BudgetDAO] 更新失败，数据验证不通过');
     }
 
-    const store: relationalStore.RdbStore = BudgetDAO.ensureDb();
+    const store: relationalStore.RdbStore = DatabaseManager.getDatabase();
     const valueBucket: relationalStore.ValuesBucket = {
       category_id: budget.categoryId,
       amount: budget.amount,
@@ -147,26 +104,22 @@ export class BudgetDAO {
   }
 
   static async delete(budgetId: number): Promise<void> {
-    const store: relationalStore.RdbStore = BudgetDAO.ensureDb();
+    const store: relationalStore.RdbStore = DatabaseManager.getDatabase();
     const predicates: relationalStore.RdbPredicates = new relationalStore.RdbPredicates('budgets');
     predicates.equalTo('budget_id', budgetId);
     await store.delete(predicates);
     console.log(`[BudgetDAO] 删除成功 id=${budgetId}`);
   }
 
+  /**
+   * 软删除预算 - 使用 DAOHelper 统一方法
+   */
   static async softDelete(budgetId: number): Promise<void> {
-    const store: relationalStore.RdbStore = BudgetDAO.ensureDb();
-    const valueBucket: relationalStore.ValuesBucket = {
-      is_deleted: 1
-    };
-    const predicates: relationalStore.RdbPredicates = new relationalStore.RdbPredicates('budgets');
-    predicates.equalTo('budget_id', budgetId);
-    await store.update(valueBucket, predicates);
-    console.log(`[BudgetDAO] 软删除成功 id=${budgetId}`);
+    await DAOHelper.softDelete('budgets', 'budget_id', budgetId, '[BudgetDAO]');
   }
 
   static async getAllActive(): Promise<Budget[]> {
-    const store: relationalStore.RdbStore = BudgetDAO.ensureDb();
+    const store: relationalStore.RdbStore = DatabaseManager.getDatabase();
     const resultSet: relationalStore.ResultSet = await store.querySql(
       'SELECT * FROM budgets WHERE is_deleted = 0 ORDER BY budget_id ASC'
     );
@@ -181,20 +134,38 @@ export class BudgetDAO {
     }
   }
 
-  static async transaction(fn: () => Promise<void>): Promise<void> {
-    const store: relationalStore.RdbStore = BudgetDAO.ensureDb();
+  /**
+   * 根据用户ID查询预算
+   */
+  static async getByUserId(userId: number): Promise<Budget[]> {
+    const store: relationalStore.RdbStore = DatabaseManager.getDatabase();
+    const resultSet: relationalStore.ResultSet = await store.querySql(
+      'SELECT * FROM budgets WHERE user_id = ? AND is_deleted = 0 ORDER BY budget_id ASC',
+      [userId]
+    );
+    const list: Budget[] = [];
     try {
-      await store.beginTransaction();
-      await fn();
-      await store.commit();
-    } catch (err) {
-      await store.rollBack();
-      const error = err as Error;
-      console.error('[BudgetDAO] 事务失败: ' + JSON.stringify(error));
-      throw new Error('[BudgetDAO] 事务失败');
+      while (resultSet.goToNextRow()) {
+        list.push(BudgetDAO.mapRowToBudget(resultSet));
+      }
+      return list;
+    } finally {
+      resultSet.close();
     }
   }
 
+<<<<<<< HEAD
+  /**
+   * 事务封装 - 使用 DAOHelper 统一方法
+   */
+  static async transaction(fn: () => Promise<void>): Promise<void> {
+    await DAOHelper.transaction(fn, '[BudgetDAO]');
+  }
+
+  /**
+   * 检查预算是否存在 - 使用 DAOHelper 统一方法
+   */
+=======
   static async getByUserId(userId: number): Promise<Budget[]> {
     const store = BudgetDAO.ensureDb();
     const sql = `SELECT * FROM budgets WHERE user_id = ? AND is_deleted = 0 ORDER BY budget_id DESC`;
@@ -209,15 +180,9 @@ export class BudgetDAO {
       resultSet.close();
     }
   }
+>>>>>>> main
   static async exists(budgetId: number): Promise<boolean> {
-    const store: relationalStore.RdbStore = BudgetDAO.ensureDb();
-    const sql: string = 'SELECT 1 FROM budgets WHERE budget_id = ?';
-    const rs: relationalStore.ResultSet = await store.querySql(sql, [budgetId]);
-    try {
-      return rs.goToNextRow();
-    } finally {
-      rs.close();
-    }
+    return await DAOHelper.exists('budgets', 'budget_id', budgetId);
   }
 
 }

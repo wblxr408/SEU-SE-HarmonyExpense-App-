@@ -1,0 +1,678 @@
+@startuml HarmonyExpense-ClassDiagram
+!theme plain
+skinparam classAttributeIconSize 0
+skinparam linetype ortho
+skinparam packageStyle rectangle
+
+title HarmonyOS费用管理应用-类图-1.2.0版本
+
+' 模型层 - 实体模型
+package "模型层" <<Rectangle>> #E8F5E9 {
+
+    ' 核心实体类
+    class User {
+        - userId: number
+        - username: string
+        - email: string
+        - passwordHash: string
+        - createdAt: string
+        - updatedAt: string
+        - isDeleted: number
+        --
+        + validate(): boolean
+        + toJSON(): object
+        + fromJSON(json: object): User
+        + clone(): User
+    }
+
+    class Account {
+        - accountId: number
+        - userId: number
+        - name: string
+        - type: AccountType
+        - balance: number
+        - currency: string
+        - color: string
+        - icon: string
+        - createdAt: string
+        - updatedAt: string
+        - isDeleted: number
+        --
+        + validate(): boolean
+        + toJSON(): object
+        + fromJSON(json: object): Account
+        + clone(): Account
+    }
+
+    class Category {
+        - categoryId: number
+        - userId: number
+        - name: string
+        - type: CategoryType
+        - icon: string
+        - color: string
+        - parentCategoryId: number
+        - sortOrder: number
+        - createdAt: string
+        - updatedAt: string
+        - isDeleted: number
+        --
+        + validate(): boolean
+        + toJSON(): object
+        + fromJSON(json: object): Category
+        + clone(): Category
+    }
+
+    class Bill {
+        - billId: number
+        - userId: number
+        - accountId: number
+        - categoryId: number
+        - amount: number
+        - type: BillType
+        - note: string
+        - transactionDate: string
+        - createdAt: string
+        - updatedAt: string
+        - isDeleted: number
+        --
+        + validate(): boolean
+        + toJSON(): object
+        + fromJSON(json: object): Bill
+        + clone(): Bill
+    }
+
+    class Budget {
+        - budgetId: number
+        - userId: number
+        - categoryId: number
+        - amount: number
+        - period: BudgetPeriod
+        - startDate: string
+        - endDate: string
+        - isActive: number
+        - createdAt: string
+        - updatedAt: string
+        - isDeleted: number
+        --
+        + validate(): boolean
+        + toJSON(): object
+        + fromJSON(json: object): Budget
+        + clone(): Budget
+    }
+
+    class Tag {
+        - tagId: number
+        - userId: number
+        - name: string
+        - color: string
+        - usageCount: number
+        - createdAt: string
+        - updatedAt: string
+        - isDeleted: number
+        --
+        + validate(): boolean
+        + toJSON(): object
+        + fromJSON(json: object): Tag
+        + clone(): Tag
+    }
+
+    class BillTag {
+        - billId: number
+        - tagId: number
+        - createdAt: string
+        --
+        + validate(): boolean
+        + toJSON(): object
+    }
+
+    ' 统计模型
+    class MonthlyStatistics {
+        - statisticsId: number
+        - userId: number
+        - categoryId: number
+        - month: string
+        - totalExpense: number
+        - totalIncome: number
+        - transactionCount: number
+        - createdAt: string
+        - updatedAt: string
+        --
+        + toJSON(): object
+    }
+
+    class CategoryStatistics {
+        - categoryId: number
+        - categoryName: string
+        - type: string
+        - totalAmount: number
+        - transactionCount: number
+        - percentage: number
+        --
+        + toJSON(): object
+    }
+
+    ' 聚合类型
+    class CategoryTreeNode {
+        - category: Category
+        - children: CategoryTreeNode[]
+        - totalAmount: number
+        - transactionCount: number
+        --
+        + addChild(node: CategoryTreeNode): void
+        + getChildren(): CategoryTreeNode[]
+        + calculateTotalAmount(): number
+    }
+
+    class CategoryAggregation {
+        - categoryId: number
+        - categoryName: string
+        - categoryType: string
+        - totalAmount: number
+        - transactionCount: number
+        - percentage: number
+        - children: CategoryAggregation[]
+        --
+        + toJSON(): object
+        + calculatePercentage(total: number): number
+    }
+
+    class TagAggregation {
+        - tagId: number
+        - tagName: string
+        - tagColor: string
+        - totalAmount: number
+        - transactionCount: number
+        - percentage: number
+        --
+        + toJSON(): object
+        + calculatePercentage(total: number): number
+    }
+
+    ' 枚举类型
+    enum AccountType {
+        CASH
+        BANK
+        CREDIT_CARD
+        OTHER
+    }
+
+    enum CategoryType {
+        EXPENSE
+        INCOME
+    }
+
+    enum BillType {
+        EXPENSE
+        INCOME
+    }
+
+    enum BudgetPeriod {
+        MONTHLY
+        YEARLY
+    }
+}
+
+
+' DAO层 - 数据访问对象
+
+package "DAO层" <<Rectangle>> #E3F2FD {
+
+    class UserDAO {
+        - {static} instance: UserDAO
+        --
+        + {static} getInstance(): UserDAO
+        + insert(user: User): Promise<number>
+        + insertMany(users: User[]): Promise<void>
+        + getById(userId: number): Promise<User>
+        + getAll(): Promise<User[]>
+        + update(user: User): Promise<void>
+        + delete(userId: number): Promise<void>
+        + softDelete(userId: number): Promise<void>
+        + restore(userId: number): Promise<void>
+        + transaction(callback: Function): Promise<any>
+    }
+
+    class AccountDAO {
+        - {static} instance: AccountDAO
+        --
+        + {static} getInstance(): AccountDAO
+        + insert(account: Account): Promise<number>
+        + insertMany(accounts: Account[]): Promise<void>
+        + getById(accountId: number): Promise<Account>
+        + getAll(): Promise<Account[]>
+        + getByUserId(userId: number): Promise<Account[]>
+        + update(account: Account): Promise<void>
+        + updateMany(accounts: Account[]): Promise<void>
+        + delete(accountId: number): Promise<void>
+        + softDelete(accountId: number): Promise<void>
+        + restore(accountId: number): Promise<void>
+        + exists(accountId: number): Promise<boolean>
+        + getByBalanceRange(min: number, max: number): Promise<Account[]>
+    }
+
+    class CategoryDAO {
+        - {static} instance: CategoryDAO
+        --
+        + {static} getInstance(): CategoryDAO
+        + insert(category: Category): Promise<number>
+        + bulkInsert(categories: Category[]): Promise<void>
+        + getById(categoryId: number): Promise<Category>
+        + getAll(useCache: boolean): Promise<Category[]>
+        + getByType(type: string): Promise<Category[]>
+        + getChildren(parentId: number): Promise<Category[]>
+        + getCategoryTree(userId: number): Promise<CategoryTreeNode[]>
+        + aggregateByCategory(filters: object): Promise<CategoryAggregation[]>
+        + update(category: Category): Promise<void>
+        + softDelete(categoryId: number): Promise<void>
+        + restore(categoryId: number): Promise<void>
+        + hardDelete(categoryId: number): Promise<void>
+    }
+
+    class BillDAO {
+        - {static} instance: BillDAO
+        --
+        + {static} getInstance(): BillDAO
+        + insert(bill: Bill): Promise<number>
+        + bulkInsert(bills: Bill[]): Promise<void>
+        + getById(billId: number): Promise<Bill>
+        + getAll(): Promise<Bill[]>
+        + getByUserId(userId: number): Promise<Bill[]>
+        + getByPage(pageNum: number, pageSize: number, filters: object): Promise<Bill[]>
+        + getBillsByFilters(filters: object): Promise<Bill[]>
+        + getTotalStats(userId: number, filters: object): Promise<object>
+        + getMonthlyStats(userId: number, month: string): Promise<object>
+        + update(bill: Bill): Promise<void>
+        + delete(billId: number): Promise<void>
+        + bulkSoftDelete(billIds: number[]): Promise<void>
+        + restore(billId: number): Promise<void>
+    }
+
+    class BudgetDAO {
+        - {static} instance: BudgetDAO
+        --
+        + {static} getInstance(): BudgetDAO
+        + insert(budget: Budget): Promise<number>
+        + getById(budgetId: number): Promise<Budget>
+        + getAll(): Promise<Budget[]>
+        + getAllActive(): Promise<Budget[]>
+        + update(budget: Budget): Promise<void>
+        + delete(budgetId: number): Promise<void>
+        + softDelete(budgetId: number): Promise<void>
+        + exists(budgetId: number): Promise<boolean>
+        + transaction(callback: Function): Promise<any>
+    }
+
+    class TagDAO {
+        - {static} instance: TagDAO
+        --
+        + {static} getInstance(): TagDAO
+        + insert(tag: Tag): Promise<number>
+        + bulkInsert(tags: Tag[]): Promise<void>
+        + getById(tagId: number): Promise<Tag>
+        + getAll(): Promise<Tag[]>
+        + update(tag: Tag): Promise<void>
+        + delete(tagId: number): Promise<void>
+        + softDelete(tagId: number): Promise<void>
+        + addTagToBill(billId: number, tagId: number): Promise<void>
+        + removeTagFromBill(billId: number, tagId: number): Promise<void>
+        + setTagsForBill(billId: number, tagIds: number[]): Promise<void>
+        + getTagsByBillId(billId: number): Promise<Tag[]>
+        + getBillIdsByTagId(tagId: number): Promise<number[]>
+        + getPopularTags(limit: number): Promise<Tag[]>
+        + aggregateByTag(filters: object): Promise<TagAggregation[]>
+    }
+
+    class StatisticsDAO {
+        - {static} instance: StatisticsDAO
+        --
+        + {static} getInstance(): StatisticsDAO
+        + insertMonthly(stats: MonthlyStatistics): Promise<number>
+        + bulkInsertMonthly(stats: MonthlyStatistics[]): Promise<void>
+        + getMonthly(statsId: number): Promise<MonthlyStatistics>
+        + getAllMonthly(): Promise<MonthlyStatistics[]>
+        + updateMonthly(stats: MonthlyStatistics): Promise<void>
+        + softDeleteMonthly(statsId: number): Promise<void>
+        + restoreMonthly(statsId: number): Promise<void>
+        + insertCategory(stats: CategoryStatistics): Promise<number>
+        + bulkInsertCategory(stats: CategoryStatistics[]): Promise<void>
+        + getCategory(categoryId: number): Promise<CategoryStatistics>
+        + getAllCategory(): Promise<CategoryStatistics[]>
+        + updateCategory(stats: CategoryStatistics): Promise<void>
+        + softDeleteCategory(categoryId: number): Promise<void>
+        + restoreCategory(categoryId: number): Promise<void>
+    }
+}
+
+'                                     
+' 服务层 - 业务服务
+'                                     
+package "服务层" <<Rectangle>> #FFF3E0 {
+
+    class ExportService {
+        - {static} instance: ExportService
+        --
+        + {static} getInstance(): ExportService
+        + exportUserData(userId: number, options: ExportOptions): Promise<string>
+        - collectUserData(userId: number, options: ExportOptions): Promise<ExportDataContent>
+    }
+
+    class ImportService {
+        - {static} instance: ImportService
+        --
+        + {static} getInstance(): ImportService
+        + importUserData(filePath: string, options: ImportOptions): Promise<ImportResult>
+        - importToDatabase(data: ExportDataContent, options: ImportOptions): Promise<ImportResult>
+    }
+
+    class EncryptionModule {
+        --
+        + {static} encryptData(data: string, password: string): Promise<EncryptionResult>
+        + {static} decryptData(encryptedData: string, password: string, params: EncryptionParams): Promise<string>
+        - {static} deriveKey(password: string, salt: Uint8Array): Promise<Uint8Array>
+    }
+
+    class FileHelper {
+        --
+        + {static} saveToFile(filePath: string, content: string): Promise<void>
+        + {static} readFromFile(filePath: string): Promise<string>
+        + {static} generateFileName(userId: number, extension: string): string
+        + {static} getExportDirectory(): string
+    }
+
+    class ChecksumHelper {
+        --
+        + {static} generateChecksum(data: string): Promise<string>
+        + {static} verifyChecksum(data: string, checksum: string): Promise<boolean>
+    }
+}
+
+' 工具层 - 工具类                                  
+   
+package "工具层" <<Rectangle>> #F3E5F5 {
+
+    ' 数据库核心工具
+    class DatabaseManager <<Singleton>> {
+        - {static} instance: DatabaseManager
+        - db: relationalStore.RdbStore
+        --
+        + {static} getInstance(): DatabaseManager
+        + initDatabase(): Promise<void>
+        + getDatabase(): relationalStore.RdbStore
+        + createAllTables(): Promise<void>
+        + transaction(callback: Function): Promise<any>
+        - createUsersTable(): Promise<void>
+        - createAccountsTable(): Promise<void>
+        - createCategoriesTable(): Promise<void>
+        - createBillsTable(): Promise<void>
+        - createBudgetsTable(): Promise<void>
+        - createTagsTable(): Promise<void>
+        - createBillTagsTable(): Promise<void>
+        - createStatisticsTables(): Promise<void>
+    }
+
+    class CacheManager <<Singleton>> {
+        - {static} instance: CacheManager
+        - cache: Map<string, CacheEntry>
+        - defaultTTL: number
+        - stats: CacheStats
+        --
+        + {static} getInstance(): CacheManager
+        + get<T>(key: string): T | null
+        + set<T>(key: string, value: T, ttl?: number): void
+        + getOrSet<T>(key: string, factory: Function, ttl?: number): Promise<T>
+        + has(key: string): boolean
+        + delete(key: string): boolean
+        + clear(pattern?: string): void
+        + cleanExpired(): void
+        + getStats(): CacheStats
+        + printStats(): void
+    }
+
+    class BatchQueryHelper {
+        --
+        + {static} bulkInsert(tableName: string, records: object[], batchSize?: number): Promise<void>
+        + {static} bulkSoftDelete(tableName: string, ids: number[], idColumn: string): Promise<void>
+        + {static} bulkUpdate(tableName: string, updates: object[]): Promise<void>
+        + {static} executeTransaction(operations: Function[]): Promise<void>
+    }
+
+    class QueryHelper {
+        --
+        + {static} queryBillsByCategoryAndTags(categoryIds: number[], tagIds: number[], filters: object): Promise<Bill[]>
+        + {static} queryBillsByCategory(categoryId: number, includeChildren: boolean): Promise<Bill[]>
+        + {static} getCategoryWithChildren(categoryId: number): Promise<number[]>
+    }
+
+    class IndexManager {
+        --
+        + {static} createAllIndexes(): Promise<void>
+        + {static} createBillsIndexes(): Promise<void>
+        + {static} createAccountsIndexes(): Promise<void>
+        + {static} createCategoriesIndexes(): Promise<void>
+        + {static} createBillTagsIndexes(): Promise<void>
+        + {static} rebuildIndexes(): Promise<void>
+    }
+
+    class DatabaseConfigOptimizer {
+        --
+        + {static} applyOptimizations(): Promise<void>
+        + {static} getConfig(): Promise<object>
+        + {static} printConfig(): Promise<void>
+        + {static} checkpoint(): Promise<void>
+    }
+
+    class PerformanceMonitor <<Singleton>> {
+        - {static} instance: PerformanceMonitor
+        - queryStats: Map<string, QueryStat>
+        --
+        + {static} getInstance(): PerformanceMonitor
+        + measure<T>(operation: string, fn: Function): Promise<T>
+        + recordQuery(operation: string, duration: number): void
+        + getStats(): Map<string, QueryStat>
+        + printStats(): void
+        + clearStats(): void
+    }
+
+    class DAOHelper {
+        --
+        + {static} toError(error: any, context: string): Error
+        + {static} transaction<T>(callback: Function): Promise<T>
+        + {static} exists(tableName: string, idColumn: string, id: number): Promise<boolean>
+        + {static} softDelete(tableName: string, idColumn: string, id: number): Promise<void>
+        + {static} restore(tableName: string, idColumn: string, id: number): Promise<void>
+        + {static} hardDelete(tableName: string, idColumn: string, id: number): Promise<void>
+        + {static} getLong(resultSet: any, column: string): number
+        + {static} getString(resultSet: any, column: string): string
+        + {static} getDouble(resultSet: any, column: string): number
+    }
+}
+
+'                                     
+' 配置 - 配置类
+'                                     
+package "配置" <<Rectangle>> #FFFDE7 {
+
+    class DatabaseConfig {
+        + {static} DB_NAME: string
+        + {static} DB_VERSION: number
+        + {static} BATCH_SIZE: number
+        + {static} MAX_SQL_PARAMS: number
+    }
+
+    class CacheConfig {
+        + {static} DEFAULT_TTL: number
+        + {static} CATEGORY_TTL: number
+        + {static} USER_TTL: number
+        + {static} MAX_CACHE_SIZE: number
+    }
+
+    class PerformanceConfig {
+        + {static} SLOW_QUERY_THRESHOLD: number
+        + {static} VERY_SLOW_QUERY_THRESHOLD: number
+    }
+
+    class EncryptionConfig {
+        + {static} SALT_LENGTH: number
+        + {static} IV_LENGTH: number
+        + {static} KEY_SIZE: number
+        + {static} PBKDF2_ITERATIONS: number
+    }
+}
+
+'                                     
+' 关系定义
+'                                     
+
+' 模型层内部关系
+User "1" -- "0..*" Account : 拥有 >
+User "1" -- "0..*" Category : 创建 >
+User "1" -- "0..*" Bill : 有 >
+User "1" -- "0..*" Budget : 设置 >
+User "1" -- "0..*" Tag : 定义 >
+
+Account "1" -- "0..*" Bill : 记录 >
+Category "1" -- "0..*" Bill : 分类 >
+Category "1" -- "0..*" Budget : 限制 >
+Category "0..*" -- "0..1" Category : 父子关系 >
+
+Bill "0..*" -- "0..*" Tag : 标记 >
+Bill "0..*" .. "0..*" BillTag : (通过) >
+Tag "0..*" .. "0..*" BillTag : (通过) >
+
+Bill ..|> BillType : 使用
+Account ..|> AccountType : 使用
+Category ..|> CategoryType : 使用
+Budget ..|> BudgetPeriod : 使用
+
+CategoryTreeNode o-- Category : 包含
+CategoryTreeNode "1" o-- "0..*" CategoryTreeNode : 子节点
+
+' DAO层对模型层的依赖
+UserDAO ..> User : 管理
+AccountDAO ..> Account : 管理
+CategoryDAO ..> Category : 管理
+CategoryDAO ..> CategoryTreeNode : 构建
+CategoryDAO ..> CategoryAggregation : 返回
+BillDAO ..> Bill : 管理
+BudgetDAO ..> Budget : 管理
+TagDAO ..> Tag : 管理
+TagDAO ..> BillTag : 管理
+TagDAO ..> TagAggregation : 返回
+StatisticsDAO ..> MonthlyStatistics : 管理
+StatisticsDAO ..> CategoryStatistics : 管理
+
+' DAO层对数据库管理器的依赖
+UserDAO ..> DatabaseManager : 使用
+AccountDAO ..> DatabaseManager : 使用
+CategoryDAO ..> DatabaseManager : 使用
+BillDAO ..> DatabaseManager : 使用
+BudgetDAO ..> DatabaseManager : 使用
+TagDAO ..> DatabaseManager : 使用
+StatisticsDAO ..> DatabaseManager : 使用
+
+' DAO层对工具类的依赖
+UserDAO ..> DAOHelper : 使用
+AccountDAO ..> DAOHelper : 使用
+CategoryDAO ..> DAOHelper : 使用
+CategoryDAO ..> CacheManager : 缓存
+BillDAO ..> DAOHelper : 使用
+BillDAO ..> BatchQueryHelper : 批量操作
+BudgetDAO ..> DAOHelper : 使用
+TagDAO ..> DAOHelper : 使用
+StatisticsDAO ..> DAOHelper : 使用
+
+' 服务层依赖
+ExportService ..> UserDAO : 使用
+ExportService ..> AccountDAO : 使用
+ExportService ..> CategoryDAO : 使用
+ExportService ..> BillDAO : 使用
+ExportService ..> BudgetDAO : 使用
+ExportService ..> TagDAO : 使用
+ExportService ..> EncryptionModule : 加密
+ExportService ..> FileHelper : 保存
+ExportService ..> ChecksumHelper : 验证
+
+ImportService ..> UserDAO : 使用
+ImportService ..> AccountDAO : 使用
+ImportService ..> CategoryDAO : 使用
+ImportService ..> BillDAO : 使用
+ImportService ..> BudgetDAO : 使用
+ImportService ..> TagDAO : 使用
+ImportService ..> EncryptionModule : 解密
+ImportService ..> FileHelper : 读取
+ImportService ..> ChecksumHelper : 验证
+ImportService ..> DatabaseManager : 事务
+
+' 工具层内部关系
+DatabaseManager ..> IndexManager : 创建索引
+DatabaseManager ..> DatabaseConfigOptimizer : 优化
+BatchQueryHelper ..> DatabaseManager : 使用
+QueryHelper ..> DatabaseManager : 使用
+PerformanceMonitor ..> DatabaseManager : 监控
+
+' 配置依赖
+DatabaseManager ..> DatabaseConfig : 配置
+CacheManager ..> CacheConfig : 配置
+PerformanceMonitor ..> PerformanceConfig : 配置
+EncryptionModule ..> EncryptionConfig : 配置
+
+' 注释说明
+note right of DatabaseManager
+  单例模式
+  管理数据库连接
+  创建表结构和索引
+end note
+
+note right of CacheManager
+  单例模式
+  基于TTL的缓存机制
+  性能提升
+end note
+
+note right of BatchQueryHelper
+  批量操作优化
+  性能提升
+end note
+
+note right of IndexManager
+  覆盖索引优化
+  部分索引优化
+  性能提升
+end note
+
+note right of EncryptionModule
+  AES-256-GCM 加密
+  PBKDF2 密钥派生
+  企业级安全
+end note
+
+note bottom of "模型层"
+  实体层：定义核心业务模型
+  支持JSON序列化、克隆、验证
+  所有实体支持软删除
+end note
+
+note bottom of "DAO层"
+  数据访问层：单例模式
+  统一CRUD操作
+  批量操作、分页查询
+  聚合统计支持
+end note
+
+note bottom of "服务层"
+  业务服务层：
+  导出/导入功能
+  加密/解密
+  文件操作
+  数据完整性验证
+end note
+
+note bottom of "工具层"
+  工具层：
+  数据库管理、缓存优化
+  批量查询、性能监控
+  索引管理、配置优化
+end note
+
+@enduml

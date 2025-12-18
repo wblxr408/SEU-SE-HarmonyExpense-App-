@@ -1,71 +1,15 @@
 import relationalStore from '@ohos.data.relationalStore';
-import common from '@ohos.app.ability.common';
+import { DatabaseManager } from '../database/DatabaseManager';
 import { MonthlyStatistics, CategoryStatistics } from '../model/Statistics';
-
-let db: relationalStore.RdbStore | null = null;
+import { DAOHelper } from '../common/DAOHelper';
 
 export class StatisticsDAO {
-  static async initDatabase(context: common.Context) {
-    const storeConfig: relationalStore.StoreConfig = {
-      name: 'harmony_expense.db',
-      securityLevel: relationalStore.SecurityLevel.S1
-    };
-    try {
-      db = await relationalStore.getRdbStore(context, storeConfig);
-      console.log('[StatisticsDAO] 数据库已初始化');
-      await StatisticsDAO.createTables();
-    } catch (error) {
-      console.error('[StatisticsDAO] 初始化数据库失败: ' + JSON.stringify(error));
-      throw new Error('[StatisticsDAO] 初始化数据库失败');
-    }
-  }
-
-  static async createTables() {
-    const store = StatisticsDAO.ensureDb();
-    const monthlySQL = `
-      CREATE TABLE IF NOT EXISTS monthly_statistics (
-        user_id INTEGER,
-        category_id INTEGER,
-        month TEXT,
-        total_expense REAL,
-        total_income REAL,
-        transaction_count INTEGER,
-        created_at TEXT,
-        updated_at TEXT,
-        is_deleted INTEGER DEFAULT 0,
-        PRIMARY KEY(user_id, category_id, month)
-      );
-    `;
-    const categorySQL = `
-      CREATE TABLE IF NOT EXISTS category_statistics (
-        category_id INTEGER PRIMARY KEY,
-        category_name TEXT,
-        type TEXT,
-        total_amount REAL,
-        transaction_count INTEGER,
-        percentage REAL,
-        icon TEXT,
-        color TEXT,
-        created_at TEXT,
-        updated_at TEXT,
-        is_deleted INTEGER DEFAULT 0
-      );
-    `;
-    await store.executeSql(monthlySQL);
-    await store.executeSql(categorySQL);
-    console.log('[StatisticsDAO] 表创建完成');
-  }
-
-  private static ensureDb(): relationalStore.RdbStore {
-    if (!db) throw new Error('[StatisticsDAO] Database not initialized');
-    return db;
-  }
 
   /** ================== 月度统计 ================== */
   static async insertMonthly(stat: MonthlyStatistics) {
     if (!stat.validate()) throw new Error('[StatisticsDAO] 月度统计验证失败');
 
-    const store = StatisticsDAO.ensureDb();
+    const store = DatabaseManager.getDatabase();
     const now = new Date().toISOString();
     stat.createdAt = now;
     stat.updatedAt = now;
@@ -83,20 +27,17 @@ export class StatisticsDAO {
     await store.executeSql(sql, params);
   }
 
+  /**
+   * 批量插入月度统计 - 使用 DAOHelper 统一事务处理
+   */
   static async bulkInsertMonthly(stats: MonthlyStatistics[]) {
-    const store = StatisticsDAO.ensureDb();
-    await store.beginTransaction();
-    try {
+    await DAOHelper.transaction(async () => {
       for (const s of stats) await StatisticsDAO.insertMonthly(s);
-      await store.commit();
-    } catch (err) {
-      await store.rollBack();
-      throw new Error('[StatisticsDAO] 批量插入月度统计失败');
-    }
+    }, '[StatisticsDAO] 批量插入月度统计');
   }
 
   static async getMonthly(userId: number, categoryId: number, month: string): Promise<MonthlyStatistics | null> {
-    const store = StatisticsDAO.ensureDb();
+    const store = DatabaseManager.getDatabase();
     const sql = `
       SELECT * FROM monthly_statistics 
       WHERE user_id=? AND category_id=? AND month=? AND is_deleted=0
@@ -112,7 +53,7 @@ export class StatisticsDAO {
   }
 
   static async getAllMonthly(): Promise<MonthlyStatistics[]> {
-    const store = StatisticsDAO.ensureDb();
+    const store = DatabaseManager.getDatabase();
     const sql = `SELECT * FROM monthly_statistics WHERE is_deleted=0 ORDER BY month ASC`;
     let rs: relationalStore.ResultSet | null = null;
     const list: MonthlyStatistics[] = [];
@@ -128,7 +69,7 @@ export class StatisticsDAO {
   static async updateMonthly(stat: MonthlyStatistics) {
     if (!stat.validate()) throw new Error('[StatisticsDAO] 月度统计验证失败');
 
-    const store = StatisticsDAO.ensureDb();
+    const store = DatabaseManager.getDatabase();
     stat.updatedAt = new Date().toISOString();
 
     const sql = `
@@ -144,7 +85,7 @@ export class StatisticsDAO {
   }
 
   static async softDeleteMonthly(userId: number, categoryId: number, month: string) {
-    const store = StatisticsDAO.ensureDb();
+    const store = DatabaseManager.getDatabase();
     const sql = `
       UPDATE monthly_statistics SET is_deleted=1, updated_at=? 
       WHERE user_id=? AND category_id=? AND month=?
@@ -153,7 +94,7 @@ export class StatisticsDAO {
   }
 
   static async restoreMonthly(userId: number, categoryId: number, month: string) {
-    const store = StatisticsDAO.ensureDb();
+    const store = DatabaseManager.getDatabase();
     const sql = `
       UPDATE monthly_statistics SET is_deleted=0, updated_at=? 
       WHERE user_id=? AND category_id=? AND month=?
@@ -179,7 +120,7 @@ export class StatisticsDAO {
   static async insertCategory(stat: CategoryStatistics) {
     if (!stat.validate()) throw new Error('[StatisticsDAO] 分类统计验证失败');
 
-    const store = StatisticsDAO.ensureDb();
+    const store = DatabaseManager.getDatabase();
     const now = new Date().toISOString();
     stat.createdAt = now;
     stat.updatedAt = now;
@@ -197,20 +138,17 @@ export class StatisticsDAO {
     await store.executeSql(sql, params);
   }
 
+  /**
+   * 批量插入分类统计 - 使用 DAOHelper 统一事务处理
+   */
   static async bulkInsertCategory(stats: CategoryStatistics[]) {
-    const store = StatisticsDAO.ensureDb();
-    await store.beginTransaction();
-    try {
+    await DAOHelper.transaction(async () => {
       for (const s of stats) await StatisticsDAO.insertCategory(s);
-      await store.commit();
-    } catch (err) {
-      await store.rollBack();
-      throw new Error('[StatisticsDAO] 批量插入分类统计失败');
-    }
+    }, '[StatisticsDAO] 批量插入分类统计');
   }
 
   static async getCategory(categoryId: number): Promise<CategoryStatistics | null> {
-    const store = StatisticsDAO.ensureDb();
+    const store = DatabaseManager.getDatabase();
     const sql = `SELECT * FROM category_statistics WHERE category_id=? AND is_deleted=0`;
     let rs: relationalStore.ResultSet | null = null;
     try {
@@ -223,7 +161,7 @@ export class StatisticsDAO {
   }
 
   static async getAllCategory(): Promise<CategoryStatistics[]> {
-    const store = StatisticsDAO.ensureDb();
+    const store = DatabaseManager.getDatabase();
     const sql = `SELECT * FROM category_statistics WHERE is_deleted=0 ORDER BY category_id ASC`;
     let rs: relationalStore.ResultSet | null = null;
     const list: CategoryStatistics[] = [];
@@ -239,7 +177,7 @@ export class StatisticsDAO {
   static async updateCategory(stat: CategoryStatistics) {
     if (!stat.validate()) throw new Error('[StatisticsDAO] 分类统计验证失败');
 
-    const store = StatisticsDAO.ensureDb();
+    const store = DatabaseManager.getDatabase();
     stat.updatedAt = new Date().toISOString();
 
     const sql = `
@@ -255,7 +193,7 @@ export class StatisticsDAO {
   }
 
   static async softDeleteCategory(categoryId: number) {
-    const store = StatisticsDAO.ensureDb();
+    const store = DatabaseManager.getDatabase();
     const sql = `
       UPDATE category_statistics SET is_deleted=1, updated_at=? WHERE category_id=?
     `;
@@ -263,7 +201,7 @@ export class StatisticsDAO {
   }
 
   static async restoreCategory(categoryId: number) {
-    const store = StatisticsDAO.ensureDb();
+    const store = DatabaseManager.getDatabase();
     const sql = `
       UPDATE category_statistics SET is_deleted=0, updated_at=? WHERE category_id=?
     `;
@@ -286,16 +224,10 @@ export class StatisticsDAO {
     return stats;
   }
 
-  /** ================== 事务封装 ================== */
+  /** 
+   * 事务封装 - 使用 DAOHelper 统一方法
+   */
   static async transaction(fn: () => Promise<void>): Promise<void> {
-    const store = StatisticsDAO.ensureDb();
-    await store.beginTransaction();
-    try {
-      await fn();
-      await store.commit();
-    } catch (err) {
-      await store.rollBack();
-      throw new Error('[StatisticsDAO] 事务失败');
-    }
+    await DAOHelper.transaction(fn, '[StatisticsDAO]');
   }
 }
