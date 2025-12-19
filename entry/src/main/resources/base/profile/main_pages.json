@@ -12,6 +12,7 @@
     "pages/AccountManagement",
     "pages/SettingsPage",
     "pages/BudgetManagement",
-    "pages/ExportImportPage"
+    "pages/ExportImportPage",
+    "pages/AIChatPage"
   ]
 }

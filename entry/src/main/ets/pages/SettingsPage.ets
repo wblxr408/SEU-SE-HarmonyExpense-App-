@@ -73,6 +73,26 @@ struct SettingsPage {
         .backgroundColor('#F1F3F5')
         .divider({ strokeWidth: 1, color: '#E0E0E0', startMargin: 15, endMargin: 15 })
 
+        // API Key 配置 (Demo)
+        Column() {
+          Text('AI API Key (DeepSeek/OpenAI)')
+            .fontSize(14)
+            .fontColor(Color.Gray)
+            .margin({ top: 20, bottom: 5, left: 15 })
+            .width('100%')
+          
+          TextInput({ placeholder: '请输入 API Key', text: AppStorage.Get('LLM_API_KEY') || '' })
+            .onChange((value) => {
+              AppStorage.SetOrCreate('LLM_API_KEY', value);
+            })
+            .width('90%')
+            .height(40)
+            .backgroundColor(Color.White)
+            .borderRadius(8)
+            .margin({ bottom: 10 })
+        }
+        .width('100%')
+
         // --- 退出登录按钮 (放在底部或者列表最后) ---
         // 这里我把它作为一个单独的按钮放在列表下方，更醒目
         Button('退出登录')

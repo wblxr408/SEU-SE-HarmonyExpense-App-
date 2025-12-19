@@ -8,28 +8,44 @@ export interface ChatMessage {
   content: string;
 }
 
+interface LLMMessageContent {
+  content: string;
+}
+
+interface LLMResponseChoice {
+  message: LLMMessageContent;
+}
+
+interface LLMResponse {
+  choices: LLMResponseChoice[];
+}
+
 /**
  * LLM Service
  * Handles communication with Large Language Model APIs
  */
 export class LLMService {
   // Default configuration (User should replace these)
-  private static readonly DEFAULT_API_URL = 'https://api.deepseek.com/chat/completions'; // Example standard OpenAI-compatible endpoint
+  private static readonly DEFAULT_API_URL = 'https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions'; 
   private static readonly API_KEY_KEY = 'llm_api_key';
   private static readonly API_URL_KEY = 'llm_api_url';
 
   /**
    * Send chat request to LLM
    * @param messages Conversation history
-   * @param onChunk Callback for stream updates (optional)
+   * @param model Model name (e.g., qwen-turbo, qwen-plus)
    * @returns Full response string
    */
-  static async chat(messages: ChatMessage[]): Promise<string> {
+  static async chat(messages: ChatMessage[], model: string = 'qwen-turbo'): Promise<string> {
     try {
-      // 1. Get Config (In a real app, fetch from Preferences)
-      // For now, we use hardcoded values for testing or require user input
+      // 1. Get Config
+      // Use AppStorage/PersistentStorage
+      if (!AppStorage.Has('LLM_API_KEY')) {
+        PersistentStorage.PersistProp('LLM_API_KEY', '');
+      }
+      
       const apiUrl = LLMService.DEFAULT_API_URL;
-      const apiKey = ''; // TODO: User needs to provide this
+      const apiKey = AppStorage.Get<string>('LLM_API_KEY');
 
       // Check if API Key is set
       if (!apiKey) {
@@ -46,7 +62,7 @@ export class LLMService {
           'Authorization': `Bearer ${apiKey}`
         },
         extraData: {
-          model: 'deepseek-chat', // or 'gpt-3.5-turbo', etc.
+          model: model, 
           messages: messages,
           stream: false // For simplicity in v1, we use non-streaming
         },
@@ -56,7 +72,7 @@ export class LLMService {
 
       // 3. Parse Response
       if (response.responseCode === 200) {
-        const result = JSON.parse(response.result as string);
+        const result = JSON.parse(response.result as string) as LLMResponse;
         if (result.choices && result.choices.length > 0) {
           return result.choices[0].message.content;
         } else {
@@ -66,8 +82,12 @@ export class LLMService {
         throw new Error(`HTTP Error: ${response.responseCode}`);
       }
     } catch (error) {
-      console.error('[LLMService]', error);
-      throw error;
+      console.error('[LLMService]', JSON.stringify(error));
+      if (error instanceof Error) {
+        throw error;
+      } else {
+        throw new Error(JSON.stringify(error));
+      }
     }
   }
 }

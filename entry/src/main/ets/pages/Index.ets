@@ -271,6 +271,15 @@ struct Index {
     .title('记账APP')
     .titleMode(NavigationTitleMode.Mini)
     .hideBackButton(true) // 首页隐藏返回按钮
+    .menus([
+      {
+        value: 'AI 助手',
+        icon: 'resources/base/media/ic_bottom_record.svg', // 使用现有图标作为替代
+        action: () => {
+          router.pushUrl({ url: 'pages/AIChatPage' })
+        }
+      }
+    ])
   }
 
   //自定义的展示行的函数

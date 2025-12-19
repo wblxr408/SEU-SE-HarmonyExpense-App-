@@ -31,6 +31,9 @@ export default class EntryAbility extends UIAbility {
   private breakpointSystem: BreakpointSystem = new BreakpointSystem();
 
   async onCreate(want:Want, launchParam:AbilityConstant.LaunchParam) {
+    // Initialize PersistentStorage for API Key
+    PersistentStorage.PersistProp('LLM_API_KEY', 'sk-db4d76d137084e459292cb477ccde584');
+
     hilog.isLoggable(LogConfig.DOMAIN, LogConfig.TAG, hilog.LogLevel.INFO)
     hilog.info(LogConfig.DOMAIN, LogConfig.TAG, '%{public}s', 'Ability onCreate')
     hilog.info(LogConfig.DOMAIN, LogConfig.TAG, '%{public}s', 'want param:' + JSON.stringify(want) ?? '')
