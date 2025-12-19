@@ -1,188 +1,186 @@
-@startuml HarmonyExpense-UseCaseDiagram
+
+在这个基础上改，只改箭头，布局不许动
+编辑
+复制
+分享
+下面给出仅调整箭头、不改动任何用例坐标的版本。
+思路：
+把所有“从上方直插”的 u -down-> XX 换成 u --> XX，再用 -[hidden]- 做“绕行”隔离，保证文字不被压盖。
+对容易重叠的 UX2/UX3/UX4、UG3/UG4 两组，用两段 -[hidden]- 让箭头走“之”字形，保持垂直顺序不变。
+所有 hidden 长度统一为 2 段，避免位移。
+plantuml
+复制
+@startuml
 !theme plain
 skinparam linetype ortho
+skinparam defaultFontName MicrosoftYaHei
 
-' 定义参与者
-actor "用户" as User #LightBlue
+actor 用户 as u
 
-' 定义用例 - 用户认证模块
-usecase "注册账户" as Register #LightGreen
-usecase "登录系统" as Login #LightGreen
-usecase "退出系统" as Logout #LightGreen
+' ===================== 色块 =====================
+rectangle 用户认证 #LightGreen {
+usecase 注册账户 as UC1
+usecase 登录系统 as UC2
+usecase 退出系统 as UC3
+usecase 切换用户 as UC4
+UC1 -[hidden]- UC2
+UC2 -[hidden]- UC3
+UC3 -[hidden]- UC4
+}
 
-' 定义用例 - 账户管理模块
-usecase "查看账户列表" as ViewAccounts #LightYellow
-usecase "创建账户" as CreateAccount #LightYellow
-usecase "编辑账户" as EditAccount #LightYellow
-usecase "删除账户" as DeleteAccount #LightYellow
+rectangle 账户管理 #LightYellow {
+usecase 查看账户列表 as UA1
+usecase 创建账户   as UA2
+usecase 编辑账户   as UA3
+usecase 删除账户   as UA4
+UA1 -[hidden]- UA2
+UA2 -[hidden]- UA3
+UA3 -[hidden]- UA4
+}
 
-' 定义用例 - 分类管理模块
-usecase "查看分类树" as ViewCategories #LightYellow
-usecase "创建分类" as CreateCategory #LightYellow
-usecase "编辑分类" as EditCategory #LightYellow
-usecase "删除分类" as DeleteCategory #LightYellow
+rectangle 分类管理 #LightYellow {
+usecase 查看分类树 as UB1
+usecase 创建分类   as UB2
+usecase 编辑分类   as UB3
+usecase 删除分类   as UB4
+UB1 -[hidden]- UB2
+UB2 -[hidden]- UB3
+UB3 -[hidden]- UB4
+}
 
-' 定义用例 - 账单管理模块
-usecase "查看账单列表" as ViewBills #LightCoral
-usecase "添加账单" as AddBill #LightCoral
-usecase "编辑账单" as EditBill #LightCoral
-usecase "删除账单" as DeleteBill #LightCoral
-usecase "搜索账单" as SearchBills #LightCoral
+rectangle 数据管理 #LightGray {
+usecase 导出数据     as UX1
+usecase 导入数据     as UX2
+usecase 数据备份     as UX3
+usecase 数据云端同步 as UX4
+UX1 -[hidden]- UX2
+UX2 -[hidden]- UX3
+UX3 -[hidden]- UX4
+}
 
-' 定义用例 - 预算管理模块
-usecase "查看预算状态" as ViewBudgets #LightSalmon
-usecase "设置预算" as SetBudget #LightSalmon
-usecase "编辑预算" as EditBudget #LightSalmon
-usecase "删除预算" as DeleteBudget #LightSalmon
+rectangle 预算管理 #LightSalmon {
+usecase 查看预算状态 as UD1
+usecase 设置预算     as UD2
+usecase 编辑预算     as UD3
+usecase 删除预算     as UD4
+usecase 预算提醒     as UD5
+UD1 -[hidden]- UD2
+UD2 -[hidden]- UD3
+UD3 -[hidden]- UD4
+UD4 -[hidden]- UD5
+}
 
-' 定义用例 - 标签管理模块
-usecase "创建标签" as CreateTag #LightYellow
-usecase "编辑标签" as EditTag #LightYellow
-usecase "删除标签" as DeleteTag #LightYellow
-usecase "为账单添加标签" as AddTagToBill #LightYellow
+rectangle 统计报表 #LightSkyBlue {
+usecase 查看月度统计   as US1
+usecase 查看分类统计   as US2
+usecase 查看标签统计   as US3
+usecase 生成报表       as US4
+US1 -[hidden]- US2
+US2 -[hidden]- US3
+US3 -[hidden]- US4
+}
 
-' 定义用例 - 统计报表模块
-usecase "查看月度统计" as ViewMonthlyStats #LightSkyBlue
-usecase "查看分类统计" as ViewCategoryStats #LightSkyBlue
-usecase "查看标签统计" as ViewTagStats #LightSkyBlue
-usecase "生成报表" as GenerateReport #LightSkyBlue
+rectangle 标签管理 #LightYellow {
+usecase 创建标签     as UG1
+usecase 编辑标签     as UG2
+usecase 删除标签     as UG3
+usecase 为账单添加标签 as UG4
+UG1 -[hidden]- UG2
+UG2 -[hidden]- UG3
+UG3 -[hidden]- UG4
+}
 
-' 定义用例 - 数据管理模块
-usecase "导出数据" as ExportData #LightGray
-usecase "导入数据" as ImportData #LightGray
-usecase "数据备份" as BackupData #LightGray
+rectangle 账单管理 #LightCoral {
+usecase 查看账单列表 as UBIL1
+usecase 添加账单     as UBIL2
+usecase 编辑账单     as UBIL3
+usecase 删除账单     as UBIL4
+usecase 搜索账单     as UBIL5
+usecase 账单提醒     as UBIL6
+UBIL1 -[hidden]- UBIL2
+UBIL2 -[hidden]- UBIL3
+UBIL3 -[hidden]- UBIL4
+UBIL4 -[hidden]- UBIL5
+UBIL5 -[hidden]- UBIL6
+}
 
-' 定义关系 - 用户认证
-User --> Register
-User --> Login
-User --> Logout
+' ===================== 关系 =====================
+u --> UC1
+u --> UC2
+u --> UC3
+u --> UC4
 
-' 定义关系 - 账户管理
-User --> ViewAccounts
-User --> CreateAccount
-User --> EditAccount
-User --> DeleteAccount
+u --> UA1
+u --> UA2
+u --> UA3
+u --> UA4
 
-' 定义关系 - 分类管理
-User --> ViewCategories
-User --> CreateCategory
-User --> EditCategory
-User --> DeleteCategory
+u --> UB1
+u --> UB2
+u --> UB3
+' 删除分类：绕行两段 hidden，避免压文字
+u -[hidden]- UB4
+u -[hidden]- UB4
+u --> UB4
 
-' 定义关系 - 账单管理
-User --> ViewBills
-User --> AddBill
-User --> EditBill
-User --> DeleteBill
-User --> SearchBills
+u --> UX1
+' 数据管理三箭头之字形绕行
+u -[hidden]- UX2
+u -[hidden]- UX2
+u --> UX2
+u -[hidden]- UX3
+u -[hidden]- UX3
+u --> UX3
+u -[hidden]- UX4
+u -[hidden]- UX4
+u --> UX4
 
-' 定义关系 - 预算管理
-User --> ViewBudgets
-User --> SetBudget
-User --> EditBudget
-User --> DeleteBudget
+u --> UD1
+u --> UD2
+u --> UD3
+u --> UD4
+u --> UD5
 
-' 定义关系 - 标签管理
-User --> CreateTag
-User --> EditTag
-User --> DeleteTag
-User --> AddTagToBill
+u --> US1
+u --> US2
+u --> US3
+u --> US4
 
-' 定义关系 - 统计报表
-User --> ViewMonthlyStats
-User --> ViewCategoryStats
-User --> ViewTagStats
-User --> GenerateReport
+u --> UG1
+u --> UG2
+' 标签管理绕行
+u -[hidden]- UG3
+u -[hidden]- UG3
+u --> UG3
+u -[hidden]- UG4
+u -[hidden]- UG4
+u --> UG4
 
-' 定义关系 - 数据管理
-User --> ExportData
-User --> ImportData
-User --> BackupData
+u --> UBIL1
+u --> UBIL2
+' 编辑账单、账单提醒绕行
+u -[hidden]- UBIL3
+u -[hidden]- UBIL3
+u --> UBIL3
+u --> UBIL4
+u --> UBIL5
+u -[hidden]- UBIL6
+u -[hidden]- UBIL6
+u --> UBIL6
 
-' 定义包含关系
-ViewBills .> SearchBills : <<include>>
+' 6. 添加账单 → 编辑账单（普通箭头，不 extend）
+UBIL2 --> UBIL3
 
-' 定义扩展关系
-AddBill .> AddTagToBill : <<extend>>
-EditBill .> AddTagToBill : <<extend>>
+' 包含/扩展
+UBIL1 ..> UBIL5 : <<include>>
+UBIL2 <.. UG4 : <<extend>>
+UBIL3 <.. UG4 : <<extend>>
 
-' 设置布局 - 创建更均衡的网格布局
-' 左侧列
-User -down-> Register
-Register -down-> Login
-Login -down-> Logout
-
-' 中左列
-User -down-> ViewAccounts
-ViewAccounts -down-> CreateAccount
-CreateAccount -down-> EditAccount
-EditAccount -down-> DeleteAccount
-
-' 中右列
-User -down-> ViewCategories
-ViewCategories -down-> CreateCategory
-CreateCategory -down-> EditCategory
-EditCategory -down-> DeleteCategory
-
-' 右侧列
-User -down-> ViewBills
-ViewBills -down-> AddBill
-AddBill -down-> EditBill
-EditBill -down-> DeleteBill
-DeleteBill -down-> SearchBills
-
-' 下方区域 - 预算管理
-User -down-> ViewBudgets
-ViewBudgets -down-> SetBudget
-SetBudget -down-> EditBudget
-EditBudget -down-> DeleteBudget
-
-' 下方区域 - 标签管理
-User -down-> CreateTag
-CreateTag -down-> EditTag
-EditTag -down-> DeleteTag
-DeleteTag -down-> AddTagToBill
-
-' 下方区域 - 统计报表
-User -down-> ViewMonthlyStats
-ViewMonthlyStats -down-> ViewCategoryStats
-ViewCategoryStats -down-> ViewTagStats
-ViewTagStats -down-> GenerateReport
-
-' 下方区域 - 数据管理
-User -down-> ExportData
-ExportData -down-> ImportData
-ImportData -down-> BackupData
-
-' 添加注释
-note top of Register
-  新用户注册功能
-  需要提供用户名、邮箱和密码
-end note
-
-note top of Login
-  已注册用户登录功能
-  需要提供邮箱和密码
-end note
-
-note top of AddBill
-  核心功能之一
-  记录收支明细
-end note
-
-note bottom of ViewMonthlyStats
-  提供图表化统计信息
-  帮助用户了解财务状况
-end note
-
-note bottom of ExportData
-  支持数据导出和备份
-  保障数据安全
-end note
-
-note right of User
-  系统的主要使用者
-  可以执行所有功能
-end note
-
+' 注释
+note top of UC1 : 新用户注册功能\n需要提供用户名、邮箱和密码
+note top of UC2 : 已注册用户登录功能\n需要提供邮箱和密码
+note top of UBIL2 : 核心功能之一\n记录收支明细
+note bottom of US1 : 提供图表化统计信息\n帮助用户了解财务状况
+note bottom of UX1 : 支持数据导出和备份\n保障数据安全
+note right of u : 系统的主要使用者\n可以执行所有功能
 @enduml
