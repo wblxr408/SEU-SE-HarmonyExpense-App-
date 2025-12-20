@@ -135,7 +135,7 @@ export class ReminderService {
     } catch (error) {
       const errorMsg: string = error instanceof Error ? error.message : String(error);
       console.error('[ReminderService] 创建提醒失败:', error);
-      throw new Error(`创建提醒失败: ${errorMsg}`);
+      throw error instanceof Error ? error : new Error(`创建提醒失败: ${errorMsg}`);
     }
   }
 
@@ -173,7 +173,7 @@ export class ReminderService {
     } catch (error) {
       const errorMsg: string = error instanceof Error ? error.message : String(error);
       console.error('[ReminderService] 创建预算提醒失败:', error);
-      const err: Error = new Error(`创建预算提醒失败: ${errorMsg}`);
+      const err: Error = error instanceof Error ? error : new Error(`创建预算提醒失败: ${errorMsg}`);
       throw err;
     }
   }
@@ -219,7 +219,7 @@ export class ReminderService {
     } catch (error) {
       const errorMsg: string = error instanceof Error ? error.message : String(error);
       console.error('[ReminderService] 检查提醒失败:', error);
-      throw new Error(`检查提醒失败: ${errorMsg}`);
+      throw error instanceof Error ? error : new Error(`检查提醒失败: ${errorMsg}`);
     }
   }
 
@@ -285,7 +285,7 @@ export class ReminderService {
     } catch (error) {
       const errorMsg: string = error instanceof Error ? error.message : String(error);
       console.error('[ReminderService] 获取活跃提醒失败:', error);
-      throw new Error(`获取活跃提醒失败: ${errorMsg}`);
+      throw error instanceof Error ? error : new Error(`获取活跃提醒失败: ${errorMsg}`);
     }
   }
 
@@ -303,7 +303,7 @@ export class ReminderService {
     } catch (error) {
       const errorMsg: string = error instanceof Error ? error.message : String(error);
       console.error('[ReminderService] 获取即将到期提醒失败:', error);
-      throw new Error(`获取即将到期提醒失败: ${errorMsg}`);
+      throw error instanceof Error ? error : new Error(`获取即将到期提醒失败: ${errorMsg}`);
     }
   }
 
@@ -317,7 +317,7 @@ export class ReminderService {
     } catch (error) {
       const errorMsg: string = error instanceof Error ? error.message : String(error);
       console.error('[ReminderService] 更新提醒失败:', error);
-      throw new Error(`更新提醒失败: ${errorMsg}`);
+      throw error instanceof Error ? error : new Error(`更新提醒失败: ${errorMsg}`);
     }
   }
 
@@ -331,7 +331,7 @@ export class ReminderService {
     } catch (error) {
       const errorMsg: string = error instanceof Error ? error.message : String(error);
       console.error('[ReminderService] 删除提醒失败:', error);
-      throw new Error(`删除提醒失败: ${errorMsg}`);
+      throw error instanceof Error ? error : new Error(`删除提醒失败: ${errorMsg}`);
     }
   }
 
@@ -345,7 +345,7 @@ export class ReminderService {
     } catch (error) {
       const errorMsg: string = error instanceof Error ? error.message : String(error);
       console.error('[ReminderService] 设置提醒状态失败:', error);
-      throw new Error(`设置提醒状态失败: ${errorMsg}`);
+      throw error instanceof Error ? error : new Error(`设置提醒状态失败: ${errorMsg}`);
     }
   }
 
@@ -364,7 +364,7 @@ export class ReminderService {
     } catch (error) {
       const errorMsg: string = error instanceof Error ? error.message : String(error);
       console.error('[ReminderService] 批量创建提醒失败:', error);
-      throw new Error(`批量创建提醒失败: ${errorMsg}`);
+      throw error instanceof Error ? error : new Error(`批量创建提醒失败: ${errorMsg}`);
     }
   }
 
@@ -388,7 +388,7 @@ export class ReminderService {
     } catch (error) {
       const errorMsg: string = error instanceof Error ? error.message : String(error);
       console.error('[ReminderService] 获取提醒统计失败:', error);
-      throw new Error(`获取提醒统计失败: ${errorMsg}`);
+      throw error instanceof Error ? error : new Error(`获取提醒统计失败: ${errorMsg}`);
     }
   }
 }

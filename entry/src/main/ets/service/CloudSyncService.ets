@@ -478,7 +478,7 @@ export class CloudSyncService {
     } catch (error) {
       const errorMsg: string = error instanceof Error ? error.message : String(error);
       console.error('[CloudSyncService] 获取同步历史失败:', error);
-      throw new Error(`获取同步历史失败: ${errorMsg}`);
+      throw error instanceof Error ? error : new Error(`获取同步历史失败: ${errorMsg}`);
     }
   }
 
@@ -501,16 +501,17 @@ export class CloudSyncService {
   static async getSyncStatistics(userId: number): Promise<SyncStatistics> {
     try {
       const stats = await CloudSyncRecordDAO.getStatistics(userId);
-      return new SyncStatistics(
-        stats.total,
-        stats.completed,
-        stats.failed,
-        stats.lastSyncTime
-      );
+      const result: SyncStatistics = {
+        total: stats.total,
+        completed: stats.completed,
+        failed: stats.failed,
+        lastSyncTime: stats.lastSyncTime
+      };
+      return result;
     } catch (error) {
       const errorMsg: string = error instanceof Error ? error.message : String(error);
       console.error('[CloudSyncService] 获取同步统计失败:', error);
-      throw new Error(`获取同步统计失败: ${errorMsg}`);
+      throw error instanceof Error ? error : new Error(`获取同步统计失败: ${errorMsg}`);
     }
   }
 
@@ -524,7 +525,7 @@ export class CloudSyncService {
     } catch (error) {
       const errorMsg: string = error instanceof Error ? error.message : String(error);
       console.error('[CloudSyncService] 清理旧记录失败:', error);
-      throw new Error(`清理旧记录失败: ${errorMsg}`);
+      throw error instanceof Error ? error : new Error(`清理旧记录失败: ${errorMsg}`);
     }
   }
 
@@ -550,18 +551,11 @@ export class CloudSyncService {
 }
 
 /**
- * 同步统计
+ * 同步统计接口
  */
-class SyncStatistics {
-  total: number = 0;
-  completed: number = 0;
-  failed: number = 0;
+export interface SyncStatistics {
+  total: number;
+  completed: number;
+  failed: number;
   lastSyncTime?: string;
-
-  constructor(total: number, completed: number, failed: number, lastSyncTime?: string) {
-    this.total = total;
-    this.completed = completed;
-    this.failed = failed;
-    this.lastSyncTime = lastSyncTime;
-  }
 }

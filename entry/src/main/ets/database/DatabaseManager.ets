@@ -347,7 +347,491 @@ export class DatabaseManager {
       `);
       console.log('[DatabaseManager] 表 cloud_sync_records 及索引创建成功');
 
-      console.log('[DatabaseManager] 所有数据表创建完成');
+      // ==================== 高级功能模块表创建 ====================
+
+      // 12. 创建异常记录表（异常检测功能）
+      await store.executeSql(`
+        CREATE TABLE IF NOT EXISTS anomaly_records (
+          anomaly_id INTEGER PRIMARY KEY AUTOINCREMENT,
+          user_id INTEGER NOT NULL,
+          bill_id INTEGER NOT NULL,
+          anomaly_type TEXT NOT NULL CHECK (anomaly_type IN ('high_amount', 'low_amount', 'frequency_spike', 'unusual_time', 'unusual_category', 'pattern_break')),
+          severity TEXT NOT NULL CHECK (severity IN ('low', 'medium', 'high', 'critical')),
+          algorithm TEXT NOT NULL CHECK (algorithm IN ('sigma_3', 'z_score', 'iqr', 'moving_avg', 'ensemble')),
+          score REAL NOT NULL DEFAULT 0,
+          threshold REAL NOT NULL DEFAULT 0,
+          expected_value REAL NOT NULL DEFAULT 0,
+          actual_value REAL NOT NULL DEFAULT 0,
+          deviation REAL NOT NULL DEFAULT 0,
+          description TEXT,
+          is_acknowledged INTEGER DEFAULT 0 CHECK (is_acknowledged IN (0, 1)),
+          acknowledged_at TEXT,
+          created_at TEXT NOT NULL,
+          updated_at TEXT NOT NULL,
+          is_deleted INTEGER DEFAULT 0 CHECK (is_deleted IN (0, 1)),
+          FOREIGN KEY (user_id) REFERENCES users(user_id),
+          FOREIGN KEY (bill_id) REFERENCES bills(bill_id)
+        );
+      `);
+
+      await store.executeSql(`
+        CREATE INDEX IF NOT EXISTS idx_anomaly_user
+        ON anomaly_records (user_id) WHERE is_deleted = 0;
+      `);
+      await store.executeSql(`
+        CREATE INDEX IF NOT EXISTS idx_anomaly_bill
+        ON anomaly_records (bill_id) WHERE is_deleted = 0;
+      `);
+      await store.executeSql(`
+        CREATE INDEX IF NOT EXISTS idx_anomaly_severity
+        ON anomaly_records (user_id, severity) WHERE is_deleted = 0 AND is_acknowledged = 0;
+      `);
+      console.log('[DatabaseManager] 表 anomaly_records 及索引创建成功');
+
+      // 13. 创建用户消费基线表（异常检测基础数据）
+      await store.executeSql(`
+        CREATE TABLE IF NOT EXISTS user_spending_baselines (
+          baseline_id INTEGER PRIMARY KEY AUTOINCREMENT,
+          user_id INTEGER NOT NULL,
+          category_id INTEGER DEFAULT 0,
+          period TEXT NOT NULL DEFAULT 'monthly',
+          mean REAL NOT NULL DEFAULT 0,
+          median REAL NOT NULL DEFAULT 0,
+          std_dev REAL NOT NULL DEFAULT 0,
+          variance REAL NOT NULL DEFAULT 0,
+          min REAL NOT NULL DEFAULT 0,
+          max REAL NOT NULL DEFAULT 0,
+          q1 REAL NOT NULL DEFAULT 0,
+          q3 REAL NOT NULL DEFAULT 0,
+          iqr REAL NOT NULL DEFAULT 0,
+          sample_size INTEGER NOT NULL DEFAULT 0,
+          last_calculated_at TEXT NOT NULL,
+          sample_start_date TEXT NOT NULL,
+          sample_end_date TEXT NOT NULL,
+          created_at TEXT NOT NULL,
+          updated_at TEXT NOT NULL,
+          is_deleted INTEGER DEFAULT 0 CHECK (is_deleted IN (0, 1)),
+          FOREIGN KEY (user_id) REFERENCES users(user_id),
+          UNIQUE (user_id, category_id, period)
+        );
+      `);
+
+      await store.executeSql(`
+        CREATE INDEX IF NOT EXISTS idx_baseline_user_category
+        ON user_spending_baselines (user_id, category_id) WHERE is_deleted = 0;
+      `);
+      console.log('[DatabaseManager] 表 user_spending_baselines 及索引创建成功');
+
+      // 14. 创建领域事件表（事件溯源功能）
+      await store.executeSql(`
+        CREATE TABLE IF NOT EXISTS domain_events (
+          event_id TEXT PRIMARY KEY,
+          event_type TEXT NOT NULL,
+          aggregate_type TEXT NOT NULL CHECK (aggregate_type IN ('bill', 'category', 'account', 'budget', 'user', 'tag', 'ledger')),
+          aggregate_id INTEGER NOT NULL,
+          user_id INTEGER NOT NULL,
+          version INTEGER NOT NULL DEFAULT 1,
+          payload_json TEXT NOT NULL DEFAULT '{}',
+          metadata_json TEXT NOT NULL DEFAULT '{}',
+          occurred_at TEXT NOT NULL,
+          created_at TEXT NOT NULL,
+          FOREIGN KEY (user_id) REFERENCES users(user_id)
+        );
+      `);
+
+      await store.executeSql(`
+        CREATE INDEX IF NOT EXISTS idx_events_aggregate
+        ON domain_events (aggregate_type, aggregate_id, version);
+      `);
+      await store.executeSql(`
+        CREATE INDEX IF NOT EXISTS idx_events_user
+        ON domain_events (user_id, occurred_at DESC);
+      `);
+      await store.executeSql(`
+        CREATE INDEX IF NOT EXISTS idx_events_type
+        ON domain_events (event_type, occurred_at DESC);
+      `);
+      console.log('[DatabaseManager] 表 domain_events 及索引创建成功');
+
+      // 15. 创建命令表（CQRS命令侧）
+      await store.executeSql(`
+        CREATE TABLE IF NOT EXISTS commands (
+          command_id TEXT PRIMARY KEY,
+          command_type TEXT NOT NULL,
+          aggregate_type TEXT NOT NULL CHECK (aggregate_type IN ('bill', 'category', 'account', 'budget', 'user', 'tag', 'ledger')),
+          aggregate_id INTEGER NOT NULL DEFAULT 0,
+          user_id INTEGER NOT NULL,
+          payload_json TEXT NOT NULL DEFAULT '{}',
+          status TEXT NOT NULL CHECK (status IN ('pending', 'processing', 'succeeded', 'failed', 'cancelled')),
+          metadata_json TEXT NOT NULL DEFAULT '{}',
+          expected_version INTEGER NOT NULL DEFAULT 0,
+          issued_at TEXT NOT NULL,
+          processed_at TEXT,
+          error_message TEXT,
+          FOREIGN KEY (user_id) REFERENCES users(user_id)
+        );
+      `);
+
+      await store.executeSql(`
+        CREATE INDEX IF NOT EXISTS idx_commands_status
+        ON commands (status, issued_at);
+      `);
+      await store.executeSql(`
+        CREATE INDEX IF NOT EXISTS idx_commands_user
+        ON commands (user_id, issued_at DESC);
+      `);
+      console.log('[DatabaseManager] 表 commands 及索引创建成功');
+
+      // 16. 创建聚合快照表（事件溯源性能优化）
+      await store.executeSql(`
+        CREATE TABLE IF NOT EXISTS aggregate_snapshots (
+          snapshot_id INTEGER PRIMARY KEY AUTOINCREMENT,
+          aggregate_type TEXT NOT NULL CHECK (aggregate_type IN ('bill', 'category', 'account', 'budget', 'user', 'tag', 'ledger')),
+          aggregate_id INTEGER NOT NULL,
+          version INTEGER NOT NULL,
+          state_json TEXT NOT NULL DEFAULT '{}',
+          created_at TEXT NOT NULL,
+          UNIQUE (aggregate_type, aggregate_id, version)
+        );
+      `);
+
+      await store.executeSql(`
+        CREATE INDEX IF NOT EXISTS idx_snapshots_aggregate
+        ON aggregate_snapshots (aggregate_type, aggregate_id, version DESC);
+      `);
+      console.log('[DatabaseManager] 表 aggregate_snapshots 及索引创建成功');
+
+      // 17. 创建读模型表（CQRS查询侧）
+      await store.executeSql(`
+        CREATE TABLE IF NOT EXISTS read_models (
+          model_id INTEGER PRIMARY KEY AUTOINCREMENT,
+          model_type TEXT NOT NULL,
+          user_id INTEGER NOT NULL,
+          data_json TEXT NOT NULL DEFAULT '{}',
+          last_event_version INTEGER NOT NULL DEFAULT 0,
+          last_updated_at TEXT NOT NULL,
+          created_at TEXT NOT NULL,
+          FOREIGN KEY (user_id) REFERENCES users(user_id),
+          UNIQUE (model_type, user_id)
+        );
+      `);
+
+      await store.executeSql(`
+        CREATE INDEX IF NOT EXISTS idx_read_models_user_type
+        ON read_models (user_id, model_type);
+      `);
+      console.log('[DatabaseManager] 表 read_models 及索引创建成功');
+
+      // 18. 创建共享账本表
+      await store.executeSql(`
+        CREATE TABLE IF NOT EXISTS shared_ledgers (
+          ledger_id INTEGER PRIMARY KEY AUTOINCREMENT,
+          name TEXT NOT NULL,
+          description TEXT,
+          type TEXT NOT NULL CHECK (type IN ('personal', 'family', 'couple', 'roommate', 'team', 'project')),
+          owner_id INTEGER NOT NULL,
+          owner_name TEXT NOT NULL,
+          currency TEXT NOT NULL DEFAULT 'CNY',
+          icon TEXT,
+          color TEXT NOT NULL DEFAULT '#2196F3',
+          member_count INTEGER NOT NULL DEFAULT 1,
+          settings_json TEXT NOT NULL DEFAULT '{}',
+          created_at TEXT NOT NULL,
+          updated_at TEXT NOT NULL,
+          is_deleted INTEGER DEFAULT 0 CHECK (is_deleted IN (0, 1)),
+          FOREIGN KEY (owner_id) REFERENCES users(user_id)
+        );
+      `);
+
+      await store.executeSql(`
+        CREATE INDEX IF NOT EXISTS idx_ledgers_owner
+        ON shared_ledgers (owner_id) WHERE is_deleted = 0;
+      `);
+      await store.executeSql(`
+        CREATE INDEX IF NOT EXISTS idx_ledgers_type
+        ON shared_ledgers (type) WHERE is_deleted = 0;
+      `);
+      console.log('[DatabaseManager] 表 shared_ledgers 及索引创建成功');
+
+      // 19. 创建账本成员表
+      await store.executeSql(`
+        CREATE TABLE IF NOT EXISTS ledger_members (
+          member_id INTEGER PRIMARY KEY AUTOINCREMENT,
+          ledger_id INTEGER NOT NULL,
+          user_id INTEGER NOT NULL,
+          username TEXT NOT NULL,
+          email TEXT NOT NULL,
+          avatar TEXT,
+          role TEXT NOT NULL CHECK (role IN ('owner', 'admin', 'member', 'viewer')),
+          permissions_json TEXT NOT NULL DEFAULT '[]',
+          nickname TEXT,
+          contribution_amount REAL NOT NULL DEFAULT 0,
+          bill_count INTEGER NOT NULL DEFAULT 0,
+          joined_at TEXT NOT NULL,
+          last_active_at TEXT NOT NULL,
+          is_active INTEGER DEFAULT 1 CHECK (is_active IN (0, 1)),
+          created_at TEXT NOT NULL,
+          updated_at TEXT NOT NULL,
+          is_deleted INTEGER DEFAULT 0 CHECK (is_deleted IN (0, 1)),
+          FOREIGN KEY (ledger_id) REFERENCES shared_ledgers(ledger_id) ON DELETE CASCADE,
+          FOREIGN KEY (user_id) REFERENCES users(user_id),
+          UNIQUE (ledger_id, user_id)
+        );
+      `);
+
+      await store.executeSql(`
+        CREATE INDEX IF NOT EXISTS idx_ledger_members_ledger
+        ON ledger_members (ledger_id) WHERE is_deleted = 0;
+      `);
+      await store.executeSql(`
+        CREATE INDEX IF NOT EXISTS idx_ledger_members_user
+        ON ledger_members (user_id) WHERE is_deleted = 0;
+      `);
+      console.log('[DatabaseManager] 表 ledger_members 及索引创建成功');
+
+      // 20. 创建账本邀请表
+      await store.executeSql(`
+        CREATE TABLE IF NOT EXISTS ledger_invitations (
+          invitation_id INTEGER PRIMARY KEY AUTOINCREMENT,
+          ledger_id INTEGER NOT NULL,
+          ledger_name TEXT NOT NULL,
+          inviter_id INTEGER NOT NULL,
+          inviter_name TEXT NOT NULL,
+          invitee_email TEXT NOT NULL,
+          invitee_user_id INTEGER DEFAULT 0,
+          role TEXT NOT NULL CHECK (role IN ('owner', 'admin', 'member', 'viewer')),
+          message TEXT,
+          status TEXT NOT NULL CHECK (status IN ('pending', 'accepted', 'declined', 'expired', 'cancelled')),
+          invitation_code TEXT NOT NULL,
+          expires_at TEXT NOT NULL,
+          responded_at TEXT,
+          created_at TEXT NOT NULL,
+          updated_at TEXT NOT NULL,
+          is_deleted INTEGER DEFAULT 0 CHECK (is_deleted IN (0, 1)),
+          FOREIGN KEY (ledger_id) REFERENCES shared_ledgers(ledger_id) ON DELETE CASCADE,
+          FOREIGN KEY (inviter_id) REFERENCES users(user_id),
+          UNIQUE (invitation_code)
+        );
+      `);
+
+      await store.executeSql(`
+        CREATE INDEX IF NOT EXISTS idx_invitations_ledger
+        ON ledger_invitations (ledger_id) WHERE is_deleted = 0;
+      `);
+      await store.executeSql(`
+        CREATE INDEX IF NOT EXISTS idx_invitations_email
+        ON ledger_invitations (invitee_email, status) WHERE is_deleted = 0;
+      `);
+      await store.executeSql(`
+        CREATE INDEX IF NOT EXISTS idx_invitations_code
+        ON ledger_invitations (invitation_code) WHERE is_deleted = 0;
+      `);
+      console.log('[DatabaseManager] 表 ledger_invitations 及索引创建成功');
+
+      // 21. 创建共享账单表
+      await store.executeSql(`
+        CREATE TABLE IF NOT EXISTS shared_bills (
+          bill_id INTEGER PRIMARY KEY AUTOINCREMENT,
+          ledger_id INTEGER NOT NULL,
+          creator_id INTEGER NOT NULL,
+          creator_name TEXT NOT NULL,
+          account_id INTEGER NOT NULL,
+          category_id INTEGER NOT NULL,
+          amount REAL NOT NULL,
+          note TEXT,
+          transaction_date TEXT NOT NULL,
+          type TEXT NOT NULL CHECK (type IN ('income', 'expense')),
+          approval_status TEXT NOT NULL CHECK (approval_status IN ('pending', 'approved', 'rejected', 'auto_approved')),
+          approved_by INTEGER DEFAULT 0,
+          approved_at TEXT,
+          sync_status TEXT NOT NULL CHECK (sync_status IN ('synced', 'pending', 'conflict', 'failed')),
+          last_synced_at TEXT,
+          version INTEGER NOT NULL DEFAULT 1,
+          split_type TEXT NOT NULL CHECK (split_type IN ('equal', 'custom', 'percentage', 'none')),
+          split_details_json TEXT NOT NULL DEFAULT '[]',
+          attachments_json TEXT NOT NULL DEFAULT '[]',
+          tags_json TEXT NOT NULL DEFAULT '[]',
+          location TEXT,
+          created_at TEXT NOT NULL,
+          updated_at TEXT NOT NULL,
+          is_deleted INTEGER DEFAULT 0 CHECK (is_deleted IN (0, 1)),
+          FOREIGN KEY (ledger_id) REFERENCES shared_ledgers(ledger_id) ON DELETE CASCADE,
+          FOREIGN KEY (creator_id) REFERENCES users(user_id),
+          FOREIGN KEY (account_id) REFERENCES accounts(account_id),
+          FOREIGN KEY (category_id) REFERENCES categories(category_id)
+        );
+      `);
+
+      await store.executeSql(`
+        CREATE INDEX IF NOT EXISTS idx_shared_bills_ledger
+        ON shared_bills (ledger_id, transaction_date DESC) WHERE is_deleted = 0;
+      `);
+      await store.executeSql(`
+        CREATE INDEX IF NOT EXISTS idx_shared_bills_creator
+        ON shared_bills (creator_id) WHERE is_deleted = 0;
+      `);
+      await store.executeSql(`
+        CREATE INDEX IF NOT EXISTS idx_shared_bills_approval
+        ON shared_bills (ledger_id, approval_status) WHERE is_deleted = 0;
+      `);
+      console.log('[DatabaseManager] 表 shared_bills 及索引创建成功');
+
+      // 22. 创建审批记录表
+      await store.executeSql(`
+        CREATE TABLE IF NOT EXISTS approval_records (
+          approval_id INTEGER PRIMARY KEY AUTOINCREMENT,
+          ledger_id INTEGER NOT NULL,
+          bill_id INTEGER NOT NULL,
+          requester_id INTEGER NOT NULL,
+          requester_name TEXT NOT NULL,
+          approver_id INTEGER DEFAULT 0,
+          approver_name TEXT,
+          status TEXT NOT NULL CHECK (status IN ('pending', 'approved', 'rejected', 'auto_approved')),
+          amount REAL NOT NULL,
+          reason TEXT,
+          comment TEXT,
+          requested_at TEXT NOT NULL,
+          processed_at TEXT,
+          created_at TEXT NOT NULL,
+          updated_at TEXT NOT NULL,
+          is_deleted INTEGER DEFAULT 0 CHECK (is_deleted IN (0, 1)),
+          FOREIGN KEY (ledger_id) REFERENCES shared_ledgers(ledger_id) ON DELETE CASCADE,
+          FOREIGN KEY (bill_id) REFERENCES shared_bills(bill_id) ON DELETE CASCADE,
+          FOREIGN KEY (requester_id) REFERENCES users(user_id)
+        );
+      `);
+
+      await store.executeSql(`
+        CREATE INDEX IF NOT EXISTS idx_approvals_ledger
+        ON approval_records (ledger_id, status) WHERE is_deleted = 0;
+      `);
+      await store.executeSql(`
+        CREATE INDEX IF NOT EXISTS idx_approvals_bill
+        ON approval_records (bill_id) WHERE is_deleted = 0;
+      `);
+      console.log('[DatabaseManager] 表 approval_records 及索引创建成功');
+
+      // 23. 创建成员活动记录表
+      await store.executeSql(`
+        CREATE TABLE IF NOT EXISTS member_activities (
+          activity_id INTEGER PRIMARY KEY AUTOINCREMENT,
+          ledger_id INTEGER NOT NULL,
+          user_id INTEGER NOT NULL,
+          username TEXT NOT NULL,
+          action_type TEXT NOT NULL CHECK (action_type IN ('create', 'update', 'delete', 'approve', 'reject', 'join', 'leave')),
+          target_type TEXT NOT NULL CHECK (target_type IN ('bill', 'category', 'budget', 'member', 'settings')),
+          target_id INTEGER NOT NULL,
+          description TEXT,
+          metadata_json TEXT NOT NULL DEFAULT '{}',
+          created_at TEXT NOT NULL,
+          FOREIGN KEY (ledger_id) REFERENCES shared_ledgers(ledger_id) ON DELETE CASCADE,
+          FOREIGN KEY (user_id) REFERENCES users(user_id)
+        );
+      `);
+
+      await store.executeSql(`
+        CREATE INDEX IF NOT EXISTS idx_activities_ledger
+        ON member_activities (ledger_id, created_at DESC);
+      `);
+      await store.executeSql(`
+        CREATE INDEX IF NOT EXISTS idx_activities_user
+        ON member_activities (user_id, created_at DESC);
+      `);
+      console.log('[DatabaseManager] 表 member_activities 及索引创建成功');
+
+      // 24. 创建智能分类训练数据表
+      await store.executeSql(`
+        CREATE TABLE IF NOT EXISTS smart_category_training (
+          training_id INTEGER PRIMARY KEY AUTOINCREMENT,
+          user_id INTEGER NOT NULL,
+          bill_id INTEGER NOT NULL,
+          predicted_category_id INTEGER NOT NULL,
+          actual_category_id INTEGER NOT NULL,
+          confidence REAL NOT NULL DEFAULT 0,
+          features_json TEXT NOT NULL DEFAULT '{}',
+          is_correct INTEGER DEFAULT 0 CHECK (is_correct IN (0, 1)),
+          created_at TEXT NOT NULL,
+          FOREIGN KEY (user_id) REFERENCES users(user_id),
+          FOREIGN KEY (bill_id) REFERENCES bills(bill_id)
+        );
+      `);
+
+      await store.executeSql(`
+        CREATE INDEX IF NOT EXISTS idx_training_user
+        ON smart_category_training (user_id, created_at DESC);
+      `);
+      await store.executeSql(`
+        CREATE INDEX IF NOT EXISTS idx_training_accuracy
+        ON smart_category_training (user_id, is_correct);
+      `);
+      console.log('[DatabaseManager] 表 smart_category_training 及索引创建成功');
+
+      // 25. 创建智能分类规则表
+      await store.executeSql(`
+        CREATE TABLE IF NOT EXISTS smart_category_rules (
+          rule_id INTEGER PRIMARY KEY AUTOINCREMENT,
+          user_id INTEGER NOT NULL,
+          category_id INTEGER NOT NULL,
+          rule_type TEXT NOT NULL CHECK (rule_type IN ('keyword', 'amount_range', 'time_pattern', 'merchant', 'combined')),
+          condition_json TEXT NOT NULL DEFAULT '{}',
+          priority INTEGER NOT NULL DEFAULT 0,
+          confidence REAL NOT NULL DEFAULT 1.0,
+          usage_count INTEGER NOT NULL DEFAULT 0,
+          success_count INTEGER NOT NULL DEFAULT 0,
+          is_active INTEGER DEFAULT 1 CHECK (is_active IN (0, 1)),
+          created_at TEXT NOT NULL,
+          updated_at TEXT NOT NULL,
+          is_deleted INTEGER DEFAULT 0 CHECK (is_deleted IN (0, 1)),
+          FOREIGN KEY (user_id) REFERENCES users(user_id),
+          FOREIGN KEY (category_id) REFERENCES categories(category_id)
+        );
+      `);
+
+      await store.executeSql(`
+        CREATE INDEX IF NOT EXISTS idx_rules_user
+        ON smart_category_rules (user_id, priority DESC) WHERE is_active = 1 AND is_deleted = 0;
+      `);
+      await store.executeSql(`
+        CREATE INDEX IF NOT EXISTS idx_rules_category
+        ON smart_category_rules (category_id) WHERE is_active = 1 AND is_deleted = 0;
+      `);
+      console.log('[DatabaseManager] 表 smart_category_rules 及索引创建成功');
+
+      // 26. 创建OCR识别记录表
+      await store.executeSql(`
+        CREATE TABLE IF NOT EXISTS ocr_recognition_records (
+          recognition_id INTEGER PRIMARY KEY AUTOINCREMENT,
+          user_id INTEGER NOT NULL,
+          bill_id INTEGER DEFAULT 0,
+          image_path TEXT NOT NULL,
+          recognition_status TEXT NOT NULL CHECK (recognition_status IN ('pending', 'processing', 'completed', 'failed')),
+          confidence REAL NOT NULL DEFAULT 0,
+          extracted_data_json TEXT NOT NULL DEFAULT '{}',
+          merchant_name TEXT,
+          amount REAL DEFAULT 0,
+          transaction_date TEXT,
+          category_suggestion TEXT,
+          error_message TEXT,
+          processing_time_ms INTEGER DEFAULT 0,
+          created_at TEXT NOT NULL,
+          updated_at TEXT NOT NULL,
+          is_deleted INTEGER DEFAULT 0 CHECK (is_deleted IN (0, 1)),
+          FOREIGN KEY (user_id) REFERENCES users(user_id),
+          FOREIGN KEY (bill_id) REFERENCES bills(bill_id)
+        );
+      `);
+
+      await store.executeSql(`
+        CREATE INDEX IF NOT EXISTS idx_ocr_user
+        ON ocr_recognition_records (user_id, created_at DESC) WHERE is_deleted = 0;
+      `);
+      await store.executeSql(`
+        CREATE INDEX IF NOT EXISTS idx_ocr_status
+        ON ocr_recognition_records (recognition_status) WHERE is_deleted = 0;
+      `);
+      console.log('[DatabaseManager] 表 ocr_recognition_records 及索引创建成功');
+
+      console.log('[DatabaseManager] 所有数据表创建完成（共26张表）');
     } catch (error) {
       throw DatabaseManager.toError('[DatabaseManager] 创建数据表失败', error);
     }
