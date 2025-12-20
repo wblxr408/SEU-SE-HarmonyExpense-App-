@@ -62,20 +62,13 @@ export {
 
 // 智能预算规划
 export {
-  BudgetForecast,
-  BudgetForecastJSON,
-  SpendingTrend,
-  SpendingTrendJSON,
-  BudgetOptimizationSuggestion,
   BudgetForecastUtils,
   FORECAST_SIMPLE_MOVING_AVG,
-  FORECAST_EXPONENTIAL_SMOOTHING,
+  FORECAST_WEIGHTED_MOVING_AVG,
+  FORECAST_EXPONENTIAL_SMOOTH,
   FORECAST_HOLT_WINTERS,
   FORECAST_LINEAR_REGRESSION,
-  TREND_INCREASING,
-  TREND_DECREASING,
-  TREND_STABLE,
-  TREND_SEASONAL
+  FORECAST_ENSEMBLE
 } from './SmartBudgetPlan';
 
 // 财务健康评分

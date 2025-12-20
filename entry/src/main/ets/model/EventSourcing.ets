@@ -19,9 +19,9 @@
  */
 
 import { Bill, BillJSON } from './Bill';
-import { Category, CategoryJSON } from './Category';
+import { Category } from './Category';
 import { Account } from './Account';
-import { Budget, BudgetInit } from './Budget';
+import { Budget } from './Budget';
 
 // ==================== 辅助接口定义 ====================
 
@@ -453,6 +453,8 @@ export class Command {
   issuedAt: string = '';
   processedAt: string = '';
   errorMessage: string = '';
+  createdAt: string = '';
+  updatedAt: string = '';
 
   constructor(
     commandId: string = '',
@@ -466,7 +468,9 @@ export class Command {
     expectedVersion: number = 0,
     issuedAt: string = '',
     processedAt: string = '',
-    errorMessage: string = ''
+    errorMessage: string = '',
+    createdAt: string = '',
+    updatedAt: string = ''
   ) {
     this.commandId = commandId !== '' ? commandId : EventSourcingUtils.generateUUID();
     this.commandType = commandType;
@@ -480,6 +484,8 @@ export class Command {
     this.issuedAt = issuedAt !== '' ? issuedAt : new Date().toISOString();
     this.processedAt = processedAt;
     this.errorMessage = errorMessage;
+    this.createdAt = createdAt;
+    this.updatedAt = updatedAt;
   }
 
   /**
@@ -700,26 +706,38 @@ export class ReadModel {
   modelId: number = 0;
   modelType: string = '';
   userId: number = 0;
+  aggregateId: number = 0;
+  version: number = 0;
+  lastEventId: string = '';
   dataJson: string = '{}';
   lastEventVersion: number = 0;
   lastUpdatedAt: string = '';
+  updatedAt: string = '';
   createdAt: string = '';
 
   constructor(
     modelId: number = 0,
     modelType: string = '',
     userId: number = 0,
+    aggregateId: number = 0,
+    version: number = 0,
+    lastEventId: string = '',
     dataJson: string = '{}',
     lastEventVersion: number = 0,
     lastUpdatedAt: string = '',
+    updatedAt: string = '',
     createdAt: string = ''
   ) {
     this.modelId = modelId;
     this.modelType = modelType;
     this.userId = userId;
+    this.aggregateId = aggregateId;
+    this.version = version;
+    this.lastEventId = lastEventId;
     this.dataJson = dataJson;
     this.lastEventVersion = lastEventVersion;
     this.lastUpdatedAt = lastUpdatedAt;
+    this.updatedAt = updatedAt;
     this.createdAt = createdAt;
   }
 

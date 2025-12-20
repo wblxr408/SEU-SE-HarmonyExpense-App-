@@ -10,7 +10,7 @@
  * @author HarmonyExpense Team
  */
 
-import { Bill, BillJSON } from './Bill';
+import { Bill } from './Bill';
 
 // ==================== 常量定义 ====================
 
@@ -314,6 +314,17 @@ export class UserSpendingBaseline {
   updatedAt: string = '';
   isDeleted: number = 0;
 
+  // DAOHelper 需要的额外属性
+  avgDailySpending: number = 0;
+  stdDeviation: number = 0;
+  maxDailySpending: number = 0;
+  minDailySpending: number = 0;
+  avgTransactionFrequency: number = 0;
+  totalTransactions: number = 0;
+  analysisStartDate: string = '';
+  analysisEndDate: string = '';
+  lastUpdatedAt: string = '';
+
   constructor(
     baselineId: number = 0,
     userId: number = 0,
@@ -334,7 +345,16 @@ export class UserSpendingBaseline {
     sampleEndDate: string = '',
     createdAt: string = '',
     updatedAt: string = '',
-    isDeleted: number = 0
+    isDeleted: number = 0,
+    avgDailySpending: number = 0,
+    stdDeviation: number = 0,
+    maxDailySpending: number = 0,
+    minDailySpending: number = 0,
+    avgTransactionFrequency: number = 0,
+    totalTransactions: number = 0,
+    analysisStartDate: string = '',
+    analysisEndDate: string = '',
+    lastUpdatedAt: string = ''
   ) {
     this.baselineId = baselineId;
     this.userId = userId;
@@ -356,6 +376,15 @@ export class UserSpendingBaseline {
     this.createdAt = createdAt;
     this.updatedAt = updatedAt;
     this.isDeleted = isDeleted;
+    this.avgDailySpending = avgDailySpending;
+    this.stdDeviation = stdDeviation;
+    this.maxDailySpending = maxDailySpending;
+    this.minDailySpending = minDailySpending;
+    this.avgTransactionFrequency = avgTransactionFrequency;
+    this.totalTransactions = totalTransactions;
+    this.analysisStartDate = analysisStartDate;
+    this.analysisEndDate = analysisEndDate;
+    this.lastUpdatedAt = lastUpdatedAt;
   }
 
   /**

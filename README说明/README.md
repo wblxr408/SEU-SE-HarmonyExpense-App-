@@ -796,7 +796,7 @@ const results = await ReminderService.checkAndTriggerDueReminders(userId);
 
 ### ER图
 
-详细的ER图请参考: [README说明/UML图/er.puml](README说明/UML图/er.puml)
+详细的ER图请参考: [README说明/UML图/er.puml](UML图/er.puml)
 
 ---
 
@@ -1271,20 +1271,20 @@ const report = PerformanceMonitor.getReport();
 
 ### 项目内部文档
 
-- [项目架构说明文档](README说明/项目架构说明文档.md)
-- [高级功能实现文档](README说明/高级功能实现文档.md)
-- [高级功能快速开始](README说明/高级功能快速开始.md)
-- [测试运行指南](README说明/测试说明/测试运行指南.md)
-- [导出备份与加密技术文档](README说明/导出备份与加密/导出备份接口与加密逻辑技术文档.md)
-- [索引优化技术文档](README说明/索引优化与批量查询/索引优化与批量查询技术文档.md)
-- [分类标签技术文档](README说明/categories-tag/Categories-Tags表及查询聚合技术文档.md)
+- [项目架构说明文档](项目架构说明文档.md)
+- [高级功能实现文档](高级功能实现文档.md)
+- [高级功能快速开始](高级功能快速开始.md)
+- [测试运行指南](测试说明/测试运行指南.md)
+- [导出备份与加密技术文档](导出备份与加密/导出备份接口与加密逻辑技术文档.md)
+- [索引优化技术文档](索引优化与批量查询/索引优化与批量查询技术文档.md)
+- [分类标签技术文档](categories-tag/Categories-Tags表及查询聚合技术文档.md)
 
 ### UML设计图
 
-- [类图](README说明/UML图/class.puml)
-- [用例图](README说明/UML图/usecase.puml)
-- [ER图](README说明/UML图/er.puml)
-- [架构图](README说明/UML图/architecture.puml)
+- [类图](UML图/class.puml)
+- [用例图](UML图/usecase.puml)
+- [ER图](UML图/er.puml)
+- [架构图](UML图/architecture.puml)
 
 ---
 

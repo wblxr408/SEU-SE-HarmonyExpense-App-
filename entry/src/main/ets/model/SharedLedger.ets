@@ -428,6 +428,7 @@ export class LedgerMember {
   ledgerId: number = 0;
   userId: number = 0;
   username: string = '';
+  userName: string = '';  // DAOHelper 使用的别名
   email: string = '';
   avatar: string = '';
   role: string = MEMBER_ROLE_MEMBER;
@@ -447,6 +448,7 @@ export class LedgerMember {
     ledgerId: number = 0,
     userId: number = 0,
     username: string = '',
+    userName: string = '',
     email: string = '',
     avatar: string = '',
     role: string = MEMBER_ROLE_MEMBER,
@@ -465,6 +467,7 @@ export class LedgerMember {
     this.ledgerId = ledgerId;
     this.userId = userId;
     this.username = username;
+    this.userName = userName;
     this.email = email;
     this.avatar = avatar;
     this.role = role;
@@ -555,6 +558,7 @@ export class LedgerMember {
       data.ledgerId,
       data.userId,
       data.username,
+      data.username,  // userName 别名
       data.email,
       data.avatar,
       data.role,
@@ -604,6 +608,8 @@ export class LedgerInvitation {
   inviterName: string = '';
   inviteeEmail: string = '';
   inviteeUserId: number = 0;
+  inviteeId: number = 0;  // DAOHelper 使用的别名
+  inviteeName: string = '';  // DAOHelper 使用的属性
   role: string = MEMBER_ROLE_MEMBER;
   message: string = '';
   status: string = INVITATION_STATUS_PENDING;
@@ -622,6 +628,8 @@ export class LedgerInvitation {
     inviterName: string = '',
     inviteeEmail: string = '',
     inviteeUserId: number = 0,
+    inviteeId: number = 0,
+    inviteeName: string = '',
     role: string = MEMBER_ROLE_MEMBER,
     message: string = '',
     status: string = INVITATION_STATUS_PENDING,
@@ -639,6 +647,8 @@ export class LedgerInvitation {
     this.inviterName = inviterName;
     this.inviteeEmail = inviteeEmail;
     this.inviteeUserId = inviteeUserId;
+    this.inviteeId = inviteeId;
+    this.inviteeName = inviteeName;
     this.role = role;
     this.message = message;
     this.status = status;
@@ -722,6 +732,8 @@ export class LedgerInvitation {
       data.inviterName,
       data.inviteeEmail,
       data.inviteeUserId,
+      data.inviteeUserId,  // inviteeId 别名
+      data.inviterName,  // inviteeName 别名
       data.role,
       data.message,
       data.status,
@@ -767,8 +779,10 @@ export class SharedBill {
   creatorName: string = '';
   accountId: number = 0;
   categoryId: number = 0;
+  categoryName: string = '';  // DAOHelper 使用
   amount: number = 0;
   note: string = '';
+  description: string = '';  // DAOHelper 使用的别名
   transactionDate: string = '';
   type: string = 'expense';
   approvalStatus: string = APPROVAL_STATUS_AUTO_APPROVED;
@@ -778,10 +792,14 @@ export class SharedBill {
   lastSyncedAt: string = '';
   version: number = 1;
   splitType: string = 'none';
+  splitMethod: string = 'none';  // DAOHelper 使用的别名
   splitDetailsJson: string = '[]';
+  splitsJson: string = '[]';  // DAOHelper 使用的别名
   attachmentsJson: string = '[]';
+  attachments: string = '[]';  // DAOHelper 使用的别名
   tagsJson: string = '[]';
   location: string = '';
+  status: string = '';  // DAOHelper 使用
   createdAt: string = '';
   updatedAt: string = '';
   isDeleted: number = 0;
@@ -793,8 +811,10 @@ export class SharedBill {
     creatorName: string = '',
     accountId: number = 0,
     categoryId: number = 0,
+    categoryName: string = '',
     amount: number = 0,
     note: string = '',
+    description: string = '',
     transactionDate: string = '',
     type: string = 'expense',
     approvalStatus: string = APPROVAL_STATUS_AUTO_APPROVED,
@@ -804,10 +824,14 @@ export class SharedBill {
     lastSyncedAt: string = '',
     version: number = 1,
     splitType: string = 'none',
+    splitMethod: string = 'none',
     splitDetailsJson: string = '[]',
+    splitsJson: string = '[]',
     attachmentsJson: string = '[]',
+    attachments: string = '[]',
     tagsJson: string = '[]',
     location: string = '',
+    status: string = '',
     createdAt: string = '',
     updatedAt: string = '',
     isDeleted: number = 0
@@ -818,8 +842,10 @@ export class SharedBill {
     this.creatorName = creatorName;
     this.accountId = accountId;
     this.categoryId = categoryId;
+    this.categoryName = categoryName;
     this.amount = amount;
     this.note = note;
+    this.description = description;
     this.transactionDate = transactionDate;
     this.type = type;
     this.approvalStatus = approvalStatus;
@@ -829,10 +855,14 @@ export class SharedBill {
     this.lastSyncedAt = lastSyncedAt;
     this.version = version;
     this.splitType = splitType;
+    this.splitMethod = splitMethod;
     this.splitDetailsJson = splitDetailsJson;
+    this.splitsJson = splitsJson;
     this.attachmentsJson = attachmentsJson;
+    this.attachments = attachments;
     this.tagsJson = tagsJson;
     this.location = location;
+    this.status = status;
     this.createdAt = createdAt;
     this.updatedAt = updatedAt;
     this.isDeleted = isDeleted;
@@ -962,6 +992,12 @@ export class SharedBill {
   }
 
   static fromJSON(data: SharedBillJSON): SharedBill {
+    const note = data.note;
+    const splitType = data.splitType;
+    const splitDetailsJson = JSON.stringify(data.splitDetails);
+    const attachmentsJson = JSON.stringify(data.attachments);
+    const approvalStatus = data.approvalStatus;
+
     return new SharedBill(
       data.billId,
       data.ledgerId,
@@ -969,21 +1005,27 @@ export class SharedBill {
       data.creatorName,
       data.accountId,
       data.categoryId,
+      '',  // categoryName - 不在 JSON 中
       data.amount,
-      data.note,
+      note,
+      note,  // description 别名
       data.transactionDate,
       data.type,
-      data.approvalStatus,
+      approvalStatus,
       data.approvedBy,
       data.approvedAt,
       data.syncStatus,
       data.lastSyncedAt,
       data.version,
-      data.splitType,
-      JSON.stringify(data.splitDetails),
-      JSON.stringify(data.attachments),
+      splitType,
+      splitType,  // splitMethod 别名
+      splitDetailsJson,
+      splitDetailsJson,  // splitsJson 别名
+      attachmentsJson,
+      attachmentsJson,  // attachments 别名
       JSON.stringify(data.tags),
       data.location,
+      approvalStatus,  // status 别名
       data.createdAt,
       data.updatedAt,
       data.isDeleted
@@ -1011,6 +1053,7 @@ export class ApprovalRecord {
   static readonly tableName: string = 'approval_records';
 
   approvalId: number = 0;
+  recordId: number = 0;  // DAOHelper 使用
   ledgerId: number = 0;
   billId: number = 0;
   requesterId: number = 0;
@@ -1021,14 +1064,17 @@ export class ApprovalRecord {
   amount: number = 0;
   reason: string = '';
   comment: string = '';
+  comments: string = '';  // DAOHelper 使用的别名
   requestedAt: string = '';
   processedAt: string = '';
+  approvedAt: string = '';  // DAOHelper 使用
   createdAt: string = '';
   updatedAt: string = '';
   isDeleted: number = 0;
 
   constructor(
     approvalId: number = 0,
+    recordId: number = 0,
     ledgerId: number = 0,
     billId: number = 0,
     requesterId: number = 0,
@@ -1039,13 +1085,16 @@ export class ApprovalRecord {
     amount: number = 0,
     reason: string = '',
     comment: string = '',
+    comments: string = '',
     requestedAt: string = '',
     processedAt: string = '',
+    approvedAt: string = '',
     createdAt: string = '',
     updatedAt: string = '',
     isDeleted: number = 0
   ) {
     this.approvalId = approvalId;
+    this.recordId = recordId;
     this.ledgerId = ledgerId;
     this.billId = billId;
     this.requesterId = requesterId;
@@ -1056,8 +1105,10 @@ export class ApprovalRecord {
     this.amount = amount;
     this.reason = reason;
     this.comment = comment;
+    this.comments = comments;
     this.requestedAt = requestedAt;
     this.processedAt = processedAt;
+    this.approvedAt = approvedAt;
     this.createdAt = createdAt;
     this.updatedAt = updatedAt;
     this.isDeleted = isDeleted;
@@ -1110,8 +1161,10 @@ export class ApprovalRecord {
   }
 
   static fromJSON(data: ApprovalRecordJSON): ApprovalRecord {
+    const comment = data.comment;
     return new ApprovalRecord(
       data.approvalId,
+      data.approvalId,  // recordId 别名
       data.ledgerId,
       data.billId,
       data.requesterId,
@@ -1121,9 +1174,11 @@ export class ApprovalRecord {
       data.status,
       data.amount,
       data.reason,
-      data.comment,
+      comment,
+      comment,  // comments 别名
       data.requestedAt,
       data.processedAt,
+      data.processedAt,  // approvedAt 别名
       data.createdAt,
       data.updatedAt,
       data.isDeleted
@@ -1154,11 +1209,14 @@ export class MemberActivity {
   ledgerId: number = 0;
   userId: number = 0;
   username: string = '';
+  userName: string = '';  // DAOHelper 使用的别名
   actionType: string = 'create';
+  activityType: string = 'create';  // DAOHelper 使用的别名
   targetType: string = 'bill';
   targetId: number = 0;
   description: string = '';
   metadataJson: string = '{}';
+  occurredAt: string = '';  // DAOHelper 使用
   createdAt: string = '';
 
   constructor(
@@ -1166,22 +1224,28 @@ export class MemberActivity {
     ledgerId: number = 0,
     userId: number = 0,
     username: string = '',
+    userName: string = '',
     actionType: string = 'create',
+    activityType: string = 'create',
     targetType: string = 'bill',
     targetId: number = 0,
     description: string = '',
     metadataJson: string = '{}',
+    occurredAt: string = '',
     createdAt: string = ''
   ) {
     this.activityId = activityId;
     this.ledgerId = ledgerId;
     this.userId = userId;
     this.username = username;
+    this.userName = userName;
     this.actionType = actionType;
+    this.activityType = activityType;
     this.targetType = targetType;
     this.targetId = targetId;
     this.description = description;
     this.metadataJson = metadataJson;
+    this.occurredAt = occurredAt;
     this.createdAt = createdAt;
   }
 
@@ -1202,17 +1266,24 @@ export class MemberActivity {
   }
 
   static fromJSON(data: MemberActivityJSON): MemberActivity {
+    const username = data.username;
+    const actionType = data.actionType;
+    const createdAt = data.createdAt;
+
     return new MemberActivity(
       data.activityId,
       data.ledgerId,
       data.userId,
-      data.username,
-      data.actionType,
+      username,
+      username,  // userName 别名
+      actionType,
+      actionType,  // activityType 别名
       data.targetType,
       data.targetId,
       data.description,
       data.metadata,
-      data.createdAt
+      createdAt,  // occurredAt
+      createdAt
     );
   }
 }

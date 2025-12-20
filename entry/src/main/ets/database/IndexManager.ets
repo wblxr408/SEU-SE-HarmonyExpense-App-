@@ -20,12 +20,17 @@ export class IndexManager {
    */
   static async createAllIndexes(): Promise<void> {
     console.log('[IndexManager] 开始创建数据库索引...');
-    
+
     try {
       await IndexManager.createBillsIndexes();
       await IndexManager.createAccountsIndexes();
       await IndexManager.createBillTagsIndexes();
-      
+      await IndexManager.createAnomalyDetectionIndexes();
+      await IndexManager.createEventSourcingIndexes();
+      await IndexManager.createSharedLedgerIndexes();
+      await IndexManager.createSmartCategoryIndexes();
+      await IndexManager.createOCRRecognitionIndexes();
+
       console.log('[IndexManager] ✅ 所有索引创建完成');
     } catch (err) {
       const error = err as Error;
@@ -205,6 +210,194 @@ export class IndexManager {
     } catch (err) {
       const error = err as Error;
       console.error('[IndexManager] ❌ 索引重建失败:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * 创建异常检测表的索引
+   */
+  private static async createAnomalyDetectionIndexes(): Promise<void> {
+    const store = DatabaseManager.getDatabase();
+
+    try {
+      // 异常记录表 - 用户未确认异常查询索引
+      await store.executeSql(`
+        CREATE INDEX IF NOT EXISTS idx_anomaly_records_user_ack
+        ON anomaly_records(user_id, is_acknowledged, created_at DESC)
+        WHERE is_deleted = 0;
+      `);
+
+      // 异常记录表 - 严重程度索引
+      await store.executeSql(`
+        CREATE INDEX IF NOT EXISTS idx_anomaly_records_severity
+        ON anomaly_records(user_id, severity, created_at DESC)
+        WHERE is_deleted = 0;
+      `);
+
+      console.log('[IndexManager] ✓ 异常检测表索引创建成功');
+    } catch (err) {
+      const error = err as Error;
+      console.error('[IndexManager] ❌ 异常检测表索引创建失败:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * 创建事件溯源表的索引
+   */
+  private static async createEventSourcingIndexes(): Promise<void> {
+    const store = DatabaseManager.getDatabase();
+
+    try {
+      // 领域事件表 - 聚合事件查询索引
+      await store.executeSql(`
+        CREATE INDEX IF NOT EXISTS idx_domain_events_aggregate
+        ON domain_events(aggregate_type, aggregate_id, version);
+      `);
+
+      // 领域事件表 - 用户事件索引
+      await store.executeSql(`
+        CREATE INDEX IF NOT EXISTS idx_domain_events_user
+        ON domain_events(user_id, occurred_at DESC);
+      `);
+
+      // 命令表 - 状态索引
+      await store.executeSql(`
+        CREATE INDEX IF NOT EXISTS idx_commands_status
+        ON commands(status, issued_at DESC);
+      `);
+
+      // 读模型表 - 聚合查询索引
+      await store.executeSql(`
+        CREATE INDEX IF NOT EXISTS idx_read_models_aggregate
+        ON read_models(model_type, aggregate_id);
+      `);
+
+      console.log('[IndexManager] ✓ 事件溯源表索引创建成功');
+    } catch (err) {
+      const error = err as Error;
+      console.error('[IndexManager] ❌ 事件溯源表索引创建失败:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * 创建共享账本表的索引
+   */
+  private static async createSharedLedgerIndexes(): Promise<void> {
+    const store = DatabaseManager.getDatabase();
+
+    try {
+      // 共享账本表 - 所有者索引
+      await store.executeSql(`
+        CREATE INDEX IF NOT EXISTS idx_shared_ledgers_owner
+        ON shared_ledgers(owner_id, created_at DESC)
+        WHERE is_deleted = 0;
+      `);
+
+      // 账本成员表 - 用户账本索引
+      await store.executeSql(`
+        CREATE INDEX IF NOT EXISTS idx_ledger_members_user
+        ON ledger_members(user_id, joined_at DESC)
+        WHERE is_deleted = 0;
+      `);
+
+      // 账本邀请表 - 被邀请人索引
+      await store.executeSql(`
+        CREATE INDEX IF NOT EXISTS idx_ledger_invitations_invitee
+        ON ledger_invitations(invitee_id, status, created_at DESC);
+      `);
+
+      // 共享账单表 - 账本账单索引
+      await store.executeSql(`
+        CREATE INDEX IF NOT EXISTS idx_shared_bills_ledger
+        ON shared_bills(ledger_id, status, created_at DESC)
+        WHERE is_deleted = 0;
+      `);
+
+      // 成员活动表 - 账本活动索引
+      await store.executeSql(`
+        CREATE INDEX IF NOT EXISTS idx_member_activities_ledger
+        ON member_activities(ledger_id, occurred_at DESC);
+      `);
+
+      console.log('[IndexManager] ✓ 共享账本表索引创建成功');
+    } catch (err) {
+      const error = err as Error;
+      console.error('[IndexManager] ❌ 共享账本表索引创建失败:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * 创建智能分类表的索引
+   */
+  private static async createSmartCategoryIndexes(): Promise<void> {
+    const store = DatabaseManager.getDatabase();
+
+    try {
+      // 训练记录表 - 用户训练查询索引
+      await store.executeSql(`
+        CREATE INDEX IF NOT EXISTS idx_training_records_user
+        ON smart_category_training(user_id, training_type, created_at DESC)
+        WHERE is_deleted = 0;
+      `);
+
+      // 分类规则表 - 用户激活规则索引
+      await store.executeSql(`
+        CREATE INDEX IF NOT EXISTS idx_category_rules_user_active
+        ON smart_category_rules(user_id, is_active, priority DESC)
+        WHERE is_deleted = 0;
+      `);
+
+      // 分类规则表 - 分类规则索引
+      await store.executeSql(`
+        CREATE INDEX IF NOT EXISTS idx_category_rules_category
+        ON smart_category_rules(user_id, category_id, priority DESC)
+        WHERE is_deleted = 0;
+      `);
+
+      console.log('[IndexManager] ✓ 智能分类表索引创建成功');
+    } catch (err) {
+      const error = err as Error;
+      console.error('[IndexManager] ❌ 智能分类表索引创建失败:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * 创建OCR识别表的索引
+   */
+  private static async createOCRRecognitionIndexes(): Promise<void> {
+    const store = DatabaseManager.getDatabase();
+
+    try {
+      // OCR识别记录表 - 用户识别记录索引
+      await store.executeSql(`
+        CREATE INDEX IF NOT EXISTS idx_ocr_records_user
+        ON ocr_recognition_records(user_id, created_at DESC)
+        WHERE is_deleted = 0;
+      `);
+
+      // OCR识别记录表 - 未使用记录索引
+      await store.executeSql(`
+        CREATE INDEX IF NOT EXISTS idx_ocr_records_unused
+        ON ocr_recognition_records(user_id, is_used, recognition_status, confidence_score DESC)
+        WHERE is_deleted = 0;
+      `);
+
+      // OCR识别记录表 - 账单关联索引
+      await store.executeSql(`
+        CREATE INDEX IF NOT EXISTS idx_ocr_records_bill
+        ON ocr_recognition_records(bill_id)
+        WHERE bill_id IS NOT NULL AND is_deleted = 0;
+      `);
+
+      console.log('[IndexManager] ✓ OCR识别表索引创建成功');
+    } catch (err) {
+      const error = err as Error;
+      console.error('[IndexManager] ❌ OCR识别表索引创建失败:', error);
       throw error;
     }
   }

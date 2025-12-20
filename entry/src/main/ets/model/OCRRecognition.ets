@@ -1209,3 +1209,259 @@ export class OCRConfigUtils {
     return result;
   }
 }
+
+/**
+ * OCR识别记录JSON接口
+ */
+export interface OCRRecognitionRecordJSON {
+  recordId: number;
+  userId: number;
+  billId: number | null;
+  imagePath: string;
+  thumbnailPath: string;
+  ocrProvider: string;
+  receiptType: string;
+  rawText: string;
+  merchantName: string;
+  totalAmount: number | null;
+  transactionDate: string;
+  confidenceScore: number;
+  structuredDataJson: string;
+  suggestedCategoryId: number | null;
+  suggestedCategoryName: string;
+  isUsed: number;
+  recognitionStatus: string;
+  errorMessage: string;
+  processingTimeMs: number;
+  createdAt: string;
+  updatedAt: string;
+  isDeleted: number;
+}
+
+/**
+ * OCR识别记录类
+ */
+export class OCRRecognitionRecord {
+  static readonly tableName: string = 'ocr_recognition_records';
+
+  recordId: number = 0;
+  userId: number = 0;
+  billId: number | null = null;
+  imagePath: string = '';
+  thumbnailPath: string = '';
+  ocrProvider: string = OCR_PROVIDER_HUAWEI_ML_KIT;
+  receiptType: string = RECEIPT_TYPE_UNKNOWN;
+  rawText: string = '';
+  merchantName: string = '';
+  totalAmount: number | null = null;
+  transactionDate: string = '';
+  confidenceScore: number = 0;
+  structuredDataJson: string = '';
+  suggestedCategoryId: number | null = null;
+  suggestedCategoryName: string = '';
+  isUsed: number = 0;
+  recognitionStatus: string = RECOGNITION_STATUS_PENDING;
+  errorMessage: string = '';
+  processingTimeMs: number = 0;
+  createdAt: string = '';
+  updatedAt: string = '';
+  isDeleted: number = 0;
+
+  constructor(
+    recordId: number = 0,
+    userId: number = 0,
+    billId: number | null = null,
+    imagePath: string = '',
+    thumbnailPath: string = '',
+    ocrProvider: string = OCR_PROVIDER_HUAWEI_ML_KIT,
+    receiptType: string = RECEIPT_TYPE_UNKNOWN,
+    rawText: string = '',
+    merchantName: string = '',
+    totalAmount: number | null = null,
+    transactionDate: string = '',
+    confidenceScore: number = 0,
+    structuredDataJson: string = '',
+    suggestedCategoryId: number | null = null,
+    suggestedCategoryName: string = '',
+    isUsed: number = 0,
+    recognitionStatus: string = RECOGNITION_STATUS_PENDING,
+    errorMessage: string = '',
+    processingTimeMs: number = 0,
+    createdAt: string = '',
+    updatedAt: string = '',
+    isDeleted: number = 0
+  ) {
+    this.recordId = recordId;
+    this.userId = userId;
+    this.billId = billId;
+    this.imagePath = imagePath;
+    this.thumbnailPath = thumbnailPath;
+    this.ocrProvider = ocrProvider;
+    this.receiptType = receiptType;
+    this.rawText = rawText;
+    this.merchantName = merchantName;
+    this.totalAmount = totalAmount;
+    this.transactionDate = transactionDate;
+    this.confidenceScore = confidenceScore;
+    this.structuredDataJson = structuredDataJson;
+    this.suggestedCategoryId = suggestedCategoryId;
+    this.suggestedCategoryName = suggestedCategoryName;
+    this.isUsed = isUsed;
+    this.recognitionStatus = recognitionStatus;
+    this.errorMessage = errorMessage;
+    this.processingTimeMs = processingTimeMs;
+    this.createdAt = createdAt;
+    this.updatedAt = updatedAt;
+    this.isDeleted = isDeleted;
+  }
+
+  /**
+   * 获取结构化数据
+   */
+  getStructuredData(): StructuredReceiptData | null {
+    if (this.structuredDataJson === '') {
+      return null;
+    }
+    try {
+      const parsed = JSON.parse(this.structuredDataJson) as StructuredReceiptData;
+      return parsed;
+    } catch (e) {
+      return null;
+    }
+  }
+
+  /**
+   * 设置结构化数据
+   */
+  setStructuredData(data: StructuredReceiptData): void {
+    this.structuredDataJson = JSON.stringify(data);
+    this.updatedAt = new Date().toISOString();
+  }
+
+  /**
+   * 标记为已使用
+   */
+  markAsUsed(billId: number): void {
+    this.isUsed = 1;
+    this.billId = billId;
+    this.updatedAt = new Date().toISOString();
+  }
+
+  /**
+   * 标记为失败
+   */
+  markFailed(errorMessage: string): void {
+    this.recognitionStatus = RECOGNITION_STATUS_FAILED;
+    this.errorMessage = errorMessage;
+    this.updatedAt = new Date().toISOString();
+  }
+
+  /**
+   * 标记为成功
+   */
+  markSuccess(): void {
+    this.recognitionStatus = RECOGNITION_STATUS_SUCCESS;
+    this.errorMessage = '';
+    this.updatedAt = new Date().toISOString();
+  }
+
+  toJSON(): OCRRecognitionRecordJSON {
+    const result: OCRRecognitionRecordJSON = {
+      recordId: this.recordId,
+      userId: this.userId,
+      billId: this.billId,
+      imagePath: this.imagePath,
+      thumbnailPath: this.thumbnailPath,
+      ocrProvider: this.ocrProvider,
+      receiptType: this.receiptType,
+      rawText: this.rawText,
+      merchantName: this.merchantName,
+      totalAmount: this.totalAmount,
+      transactionDate: this.transactionDate,
+      confidenceScore: this.confidenceScore,
+      structuredDataJson: this.structuredDataJson,
+      suggestedCategoryId: this.suggestedCategoryId,
+      suggestedCategoryName: this.suggestedCategoryName,
+      isUsed: this.isUsed,
+      recognitionStatus: this.recognitionStatus,
+      errorMessage: this.errorMessage,
+      processingTimeMs: this.processingTimeMs,
+      createdAt: this.createdAt,
+      updatedAt: this.updatedAt,
+      isDeleted: this.isDeleted
+    };
+    return result;
+  }
+
+  static fromJSON(data: OCRRecognitionRecordJSON): OCRRecognitionRecord {
+    return new OCRRecognitionRecord(
+      data.recordId,
+      data.userId,
+      data.billId,
+      data.imagePath,
+      data.thumbnailPath,
+      data.ocrProvider,
+      data.receiptType,
+      data.rawText,
+      data.merchantName,
+      data.totalAmount,
+      data.transactionDate,
+      data.confidenceScore,
+      data.structuredDataJson,
+      data.suggestedCategoryId,
+      data.suggestedCategoryName,
+      data.isUsed,
+      data.recognitionStatus,
+      data.errorMessage,
+      data.processingTimeMs,
+      data.createdAt,
+      data.updatedAt,
+      data.isDeleted
+    );
+  }
+
+  validate(): boolean {
+    // 验证必填字段
+    if (this.userId <= 0) {
+      return false;
+    }
+    if (this.imagePath.trim().length === 0) {
+      return false;
+    }
+
+    // 验证OCR提供商
+    let validProvider = false;
+    for (let i = 0; i < ALL_OCR_PROVIDERS.length; i++) {
+      if (ALL_OCR_PROVIDERS[i] === this.ocrProvider) {
+        validProvider = true;
+        break;
+      }
+    }
+    if (!validProvider) {
+      return false;
+    }
+
+    // 验证票据类型
+    let validReceiptType = false;
+    for (let i = 0; i < ALL_RECEIPT_TYPES.length; i++) {
+      if (ALL_RECEIPT_TYPES[i] === this.receiptType) {
+        validReceiptType = true;
+        break;
+      }
+    }
+    if (!validReceiptType) {
+      return false;
+    }
+
+    // 验证置信度分数范围
+    if (this.confidenceScore < 0 || this.confidenceScore > 1) {
+      return false;
+    }
+
+    return true;
+  }
+
+  clone(): OCRRecognitionRecord {
+    return OCRRecognitionRecord.fromJSON(this.toJSON());
+  }
+}

@@ -543,4 +543,67 @@ export class BillDAO {
       throw DAOHelper.toError('[BillDAO] 月度统计查询失败', error);
     }
   }
+
+  /**
+   * 按时间范围查询账单
+   * @param userId 用户ID
+   * @param startDate 开始时间（ISO字符串）
+   * @param endDate 结束时间（ISO字符串）
+   * @returns 账单列表
+   */
+  static async getByTimeRange(userId: number, startDate: string, endDate: string): Promise<Bill[]> {
+    let resultSet: relationalStore.ResultSet | null = null;
+    try {
+      const store = DatabaseManager.getDatabase();
+      const predicates = new relationalStore.RdbPredicates(Bill.tableName);
+      predicates.equalTo('user_id', userId);
+      predicates.between('transaction_date', startDate, endDate);
+      predicates.equalTo('is_deleted', 0);
+      predicates.orderByDesc('transaction_date');
+
+      resultSet = await store.query(predicates);
+
+      const bills: Bill[] = [];
+      while (resultSet.goToNextRow()) {
+        bills.push(DAOHelper.convertToBill(resultSet));
+      }
+      return bills;
+    } catch (error) {
+      throw DAOHelper.toError('[BillDAO] 按时间范围查询账单失败', error);
+    } finally {
+      DAOHelper.closeResultSet(resultSet);
+    }
+  }
+
+  /**
+   * 按分类ID查询账单
+   * @param userId 用户ID
+   * @param categoryId 分类ID
+   * @param limit 限制数量
+   * @returns 账单列表
+   */
+  static async getByCategoryId(userId: number, categoryId: number, limit: number = 100): Promise<Bill[]> {
+    let resultSet: relationalStore.ResultSet | null = null;
+    try {
+      const store = DatabaseManager.getDatabase();
+      const predicates = new relationalStore.RdbPredicates(Bill.tableName);
+      predicates.equalTo('user_id', userId);
+      predicates.equalTo('category_id', categoryId);
+      predicates.equalTo('is_deleted', 0);
+      predicates.orderByDesc('transaction_date');
+      predicates.limitAs(limit);
+
+      resultSet = await store.query(predicates);
+
+      const bills: Bill[] = [];
+      while (resultSet.goToNextRow()) {
+        bills.push(DAOHelper.convertToBill(resultSet));
+      }
+      return bills;
+    } catch (error) {
+      throw DAOHelper.toError('[BillDAO] 按分类查询账单失败', error);
+    } finally {
+      DAOHelper.closeResultSet(resultSet);
+    }
+  }
 }

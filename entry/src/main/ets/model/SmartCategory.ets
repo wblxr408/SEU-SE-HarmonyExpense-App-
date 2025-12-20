@@ -606,3 +606,359 @@ export class SmartCategoryUtils {
     );
   }
 }
+
+// ==================== 智能分类训练记录 ====================
+
+/**
+ * 智能分类训练记录JSON接口
+ */
+export interface SmartCategoryTrainingJSON {
+  recordId: number;
+  userId: number;
+  billNote: string;
+  billAmount: number;
+  actualCategoryId: number;
+  actualCategoryName: string;
+  predictedCategoryId: number;
+  predictedCategoryName: string;
+  confidence: number;
+  isCorrect: number;
+  keywordsMatched: string;
+  trainingType: string;
+  modelVersion: string;
+  createdAt: string;
+  updatedAt: string;
+  isDeleted: number;
+}
+
+/**
+ * 智能分类训练记录类
+ * 用于记录AI预测结果与用户实际选择的对比，用于模型训练和优化
+ */
+export class SmartCategoryTraining {
+  static readonly tableName: string = 'smart_category_training';
+
+  recordId: number = 0;
+  userId: number = 0;
+  billNote: string = '';
+  billAmount: number = 0;
+  actualCategoryId: number = 0;
+  actualCategoryName: string = '';
+  predictedCategoryId: number = 0;
+  predictedCategoryName: string = '';
+  confidence: number = 0;
+  isCorrect: number = 0;
+  keywordsMatched: string = '';
+  trainingType: string = 'manual';
+  modelVersion: string = '1.0.0';
+  createdAt: string = '';
+  updatedAt: string = '';
+  isDeleted: number = 0;
+
+  constructor(
+    recordId: number = 0,
+    userId: number = 0,
+    billNote: string = '',
+    billAmount: number = 0,
+    actualCategoryId: number = 0,
+    actualCategoryName: string = '',
+    predictedCategoryId: number = 0,
+    predictedCategoryName: string = '',
+    confidence: number = 0,
+    isCorrect: number = 0,
+    keywordsMatched: string = '',
+    trainingType: string = 'manual',
+    modelVersion: string = '1.0.0',
+    createdAt: string = '',
+    updatedAt: string = '',
+    isDeleted: number = 0
+  ) {
+    this.recordId = recordId;
+    this.userId = userId;
+    this.billNote = billNote;
+    this.billAmount = billAmount;
+    this.actualCategoryId = actualCategoryId;
+    this.actualCategoryName = actualCategoryName;
+    this.predictedCategoryId = predictedCategoryId;
+    this.predictedCategoryName = predictedCategoryName;
+    this.confidence = confidence;
+    this.isCorrect = isCorrect;
+    this.keywordsMatched = keywordsMatched;
+    this.trainingType = trainingType;
+    this.modelVersion = modelVersion;
+    this.createdAt = createdAt;
+    this.updatedAt = updatedAt;
+    this.isDeleted = isDeleted;
+  }
+
+  toJSON(): SmartCategoryTrainingJSON {
+    const result: SmartCategoryTrainingJSON = {
+      recordId: this.recordId,
+      userId: this.userId,
+      billNote: this.billNote,
+      billAmount: this.billAmount,
+      actualCategoryId: this.actualCategoryId,
+      actualCategoryName: this.actualCategoryName,
+      predictedCategoryId: this.predictedCategoryId,
+      predictedCategoryName: this.predictedCategoryName,
+      confidence: this.confidence,
+      isCorrect: this.isCorrect,
+      keywordsMatched: this.keywordsMatched,
+      trainingType: this.trainingType,
+      modelVersion: this.modelVersion,
+      createdAt: this.createdAt,
+      updatedAt: this.updatedAt,
+      isDeleted: this.isDeleted
+    };
+    return result;
+  }
+
+  static fromJSON(data: SmartCategoryTrainingJSON): SmartCategoryTraining {
+    return new SmartCategoryTraining(
+      data.recordId,
+      data.userId,
+      data.billNote,
+      data.billAmount,
+      data.actualCategoryId,
+      data.actualCategoryName,
+      data.predictedCategoryId,
+      data.predictedCategoryName,
+      data.confidence,
+      data.isCorrect,
+      data.keywordsMatched,
+      data.trainingType,
+      data.modelVersion,
+      data.createdAt,
+      data.updatedAt,
+      data.isDeleted
+    );
+  }
+
+  validate(): boolean {
+    return (
+      this.userId > 0 &&
+      this.billNote.trim().length > 0 &&
+      this.billAmount >= 0 &&
+      this.actualCategoryId > 0 &&
+      this.actualCategoryName.trim().length > 0 &&
+      this.confidence >= 0 && this.confidence <= 1 &&
+      (this.isCorrect === 0 || this.isCorrect === 1) &&
+      this.trainingType.trim().length > 0 &&
+      this.modelVersion.trim().length > 0
+    );
+  }
+
+  clone(): SmartCategoryTraining {
+    return SmartCategoryTraining.fromJSON(this.toJSON());
+  }
+}
+
+// ==================== 智能分类规则 ====================
+
+/**
+ * 智能分类规则JSON接口
+ */
+export interface SmartCategoryRuleJSON {
+  ruleId: number;
+  userId: number;
+  ruleName: string;
+  categoryId: number;
+  categoryName: string;
+  ruleType: string;
+  pattern: string;
+  keywords: string;
+  amountMin: number;
+  amountMax: number;
+  priority: number;
+  isActive: number;
+  accuracy: number;
+  matchCount: number;
+  lastMatchedAt: string;
+  createdAt: string;
+  updatedAt: string;
+  isDeleted: number;
+}
+
+/**
+ * 智能分类规则类
+ * 用于定义自动分类规则，支持关键词匹配、金额范围、正则表达式等
+ */
+export class SmartCategoryRule {
+  static readonly tableName: string = 'smart_category_rules';
+
+  ruleId: number = 0;
+  userId: number = 0;
+  ruleName: string = '';
+  categoryId: number = 0;
+  categoryName: string = '';
+  ruleType: string = 'keyword';
+  pattern: string = '';
+  keywords: string = '';
+  amountMin: number = 0;
+  amountMax: number = 999999999;
+  priority: number = 0;
+  isActive: number = 1;
+  accuracy: number = 0;
+  matchCount: number = 0;
+  lastMatchedAt: string = '';
+  createdAt: string = '';
+  updatedAt: string = '';
+  isDeleted: number = 0;
+
+  constructor(
+    ruleId: number = 0,
+    userId: number = 0,
+    ruleName: string = '',
+    categoryId: number = 0,
+    categoryName: string = '',
+    ruleType: string = 'keyword',
+    pattern: string = '',
+    keywords: string = '',
+    amountMin: number = 0,
+    amountMax: number = 999999999,
+    priority: number = 0,
+    isActive: number = 1,
+    accuracy: number = 0,
+    matchCount: number = 0,
+    lastMatchedAt: string = '',
+    createdAt: string = '',
+    updatedAt: string = '',
+    isDeleted: number = 0
+  ) {
+    this.ruleId = ruleId;
+    this.userId = userId;
+    this.ruleName = ruleName;
+    this.categoryId = categoryId;
+    this.categoryName = categoryName;
+    this.ruleType = ruleType;
+    this.pattern = pattern;
+    this.keywords = keywords;
+    this.amountMin = amountMin;
+    this.amountMax = amountMax;
+    this.priority = priority;
+    this.isActive = isActive;
+    this.accuracy = accuracy;
+    this.matchCount = matchCount;
+    this.lastMatchedAt = lastMatchedAt;
+    this.createdAt = createdAt;
+    this.updatedAt = updatedAt;
+    this.isDeleted = isDeleted;
+  }
+
+  toJSON(): SmartCategoryRuleJSON {
+    const result: SmartCategoryRuleJSON = {
+      ruleId: this.ruleId,
+      userId: this.userId,
+      ruleName: this.ruleName,
+      categoryId: this.categoryId,
+      categoryName: this.categoryName,
+      ruleType: this.ruleType,
+      pattern: this.pattern,
+      keywords: this.keywords,
+      amountMin: this.amountMin,
+      amountMax: this.amountMax,
+      priority: this.priority,
+      isActive: this.isActive,
+      accuracy: this.accuracy,
+      matchCount: this.matchCount,
+      lastMatchedAt: this.lastMatchedAt,
+      createdAt: this.createdAt,
+      updatedAt: this.updatedAt,
+      isDeleted: this.isDeleted
+    };
+    return result;
+  }
+
+  static fromJSON(data: SmartCategoryRuleJSON): SmartCategoryRule {
+    return new SmartCategoryRule(
+      data.ruleId,
+      data.userId,
+      data.ruleName,
+      data.categoryId,
+      data.categoryName,
+      data.ruleType,
+      data.pattern,
+      data.keywords,
+      data.amountMin,
+      data.amountMax,
+      data.priority,
+      data.isActive,
+      data.accuracy,
+      data.matchCount,
+      data.lastMatchedAt,
+      data.createdAt,
+      data.updatedAt,
+      data.isDeleted
+    );
+  }
+
+  validate(): boolean {
+    return (
+      this.userId > 0 &&
+      this.ruleName.trim().length > 0 &&
+      this.categoryId > 0 &&
+      this.categoryName.trim().length > 0 &&
+      this.ruleType.trim().length > 0 &&
+      this.amountMin >= 0 &&
+      this.amountMax >= this.amountMin &&
+      this.priority >= 0 &&
+      (this.isActive === 0 || this.isActive === 1) &&
+      this.accuracy >= 0 && this.accuracy <= 1 &&
+      this.matchCount >= 0
+    );
+  }
+
+  clone(): SmartCategoryRule {
+    return SmartCategoryRule.fromJSON(this.toJSON());
+  }
+
+  /**
+   * 检查规则是否匹配账单
+   */
+  matchesBill(billNote: string, billAmount: number): boolean {
+    if (this.isActive !== 1) {
+      return false;
+    }
+
+    // 金额范围检查
+    if (billAmount < this.amountMin || billAmount > this.amountMax) {
+      return false;
+    }
+
+    // 关键词匹配
+    if (this.ruleType === 'keyword' && this.keywords.trim().length > 0) {
+      const keywordList = this.keywords.split(',');
+      const lowerNote = billNote.toLowerCase();
+      for (let i = 0; i < keywordList.length; i++) {
+        const keyword = keywordList[i].trim().toLowerCase();
+        if (keyword.length > 0 && lowerNote.indexOf(keyword) >= 0) {
+          return true;
+        }
+      }
+      return false;
+    }
+
+    // 正则表达式匹配
+    if (this.ruleType === 'regex' && this.pattern.trim().length > 0) {
+      try {
+        const regex = new RegExp(this.pattern, 'i');
+        return regex.test(billNote);
+      } catch (e) {
+        return false;
+      }
+    }
+
+    return false;
+  }
+
+  /**
+   * 更新规则统计信息
+   */
+  updateStats(isMatch: boolean): void {
+    if (isMatch) {
+      this.matchCount += 1;
+      this.lastMatchedAt = new Date().toISOString();
+    }
+    this.updatedAt = new Date().toISOString();
+  }
+}
