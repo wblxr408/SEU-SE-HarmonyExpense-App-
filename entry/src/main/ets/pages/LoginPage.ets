@@ -1,10 +1,12 @@
 import router from '@ohos.router';
 import { UserSessionService, LoginResult } from '../service/UserSessionService';
 import promptAction from '@ohos.promptAction';
+import { DemoDataService } from '../service/DemoDataService';
 
 @Entry
 @Component
 struct LoginPage {
+
   @State email: string = '';
   @State password: string = '';
 
@@ -62,6 +64,25 @@ struct LoginPage {
           })
       }
       .margin({ top: 20 })
+
+      Button('一键演示 (Demo Mode)')
+        .width('60%')
+        .height(40)
+        .type(ButtonType.Normal)
+        .fontColor('#4A90E2')
+        .backgroundColor(Color.Transparent)
+        .margin({ top: 40 })
+        .onClick(async () => {
+          promptAction.showToast({ message: '正在准备演示环境...' });
+
+          const success = await DemoDataService.setupDemoUser();
+          if (success) {
+            promptAction.showToast({ message: '演示环境就绪' });
+            router.replaceUrl({ url: 'pages/Index' });
+          } else {
+             promptAction.showToast({ message: '演示模式启动失败' });
+          }
+        })
     }
     .width('100%')
     .height('100%')

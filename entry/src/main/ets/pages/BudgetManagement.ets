@@ -1,8 +1,10 @@
-import { Budget } from '../model/Budget'; //
-import { BudgetDAO } from '../dao/BudgetDAO'; //
-import { Category } from '../model/Category'; //
-import { CategoryDAO } from '../dao/CategoryDAO'; //
-import { BillDAO } from '../dao/BillDAO'; //
+import router from '@ohos.router';
+import { Budget } from '../model/Budget';
+import { BudgetDAO } from '../dao/BudgetDAO';
+import { Category } from '../model/Category';
+import { CategoryDAO } from '../dao/CategoryDAO';
+import { BillDAO } from '../dao/BillDAO';
+import { UserSessionService } from '../service/UserSessionService';
 import promptAction from '@ohos.promptAction';
 import hilog from '@ohos.hilog';
 
@@ -106,7 +108,7 @@ struct AddBudgetDialog {
 struct BudgetManagement {
   @State budgetItems: Array<BudgetViewItem> = [];
   @State allCategories: Array<Category> = []; // 用于弹窗选择
-  @StorageProp('currentUserId') currentUserId: number = 1;
+  private currentUserId: number = 0;
 
   dialogController: CustomDialogController = new CustomDialogController({
     builder: AddBudgetDialog({
@@ -118,7 +120,18 @@ struct BudgetManagement {
   });
 
   onPageShow() {
+    this.initUser();
     this.loadData();
+  }
+
+  initUser() {
+    const uid = UserSessionService.getCurrentUserId();
+    if (uid) {
+      this.currentUserId = uid;
+    } else {
+      // Fallback or redirect if needed, though Index usually guards this.
+      console.error('[BudgetManagement] No user logged in');
+    }
   }
 
   async loadData() {
@@ -186,18 +199,33 @@ struct BudgetManagement {
 
   // 删除预算
   async handleDelete(budgetId: number) {
+    console.debug(`[BudgetManagement] Trying to delete budget: ${budgetId}`);
     await BudgetDAO.softDelete(budgetId);
+    promptAction.showToast({ message: '删除成功' });
     this.loadData();
+  }
+
+  @Builder NavigationMenus() {
+    Row() {
+      Text('智能规划')
+        .fontSize(16)
+        .fontColor('#1890FF')
+        .onClick(() => {
+          router.pushUrl({ url: 'pages/SmartBudgetPage' });
+        })
+    }
+    .padding({ right: 15 })
   }
 
   build() {
     Navigation() {
       Column() {
         if (this.budgetItems.length === 0) {
-          Column() {
-            Image($r('app.media.norecord')).width(100).height(100).opacity(0.5); //
-            Text('暂无预算，点击右下角添加').fontSize(14).fontColor(Color.Gray).margin({top: 10});
-          }.justifyContent(FlexAlign.Center).height('80%');
+
+           Column() {
+             Image($r('app.media.norecord')).width(100).height(100).opacity(0.5); //
+             Text('暂无预算，点击右下角添加').fontSize(14).fontColor(Color.Gray).margin({top: 10});
+           }.justifyContent(FlexAlign.Center).height('80%');
         } else {
           List({ space: 15 }) {
             ForEach(this.budgetItems, (item: BudgetViewItem) => {
@@ -205,11 +233,12 @@ struct BudgetManagement {
                 this.BudgetCard(item);
               }
               .swipeAction({ end: this.SwipeDelete(item.budget.budgetId) })
-            })
+            }, (item: BudgetViewItem) => item.budget.budgetId.toString()) // Keep distinct key
           }
           .padding(15)
           .layoutWeight(1);
         }
+        // ... existing code ...
 
         // 悬浮添加按钮
         Button('+')
@@ -221,7 +250,8 @@ struct BudgetManagement {
       .width('100%').height('100%').backgroundColor('#F1F3F5');
     }
     .title('预算管理')
-    .titleMode(NavigationTitleMode.Mini);
+    .titleMode(NavigationTitleMode.Mini)
+    .menus(this.NavigationMenus());
   }
 
   @Builder

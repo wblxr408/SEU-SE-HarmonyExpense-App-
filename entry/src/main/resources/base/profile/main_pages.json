@@ -17,6 +17,9 @@
     "pages/AnomalyHistoryPage",
     "pages/SharedLedgerListPage",
     "pages/SharedLedgerDetailPage",
-    "pages/AddSharedBill"
+    "pages/AddSharedBill",
+    "pages/OCRScanPage",
+    "pages/SmartCategoryRulesPage",
+    "pages/SmartBudgetPage"
   ]
 }
