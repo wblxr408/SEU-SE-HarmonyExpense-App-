@@ -24,6 +24,7 @@ import { Budget } from '../model/Budget';
 import cryptoFramework from '@ohos.security.cryptoFramework';
 import { DatabaseManager } from '../database/DatabaseManager';
 import util from '@ohos.util';
+import http from '@ohos.net.http';
 
 /**
  * 同步选项
@@ -424,49 +425,67 @@ export class CloudSyncService {
   }
 
   /**
-   * 模拟云端上传（实际需要替换为真实API调用）
+   * 云端上传
    */
   private static async mockCloudUpload(data: string, userId: number): Promise<CloudApiResponse> {
-    // 模拟网络延迟
-    await new Promise<void>(resolve => setTimeout(resolve, 1000));
+    // 你的华为云地址
+    const url = 'http://120.46.134.106:5000';
+    console.info('[CloudSyncService] 准备上传到: ' + url);
 
-    console.log(`[CloudSyncService] 模拟上传 ${data.length} 字节数据到云端 (用户: ${userId})`);
+    let httpRequest = http.createHttp();
+    try {
+      let response = await httpRequest.request(url, {
+        method: http.RequestMethod.POST,
+        header: { 'Content-Type': 'application/json' },
+        extraData: data, // 这里就是你收集的全部账单
+        connectTimeout: 10000,
+        readTimeout: 10000
+      });
 
-    // 实际实现示例：
-    // const response = await fetch(CloudSyncService.CLOUD_API_ENDPOINT + '/upload', {
-    //   method: 'POST',
-    //   headers: { 'Content-Type': 'application/json' },
-    //   body: JSON.stringify({ userId, data })
-    // });
-    // return await response.json();
-
-    return new CloudApiResponse(true);
+      if (response.responseCode === 200) {
+        console.info('[CloudSyncService] 同步成功！');
+        return new CloudApiResponse(true, response.result.toString());
+      }
+    } catch (err) {
+      console.error('[CloudSyncService] 连接失败: ' + JSON.stringify(err));
+    } finally {
+      httpRequest.destroy();
+    }
+    return new CloudApiResponse(false);
   }
 
   /**
-   * 模拟云端下载（实际需要替换为真实API调用）
+   * 云端下载（
+   */
+  /**
+   * 真实云端下载：从华为云服务器获取备份数据
    */
   private static async mockCloudDownload(userId: number): Promise<CloudApiResponse> {
-    // 模拟网络延迟
-    await new Promise<void>(resolve => setTimeout(resolve, 1000));
+    const url = 'http://120.46.134.106:5000'; // 保持 IP 一致
+    console.info('[CloudSyncService] 正在从云端下载数据: ' + url);
 
-    console.log(`[CloudSyncService] 模拟从云端下载数据 (用户: ${userId})`);
+    let httpRequest = http.createHttp();
+    try {
+      let response = await httpRequest.request(url, {
+        method: http.RequestMethod.GET, // 下载通常用 GET
+        header: { 'User-Id': userId.toString() }, // 告诉服务器是谁要下载
+        connectTimeout: 10000,
+        readTimeout: 10000
+      });
 
-    // 实际实现示例：
-    // const response = await fetch(CloudSyncService.CLOUD_API_ENDPOINT + '/download', {
-    //   method: 'GET',
-    //   headers: { 'User-Id': userId.toString() }
-    // });
-    // return await response.json();
-
-    // 返回空数据包
-    const emptyPackage: CloudDataPackage = new CloudDataPackage(
-      userId,
-      new Date().toISOString(),
-      ''
-    );
-
-    return new CloudApiResponse(true, JSON.stringify(emptyPackage));
+      if (response.responseCode === 200) {
+        console.info('[CloudSyncService] 下载成功！');
+        // response.result 就是服务器返回的 JSON 字符串
+        return new CloudApiResponse(true, response.result.toString());
+      } else {
+        console.error('[CloudSyncService] 下载失败，状态码: ' + response.responseCode);
+      }
+    } catch (err) {
+      console.error('[CloudSyncService] 网络连接异常: ' + JSON.stringify(err));
+    } finally {
+      httpRequest.destroy();
+    }
+    return new CloudApiResponse(false);
   }
 
   /**
