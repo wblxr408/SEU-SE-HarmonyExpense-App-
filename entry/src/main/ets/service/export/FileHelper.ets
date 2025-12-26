@@ -31,13 +31,25 @@ export class FileHelper {
       FileHelper.logInfo(`开始保存文件: ${fileName}`);
 
       // 获取导出目录路径
-      const exportDir = await FileHelper.getExportDirectory();
+      let exportDir = await FileHelper.getExportDirectory();
 
       // 构建完整文件路径
       const filePath = `${exportDir}/${fileName}`;
 
       // 写入文件
-      const file = fs.openSync(filePath, fs.OpenMode.CREATE | fs.OpenMode.WRITE_ONLY | fs.OpenMode.TRUNC);
+      let file: fs.File;
+      try {
+        // 尝试直接打开
+        file = fs.openSync(filePath, fs.OpenMode.CREATE | fs.OpenMode.WRITE_ONLY | fs.OpenMode.TRUNC);
+      } catch (e) {
+        FileHelper.logError(`首次打开文件失败: ${e.message}, 尝试重新创建目录`);
+        
+        // 重试机制：重新确认目录存在
+        exportDir = await FileHelper.getExportDirectory();
+        // 再次尝试打开
+        file = fs.openSync(filePath, fs.OpenMode.CREATE | fs.OpenMode.WRITE_ONLY | fs.OpenMode.TRUNC);
+      }
+
       try {
         fs.writeSync(file.fd, content);
         FileHelper.logInfo(`文件保存成功: ${filePath}, 大小: ${content.length} 字节`);
@@ -55,6 +67,8 @@ export class FileHelper {
       );
     }
   }
+
+  // ... (readFromFile and generateFileName remain unchanged) ...
 
   /**
    * 从文件读取内容
@@ -117,7 +131,7 @@ export class FileHelper {
   }
 
   /**
-   * 获取导出目录路径
+   * 获取导出目录路径，确保目录存在
    * @returns 导出目录路径
    */
   static async getExportDirectory(): Promise<string> {
@@ -125,15 +139,39 @@ export class FileHelper {
       // 获取应用文件目录
       const context = getContext();
       const filesDir = context.filesDir;
+      if (!filesDir) {
+          throw new Error("无法获取 filesDir");
+      }
       const exportDir = `${filesDir}/${FileHelper.EXPORT_DIR}`;
 
       // 检查目录是否存在，不存在则创建
       try {
-        fs.accessSync(exportDir);
+        const exists = fs.accessSync(exportDir);
+        if (!exists) {
+             // 理论上 accessSync 只有在不存在时抛出异常 (或返回 false? 文档 says throw err if not accessible)
+             // 但为了双重保险，如果返回了 (API 差异)，我们再 check
+             fs.mkdirSync(exportDir);
+             FileHelper.logInfo(`创建导出目录成功: ${exportDir}`);
+        }
       } catch (e) {
-        // 目录不存在，创建目录
-        fs.mkdirSync(exportDir);
-        FileHelper.logInfo(`创建导出目录: ${exportDir}`);
+        // 捕获异常说明目录不可访问（通常是不存在）
+        try {
+          fs.mkdirSync(exportDir);
+          FileHelper.logInfo(`捕获异常后创建导出目录: ${exportDir}`);
+        } catch (mkError) {
+           // 如果创建失败，可能是因为已经存在（并发情况）或者权限问题
+           // 尝试再次 access 确认是否真的无妨
+           try {
+             fs.accessSync(exportDir);
+           } catch (finalErr) {
+             // 确实无法创建且无法访问
+             if (mkError instanceof Error) {
+               throw mkError;
+             } else {
+               throw new Error("创建导出目录失败: " + JSON.stringify(mkError));
+             }
+           }
+        }
       }
 
       return exportDir;

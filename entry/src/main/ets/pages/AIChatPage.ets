@@ -1,6 +1,6 @@
 import router from '@ohos.router';
 import { LLMService, ChatMessage } from '../service/LLMService';
-import promptAction from '@ohos.promptAction';
+import { promptAction } from '@kit.ArkUI';
 import { UserSessionService } from '../service/UserSessionService';
 import { AccountDAO } from '../dao/AccountDAO';
 import { BillDAO } from '../dao/BillDAO';

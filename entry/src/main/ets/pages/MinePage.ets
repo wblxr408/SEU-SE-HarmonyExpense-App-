@@ -55,6 +55,13 @@ export struct MinePage {
           })
         }
 
+        // 共享账本
+        ListItem() {
+          this.MenuRow('多人共享账本', $r('app.media.icon'), () => {
+             router.pushUrl({ url: 'pages/SharedLedgerListPage' });
+          })
+        }
+
         // 数据同步
         ListItem() {
           this.MenuRow('数据同步', $r('app.media.icon'), () => {
@@ -82,7 +89,15 @@ export struct MinePage {
             router.pushUrl({ url: 'pages/CategoryManagement' });
           })
         }
+
+        // 风险通知中心
+        ListItem() {
+          this.MenuRow('风险通知中心', $r('app.media.icon'), () => {
+             router.pushUrl({ url: 'pages/AnomalyHistoryPage' });
+          })
+        }
       }
+
       .width('100%')
       .backgroundColor(Color.White)
       .divider({ strokeWidth: 1, color: '#F0F0F0', startMargin: 56 })

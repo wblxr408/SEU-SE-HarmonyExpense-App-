@@ -281,6 +281,9 @@ export interface ReadModelJSON {
   modelId: number;
   modelType: string;             // 如 'BillSummary', 'CategoryStats'
   userId: number;
+  aggregateId: number;
+  version: number;
+  lastEventId: string;
   dataJson: string;
   lastEventVersion: number;      // 最后处理的事件版本
   lastUpdatedAt: string;
@@ -769,6 +772,9 @@ export class ReadModel {
       modelId: this.modelId,
       modelType: this.modelType,
       userId: this.userId,
+      aggregateId: this.aggregateId,
+      version: this.version,
+      lastEventId: this.lastEventId,
       dataJson: this.dataJson,
       lastEventVersion: this.lastEventVersion,
       lastUpdatedAt: this.lastUpdatedAt,
@@ -782,9 +788,13 @@ export class ReadModel {
       data.modelId,
       data.modelType,
       data.userId,
+      data.aggregateId,
+      data.version,
+      data.lastEventId,
       data.dataJson,
       data.lastEventVersion,
       data.lastUpdatedAt,
+      data.lastUpdatedAt, // Use lastUpdatedAt for updatedAt as well since it's missing in JSON
       data.createdAt
     );
   }

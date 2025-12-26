@@ -318,6 +318,18 @@ export class SharedLedgerService {
         throw new Error('该用户已是账本成员');
       }
 
+      // 检查是否有待处理的邀请
+      const invitations = await LedgerInvitationDAO.getByLedgerId(ledgerId);
+      const existingInvitation = invitations.find(i => i.inviteeId === inviteeId && i.status === 'pending');
+      
+      if (existingInvitation) {
+          // If expired, we can re-invite, but if pending, warn
+          const isExpired = new Date(existingInvitation.expiresAt).getTime() < new Date().getTime();
+          if (!isExpired) {
+             throw new Error('该用户已有待处理的邀请');
+          }
+      }
+
       // 创建邀请
       const invitation = new LedgerInvitation();
       invitation.ledgerId = ledgerId;
@@ -325,8 +337,14 @@ export class SharedLedgerService {
       invitation.inviterName = inviterName;
       invitation.inviteeId = inviteeId;
       invitation.inviteeName = inviteeName;
+      invitation.inviteeEmail = ''; // Ensure this is not null if schema requires it, though schema says NOT NULL. 
+      // If inviteeId is used, email might be empty string? 
+      // Schema: invitee_email TEXT NOT NULL. So we must set it. 
+      // DAO mapRowToInvitation uses result.getString...
+      
       invitation.role = role;
       invitation.status = 'pending';
+      invitation.generateInvitationCode(); // FIX: Generate Code
 
       // 设置过期时间（7天后）
       const expiresAt = new Date();
@@ -419,6 +437,18 @@ export class SharedLedgerService {
     } catch (error) {
       console.error('[SharedLedgerService] 拒绝邀请失败:', error);
       throw error instanceof Error ? error : new Error(String(error));
+    }
+  }
+
+  /**
+   * 获取用户的待处理邀请
+   */
+  static async getUserInvitations(userId: number): Promise<LedgerInvitation[]> {
+    try {
+      return await LedgerInvitationDAO.getByInviteeUserId(userId);
+    } catch (error) {
+      console.error('[SharedLedgerService] 获取用户邀请失败:', error);
+      return [];
     }
   }
 
@@ -572,7 +602,7 @@ export class SharedLedgerService {
       bill.splitMethod = splitMethod;
       bill.splitsJson = JSON.stringify(splits);
       bill.attachments = attachments || '';
-      bill.status = requireApproval ? 'pending_approval' : 'approved';
+      bill.approvalStatus = requireApproval ? 'pending' : 'approved'; 
       bill.version = 1;
 
       const billId = await SharedBillDAO.insert(bill);
@@ -820,12 +850,19 @@ export class SharedLedgerService {
   }
 
   /**
-   * 检查是否所有审批完成
+   * 检查所有审批是否完成
+   */
+  /**
+   * 检查所有审批是否完成
    */
   private static async checkAllApproved(billId: number): Promise<boolean> {
     try {
       const records = await ApprovalRecordDAO.getByBillId(billId);
-      return records.every(r => r.status === 'approved');
+      if (records.length === 0) return true; // 不需要审批
+      
+      // 检查是否所有记录都是 approved
+      const allApproved = records.every(r => r.status === 'approved');
+      return allApproved;
     } catch (error) {
       console.error('[SharedLedgerService] 检查审批状态失败:', error);
       return false;
@@ -839,8 +876,14 @@ export class SharedLedgerService {
    */
   static async calculateSettlement(ledgerId: number): Promise<SettlementResult[]> {
     try {
-      // 获取所有已批准的账单
-      const bills = await SharedBillDAO.getByStatus(ledgerId, 'approved');
+      // 获取此次账本所有账单 (确保包含自动审批的账单)
+      const allBills = await SharedBillDAO.getByLedgerId(ledgerId, 1000); 
+      const bills = allBills.filter(b => 
+         b.approvalStatus === 'approved' || 
+         b.approvalStatus === 'auto_approved'
+      );
+      
+      console.info(`[Settlement] Ledger ${ledgerId}: Found ${bills.length} valid bills out of ${allBills.length} total`);
 
       // 计算每个成员的净欠款
       interface BalanceInfo {

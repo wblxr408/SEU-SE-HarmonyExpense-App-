@@ -83,19 +83,25 @@ export class BillDAO {
   }
 
   // 插入账单
-  static async insert(bill: Bill) {
+  static async insert(bill: Bill): Promise<number> {
     await BillDAO.validateForeignKeys(bill);
-    const sql = `
-      INSERT INTO bills
-      (user_id,account_id, category_id, amount, type, note, transaction_date, created_at, updated_at, is_deleted)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?,?)
-    `;
-    const params = [
-      bill.userId,
-      bill.accountId, bill.categoryId, bill.amount, bill.type, bill.note,
-      bill.transactionDate, bill.createdAt, bill.updatedAt, bill.isDeleted
-    ];
-    await DatabaseManager.getDatabase().executeSql(sql, params);
+    
+    const store = DatabaseManager.getDatabase();
+    const record: relationalStore.ValuesBucket = {
+      'user_id': bill.userId,
+      'account_id': bill.accountId,
+      'category_id': bill.categoryId,
+      'amount': bill.amount,
+      'type': bill.type,
+      'note': bill.note,
+      'transaction_date': bill.transactionDate,
+      'created_at': bill.createdAt,
+      'updated_at': bill.updatedAt,
+      'is_deleted': bill.isDeleted
+    };
+
+    const rowId = await store.insert('bills', record);
+    return rowId;
   }
 
   static async validateForeignKeys(bill: Bill) {

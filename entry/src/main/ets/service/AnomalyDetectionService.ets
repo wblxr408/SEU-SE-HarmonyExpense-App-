@@ -57,6 +57,7 @@ export class AnomalyDetectionService {
 
       // 1. 金额异常检测
       const amountAnomaly = AnomalyDetectionService.detectAmountAnomaly(bill, baseline);
+      console.info(`[AnomalyDebug] Anomaly Check: Amount=${bill.amount}, Mean=${baseline.mean}, StdDev=${baseline.stdDev}, Result=${amountAnomaly.isAnomaly}, Score=${amountAnomaly.score}`);
       if (amountAnomaly.isAnomaly) {
         results.push(amountAnomaly);
 

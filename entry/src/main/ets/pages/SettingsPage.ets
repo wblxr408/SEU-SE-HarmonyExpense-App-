@@ -1,9 +1,28 @@
 import router from '@ohos.router';
 import promptAction from '@ohos.promptAction';
+import { SharedLedgerService } from '../service/SharedLedgerService';
+import { LedgerInvitation } from '../model/SharedLedger';
 
 @Entry
 @Component
 struct SettingsPage {
+  @State pendingInvitations: LedgerInvitation[] = [];
+
+  // Dialog Controller
+  // TODO: InvitationProcessingDialog is missing in the codebase.
+  // invitationController: CustomDialogController = new CustomDialogController({
+  //   builder: InvitationProcessingDialog({
+  //     invitations: $pendingInvitations,
+  //     onHandle: (invite, action) => this.handleInvitation(invite, action)
+  //   }),
+  //   autoCancel: false,
+  //   customStyle: true
+  // });
+
+  handleInvitation(invite: LedgerInvitation, action: string) {
+    // TODO: Implement handleInvitation
+    console.info(`Handling invitation: ${JSON.stringify(invite)}, action: ${action}`);
+  }
 
   // 退出登录处理函数
   handleLogout() {
@@ -32,6 +51,10 @@ struct SettingsPage {
         }
       }
     })
+  }
+
+  async onPageShow() {
+      // TODO: pendingInvitations = await SharedLedgerService.getPendingInvitations();
   }
 
   build() {

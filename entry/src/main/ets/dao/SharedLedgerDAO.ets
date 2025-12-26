@@ -651,6 +651,33 @@ export class LedgerInvitationDAO {
   }
 
   /**
+   * 获取用户的邀请 (By User ID)
+   */
+  static async getByInviteeUserId(userId: number): Promise<LedgerInvitation[]> {
+    let resultSet: relationalStore.ResultSet | null = null;
+    try {
+      const store = DatabaseManager.getDatabase();
+      const predicates = new relationalStore.RdbPredicates(LedgerInvitation.tableName);
+      predicates.equalTo('invitee_user_id', userId);
+      predicates.equalTo('status', INVITATION_STATUS_PENDING);
+      predicates.equalTo('is_deleted', 0);
+      predicates.orderByDesc('created_at');
+
+      resultSet = await store.query(predicates);
+
+      const invitations: LedgerInvitation[] = [];
+      while (resultSet.goToNextRow()) {
+        invitations.push(LedgerInvitationDAO.mapRowToInvitation(resultSet));
+      }
+      return invitations;
+    } catch (error) {
+      throw DAOHelper.toError('[LedgerInvitationDAO] 获取用户邀请失败', error);
+    } finally {
+      DAOHelper.closeResultSet(resultSet);
+    }
+  }
+
+  /**
    * 获取账本的所有邀请
    */
   static async getByLedgerId(ledgerId: number): Promise<LedgerInvitation[]> {

@@ -11,6 +11,8 @@ import { CategoryDAO } from '../dao/CategoryDAO' //
 import { hilog } from '@kit.PerformanceAnalysisKit';
 import { BreakPointType } from '../common/BreakpointSystem';
 import { UserSessionService } from '../service/UserSessionService';
+import { AnomalyDetectionService, AnomalyDetectionResult } from '../service/AnomalyDetectionService';
+import { AnomalyRecord } from '../model/AnomalyDetection';
 
 const HILOG_DOMAIN = 0x0001
 const LOG_TAG = 'AddBill'
@@ -22,6 +24,72 @@ class SelectOption {
     this.value = value;
   }
 }
+
+@CustomDialog
+struct AnomalyAlertDialog {
+  controller: CustomDialogController;
+  anomalies: AnomalyDetectionResult[] = [];
+  onConfirm: () => void = () => {};
+
+  build() {
+    Column() {
+      Text('⚠️ 异常消费提醒')
+        .fontSize(20)
+        .fontWeight(FontWeight.Bold)
+        .fontColor(Color.Red)
+        .margin({ bottom: 15 })
+
+      List() {
+        ForEach(this.anomalies, (item: AnomalyDetectionResult) => {
+          ListItem() {
+            Column() {
+              Text(this.getAnomalyTitle(item.anomalyType))
+                .fontSize(16)
+                .fontWeight(FontWeight.Bold)
+                .margin({ bottom: 5 })
+              Text(item.description)
+                .fontSize(14)
+                .fontColor(Color.Gray)
+            }
+            .alignItems(HorizontalAlign.Start)
+            .width('100%')
+            .padding(10)
+            .backgroundColor('#FFF5F5')
+            .borderRadius(8)
+            .margin({ bottom: 8 })
+          }
+        })
+      }
+      .width('100%')
+      .constraintSize({ maxHeight: 200 })
+
+      Button('我知道了')
+        .type(ButtonType.Capsule)
+        .width('90%')
+        .margin({ top: 20 })
+        .onClick(() => {
+          this.controller.close();
+          this.onConfirm();
+        })
+    }
+    .padding(20)
+    .backgroundColor(Color.White)
+    .borderRadius(16)
+    .width('90%')
+  }
+
+  getAnomalyTitle(type: string): string {
+    const map: Record<string, string> = {
+      'high_amount': '金额过高',
+      'low_amount': '金额异常',
+      'frequency_spike': '交易频繁',
+      'unusual_category': '分类异常',
+      'pattern_break': '消费习惯改变'
+    };
+    return map[type] || '检测到异常';
+  }
+}
+
 @Entry
 @Component
 struct AddBill{
@@ -38,6 +106,21 @@ struct AddBill{
 
   @State categoryOptions: SelectOption[] = [];
   @State accountOptions: SelectOption[] = []; // Added from MAIN logic requirement
+  
+  // 异常检测相关
+  @State detectionAnomalies: AnomalyDetectionResult[] = [];
+  
+  anomalyDialogController: CustomDialogController = new CustomDialogController({
+    builder: AnomalyAlertDialog({
+      anomalies: this.detectionAnomalies,
+      onConfirm: () => {
+        router.back();
+      }
+    }),
+    autoCancel: false,
+    alignment: DialogAlignment.Center
+  });
+
 
   @StorageProp('currentBreakpoint') currentBreakpoint: string = 'md';
   // 响应式配置
@@ -45,6 +128,11 @@ struct AddBill{
   private labelFontSize = new BreakPointType({ xs: 14, sm: 15, md: 16, lg: 18, xl: 20, xxl: 22 });
   private buttonWidth = new BreakPointType({ xs: '95%', sm: '92%', md: '90%', lg: '80%', xl: '70%', xxl: '60%' });
   private contentPadding = new BreakPointType({ xs: 10, sm: 12, md: 15, lg: 18, xl: 20, xxl: 24 });
+
+  aboutToAppear() {
+    this.loadData();
+  }
+
 
   async loadData(){
     try{
@@ -287,16 +375,25 @@ struct AddBill{
             }
 
             try{
-              await BillDAO.insert(newBill);
-              promptAction.showToast({ message: '保存成功，余额已更新' });
-
-              // TODO: Sprint 1 任务，通知首页刷新
-              // (目前先直接返回)
-              router.back();
+              const rowId = await BillDAO.insert(newBill);
+              
+              // 异常检测
+              newBill.billId = rowId;
+              const anomalies = await AnomalyDetectionService.detectBillAnomaly(newBill, userId);
+              
+              if (anomalies.length > 0) {
+                this.detectionAnomalies = anomalies;
+                this.anomalyDialogController.open();
+                // 不立即返回，等待用户点击弹窗确认
+              } else {
+                promptAction.showToast({ message: '保存成功，余额已更新' });
+                router.back();
+              }
             }catch (error){
               console.error('[添加账单] 保存失败: %{public}s', JSON.stringify(error));
               promptAction.showToast({ message: `保存失败: ${error.message}` });
             }
+
           })
       }
       .padding(this.contentPadding.getValue(this.currentBreakpoint) as number)

@@ -13,6 +13,10 @@
     "pages/SettingsPage",
     "pages/BudgetManagement",
     "pages/ExportImportPage",
-    "pages/AIChatPage"
+    "pages/AIChatPage",
+    "pages/AnomalyHistoryPage",
+    "pages/SharedLedgerListPage",
+    "pages/SharedLedgerDetailPage",
+    "pages/AddSharedBill"
   ]
 }
