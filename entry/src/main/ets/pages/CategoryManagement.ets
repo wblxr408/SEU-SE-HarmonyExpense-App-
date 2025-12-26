@@ -243,9 +243,11 @@ struct CategoryManagement {
             ListItem() {
               // (U) 列表项
               Row() {
-                Text(item.icon)
-                  .fontSize((this.itemFontSize.getValue(this.currentBreakpoint) as number) + 4)
+                Image($r(item.icon))
                   .width(30)
+                  .height(30)
+                  .margin({ right: 10 })
+                  .objectFit(ImageFit.Contain)
                 Text(item.name)
                   .fontSize(this.itemFontSize.getValue(this.currentBreakpoint) as number)
                   .layoutWeight(1)

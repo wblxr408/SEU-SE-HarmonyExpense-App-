@@ -63,7 +63,14 @@ struct SettingsPage {
         List() {
           // --- 原有的功能列表 ---
 
-          // 1. 分类管理
+          // 1. 智能分类规则
+          ListItem() {
+            this.SettingItem('智能分类规则', () => {
+              router.pushUrl({ url: 'pages/SmartCategoryRulesPage' });
+            })
+          }
+
+          // 2. 分类管理
           ListItem() {
             this.SettingItem('分类管理', () => {
               router.pushUrl({ url: 'pages/CategoryManagement' });

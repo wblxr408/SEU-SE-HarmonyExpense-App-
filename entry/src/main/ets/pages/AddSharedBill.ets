@@ -1,6 +1,6 @@
 import router from '@ohos.router';
 import { SharedLedgerService, BillSplit } from '../service/SharedLedgerService';
-import { LedgerMember } from '../model/SharedLedger';
+import { LedgerMember, SharedBill } from '../model/SharedLedger';
 import { UserSessionService } from '../service/UserSessionService';
 import { Category } from '../model/Category';
 import { CategoryDAO } from '../dao/CategoryDAO';
@@ -10,6 +10,7 @@ import promptAction from '@ohos.promptAction';
 @Component
 struct AddSharedBill {
   @State ledgerId: number = 0;
+  @State billId: number = 0; // If set, we are editing
   @State amount: string = '';
   @State note: string = '';
   @State selectedDate: Date = new Date();
@@ -25,8 +26,9 @@ struct AddSharedBill {
 
   aboutToAppear() {
     const params = router.getParams() as Record<string, number>;
-    if (params && params.ledgerId) {
-      this.ledgerId = params.ledgerId;
+    if (params) {
+      if (params.ledgerId) this.ledgerId = params.ledgerId;
+      if (params.billId) this.billId = params.billId;
       this.loadData();
     } else {
       promptAction.showToast({ message: '参数错误' });
@@ -42,17 +44,41 @@ struct AddSharedBill {
 
       // 1. 获取成员
       this.members = await SharedLedgerService.getLedgerMembers(this.ledgerId);
-      // 默认全选
-      this.selectedMemberIds = this.members.map(m => m.userId);
-
-      // 2. 获取分类 (默认获取支出的)
+      
+      // 2. 获取分类
       this.categories = await CategoryDAO.getByType(userId, 'expense');
-      if (this.categories.length > 0) {
-        this.selectedCategoryId = this.categories[0].categoryId;
-        this.selectedCategoryName = this.categories[0].name;
+      
+      // 3. 如果是编辑模式，加载账单详情
+      if (this.billId) {
+        const bill = await SharedLedgerService.getSharedBillById(this.billId);
+        if (bill) {
+          this.amount = bill.amount.toString();
+          this.note = bill.note;
+          this.selectedCategoryId = bill.categoryId;
+          this.selectedCategoryName = bill.categoryName;
+          
+          // Parse splits to select members
+          if (bill.splitsJson) {
+             const splits = JSON.parse(bill.splitsJson) as BillSplit[];
+             this.selectedMemberIds = splits.map(s => s.memberId);
+          } else {
+             // Fallback: Select all if no split info found (unlikely)
+             this.selectedMemberIds = this.members.map(m => m.userId);
+          }
+        }
+      } else {
+        // Create Mode Defaults
+        // 默认全选成员
+        this.selectedMemberIds = this.members.map(m => m.userId);
+        // 默认选中第一个分类
+        if (this.categories.length > 0) {
+          this.selectedCategoryId = this.categories[0].categoryId;
+          this.selectedCategoryName = this.categories[0].name;
+        }
       }
 
-    } catch (error) {
+    } catch (err) {
+      let error = err as Error;
       console.error('[AddSharedBill] 加载数据失败:', error);
       promptAction.showToast({ message: '加载失败' });
     } finally {
@@ -95,10 +121,6 @@ struct AddSharedBill {
       const splitCount = this.selectedMemberIds.length;
       const perAmount = parseFloat((totalAmount / splitCount).toFixed(2));
       
-      // 构建分摊数据 (简单均分)
-      // 注意：由于四舍五入，最后一个人可能需要承担误差，或者 Service 层会校验
-      // 这里我们在前端简单处理，Service的validateSplits 允许 0.01 误差
-      
       const splits: BillSplit[] = this.selectedMemberIds.map((uid): BillSplit => {
         return {
           memberId: uid,
@@ -107,7 +129,7 @@ struct AddSharedBill {
         } as BillSplit;
       });
 
-      // 修正总额误差 (把余数加到第一个人)
+      // 修正总额误差
       const currentSum = splits.reduce((sum, s) => sum + s.amount, 0);
       const diff = totalAmount - currentSum;
       if (Math.abs(diff) > 0.0001) {
@@ -115,22 +137,42 @@ struct AddSharedBill {
         splits[0].amount = parseFloat(splits[0].amount.toFixed(2));
       }
 
-      await SharedLedgerService.createSharedBill(
-        this.ledgerId,
-        currentUser.userId,
-        currentUser.username,
-        totalAmount,
-        this.note || this.selectedCategoryName, // 描述默认为备注或分类名
-        this.selectedCategoryId,
-        this.selectedCategoryName,
-        'equal',
-        splits
-      );
-
-      promptAction.showToast({ message: '记账成功' });
+      if (this.billId) {
+        // UPDATE MODE
+        await SharedLedgerService.updateSharedBill(
+          this.billId,
+          currentUser.userId,
+          {
+            amount: totalAmount,
+            description: this.note || this.selectedCategoryName, // description alias for note in some contexts
+            categoryId: this.selectedCategoryId,
+            categoryName: this.selectedCategoryName,
+            splitMethod: 'equal',
+            splitsJson: JSON.stringify(splits)
+            // status update if needed? Keep current status usually.
+          }
+        );
+        promptAction.showToast({ message: '修改成功' });
+      } else {
+        // CREATE MODE
+        await SharedLedgerService.createSharedBill(
+          this.ledgerId,
+          currentUser.userId,
+          currentUser.username,
+          totalAmount,
+          this.note || this.selectedCategoryName,
+          this.selectedCategoryId,
+          this.selectedCategoryName,
+          'equal',
+          splits
+        );
+        promptAction.showToast({ message: '记账成功' });
+      }
+      
       router.back();
 
-    } catch (error) {
+    } catch (err) {
+      let error = err as Error;
       console.error('[AddSharedBill] 保存失败:', error);
       promptAction.showToast({ message: '保存失败: ' + error.message });
     } finally {
@@ -146,7 +188,7 @@ struct AddSharedBill {
           .width(24).height(24)
           .onClick(() => router.back())
           .margin({ right: 10 })
-        Text('记一笔 (AA)')
+        Text(this.billId ? '编辑账单' : '记一笔 (AA)')
           .fontSize(20)
           .fontWeight(FontWeight.Bold)
       }
@@ -251,7 +293,7 @@ struct AddSharedBill {
       }
       .layoutWeight(1)
 
-      Button('保存')
+      Button(this.billId ? '更新' : '保存')
         .width('90%')
         .height(50)
         .type(ButtonType.Capsule)

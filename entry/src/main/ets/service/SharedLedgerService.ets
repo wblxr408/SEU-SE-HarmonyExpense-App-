@@ -655,6 +655,18 @@ export class SharedLedgerService {
   }
 
   /**
+   * 获取共享账单详情
+   */
+  static async getSharedBillById(billId: number): Promise<SharedBill | null> {
+    try {
+      return await SharedBillDAO.getById(billId);
+    } catch (error) {
+      console.error('[SharedLedgerService] 获取账单详情失败:', error);
+      return null;
+    }
+  }
+
+  /**
    * 更新共享账单
    */
   static async updateSharedBill(

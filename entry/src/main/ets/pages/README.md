@@ -97,3 +97,18 @@
 - **功能**: 分别对应云同步设置、本地备份恢复、每日提醒功能设置。
 - **入口**: 均有 `MinePage` 直接进入。
 
+### 5. 智能与高级功能
+
+#### [SmartBudgetPage.ets](SmartBudgetPage.ets) (智能预算分析)
+- **功能**: 基于历史账单数据，提供智能的月度收支预测与预算优化建议。
+- **入口**: 可通过 `BudgetManagement.ets` 或 `SettingsPage.ets` 的相关入口进入。
+- **逻辑**: 使用本地算法 (`BudgetForecastUtils`) 进行离线预测，不依赖云端计算。
+
+#### [OCRScanPage.ets](OCRScanPage.ets) (OCR 票据扫描)
+- **功能**: 拍摄或选择票据图片，自动识别金额和日期并填充至记账页。
+- **入口**: `Index.ets` 首页底部或 `AddBill.ets`。
+
+#### [SmartCategoryRulesPage.ets](SmartCategoryRulesPage.ets) (智能分类规则)
+- **功能**: 管理自动分类规则（如“关键词匹配”）。
+- **入口**: `SettingsPage` 或 `MinePage`。
+

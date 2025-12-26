@@ -327,17 +327,34 @@ struct Index {
           right: this.listPadding.getValue(this.currentBreakpoint) as number 
         })
 
-        Row() {
+        Row({ space: 10 }) {
            Button('管理分类')
             .type(ButtonType.Capsule)
             .fontSize(this.titleFontSize.getValue(this.currentBreakpoint) as number)
             .height(40)
             .backgroundColor(Color.Gray)
-            .margin({ right: 10 })
             .onClick(() => {
               router.pushUrl({ url: 'pages/CategoryManagement' })
             })
+           
+           Button('📷 扫码')
+            .type(ButtonType.Capsule)
+            .fontSize(this.titleFontSize.getValue(this.currentBreakpoint) as number)
+            .height(40)
+            .backgroundColor('#4A90E2')
+            .onClick(() => {
+              router.pushUrl({ url: 'pages/OCRScanPage' })
+            })
             
+            Button('预算')
+            .type(ButtonType.Capsule)
+            .fontSize(this.titleFontSize.getValue(this.currentBreakpoint) as number)
+            .height(40)
+            .backgroundColor('#FFA000') // Orange for budget
+            .onClick(() => {
+              router.pushUrl({ url: 'pages/BudgetManagement' })
+            })
+
            Button('记一笔')
             .type(ButtonType.Capsule)
             .fontSize(this.titleFontSize.getValue(this.currentBreakpoint) as number)
@@ -370,11 +387,13 @@ struct Index {
   @Builder
   TransactionRow(item: Bill) {
     Row() {
+      /*
       Image(item.type=='expense'?$r('app.media.ic_expense_default'):$r('app.media.ic_income_default'))
         .width(40)
         .height(40)
         .margin({right:10})
         .objectFit(ImageFit.Contain)
+      */
       Column() {
         Text(this.allCategories.find(c => c.categoryId === item.categoryId)?.name || (item.type === 'expense' ? '支出' : '收入'))
           .fontSize(this.titleFontSize.getValue(this.currentBreakpoint) as number)

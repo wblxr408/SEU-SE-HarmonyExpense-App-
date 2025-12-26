@@ -111,6 +111,12 @@ struct SharedLedgerDetailPage {
                       ListItem() {
                         this.BillRow(bill)
                       }
+                      .onClick(() => {
+                        router.pushUrl({
+                          url: 'pages/SharedBillDetailPage',
+                          params: { billId: bill.billId }
+                        });
+                      })
                     })
                   }
                   .width('100%').layoutWeight(1).padding(10)

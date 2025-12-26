@@ -13,6 +13,7 @@ import { BreakPointType } from '../common/BreakpointSystem';
 import { UserSessionService } from '../service/UserSessionService';
 import { AnomalyDetectionService, AnomalyDetectionResult } from '../service/AnomalyDetectionService';
 import { AnomalyRecord } from '../model/AnomalyDetection';
+import { SmartCategoryService, CategoryRecommendation } from '../service/SmartCategoryService';
 
 const HILOG_DOMAIN = 0x0001
 const LOG_TAG = 'AddBill'
@@ -110,88 +111,142 @@ struct AddBill{
   // 异常检测相关
   @State detectionAnomalies: AnomalyDetectionResult[] = [];
   
+  // 智能推荐相关
+  @State recommendations: CategoryRecommendation[] = [];
+  @State predictedCategoryId: number = 0;
+
+  // 响应式布局相关
+  @StorageProp('currentBreakpoint') currentBreakpoint: string = 'sm';
+  inputFontSize: BreakPointType<number> = new BreakPointType({
+    sm: 32,
+    md: 36,
+    lg: 40
+  });
+  labelFontSize: BreakPointType<number> = new BreakPointType({
+    sm: 16,
+    md: 18,
+    lg: 20
+  });
+  buttonWidth: BreakPointType<string> = new BreakPointType({
+    sm: '90%',
+    md: '70%',
+    lg: '50%'
+  });
+  contentPadding: BreakPointType<number> = new BreakPointType({
+    sm: 15,
+    md: 20,
+    lg: 30
+  });
+
+  // 异常检测弹窗控制器
   anomalyDialogController: CustomDialogController = new CustomDialogController({
     builder: AnomalyAlertDialog({
       anomalies: this.detectionAnomalies,
       onConfirm: () => {
+        const selectedCategory = this.allCategories.find(c => c.categoryId === this.selectedCategoryId);
+        if (selectedCategory) {
+          const userId = UserSessionService.getCurrentUserId();
+          if (userId) {
+            SmartCategoryService.learnFromUserAction(
+              userId,
+              this.notes,
+              parseFloat(this.amount),
+              this.selectedCategoryId,
+              selectedCategory.name,
+              this.predictedCategoryId
+            );
+          }
+        }
+        promptAction.showToast({ message: '保存成功，余额已更新' });
         router.back();
       }
     }),
     autoCancel: false,
-    alignment: DialogAlignment.Center
+    customStyle: true
   });
 
+  async updateRecommendations() {
+    const userId = UserSessionService.getCurrentUserId();
+    if (!userId) return;
 
-  @StorageProp('currentBreakpoint') currentBreakpoint: string = 'md';
-  // 响应式配置
-  private inputFontSize = new BreakPointType({ xs: 20, sm: 22, md: 24, lg: 28, xl: 32, xxl: 36 });
-  private labelFontSize = new BreakPointType({ xs: 14, sm: 15, md: 16, lg: 18, xl: 20, xxl: 22 });
-  private buttonWidth = new BreakPointType({ xs: '95%', sm: '92%', md: '90%', lg: '80%', xl: '70%', xxl: '60%' });
-  private contentPadding = new BreakPointType({ xs: 10, sm: 12, md: 15, lg: 18, xl: 20, xxl: 24 });
+    if (!this.notes && !this.amount) {
+      this.recommendations = [];
+      return;
+    }
 
-  aboutToAppear() {
-    this.loadData();
+    const amountNum = parseFloat(this.amount) || 0;
+    this.recommendations = await SmartCategoryService.recommendCategory(userId, this.notes, amountNum);
+
+    if (this.recommendations.length > 0) {
+      this.predictedCategoryId = this.recommendations[0].categoryId;
+    }
   }
 
-
-  async loadData(){
-    try{
+  async loadData() {
+    try {
       const userId = UserSessionService.getCurrentUserId();
       if (!userId) {
-         promptAction.showToast({ message: '请先登录' });
-         return;
-      }
-      hilog.info(HILOG_DOMAIN, LOG_TAG, `开始加载数据，类型: ${this.billType}`);
-      //添加支出分裂
-      const accounts = await AccountDAO.getByUserId(userId);
-      const categories = await CategoryDAO.getByType(userId,this.billType);
-
-
-      this.allCategories = categories;
-      this.allAccounts = accounts;
-     // tOption 数组
-      this.categoryOptions = categories.map(cat => new SelectOption(cat.name));
-      this.accountOptions = accounts.map(acc => new SelectOption(acc.name));
-
-      //设置默认选中项
-      // Logic from MAIN: Check existence
-      if (categories.length > 0) {
-        const exists = categories.some(c => c.categoryId === this.selectedCategoryId);
-        if (!exists) {
-          this.selectedCategoryId = categories[0].categoryId;
-        }
-      } else {
-        this.selectedCategoryId = 0;
-      }
-
-      if (accounts.length > 0) {
-         const exists = accounts.some(a => a.accountId === this.selectedAccountId);
-         if (!exists) {
-          this.selectedAccountId = accounts[0].accountId;
-        }
-      } else {
-        // HEAD Logic: prompt to create account
-        promptAction.showToast({ message: '请先创建至少一个账户' });
-        // 延时跳转
-        setTimeout(() => {
-           router.pushUrl({ url: 'pages/AccountManagementPage' });
-        }, 1000);
+        promptAction.showToast({ message: '请先登录' });
         return;
       }
-      
-      hilog.info(HILOG_DOMAIN, LOG_TAG, '分类和账户加载成功');
 
-    }catch(error){
+      // 加载分类和账户列表
+      this.allCategories = await CategoryDAO.getByType(userId, this.billType);
+      this.allAccounts = await AccountDAO.getByUserId(userId);
+
+      this.categoryOptions = this.allCategories.map((c: Category) => new SelectOption(c.name));
+      this.accountOptions = this.allAccounts.map((a: Account) => new SelectOption(a.name));
+
+      // --- 智能分类冷启动逻辑 ---
+      // 检查用户是否有规则，如果没有，则触发历史数据学习
+      const rules = await SmartCategoryService.getUserRules(userId);
+      
+      if (rules.length === 0) {
+        hilog.info(HILOG_DOMAIN, LOG_TAG, '检测到无分类规则，开始从历史账单学习...');
+        const result = await SmartCategoryService.batchLearnFromHistory(userId, 90); // 学习最近90天
+        
+        if (result.rulesCreated > 0) {
+            hilog.info(HILOG_DOMAIN, LOG_TAG, `历史学习完成，创建了 ${result.rulesCreated} 条规则`);
+            promptAction.showToast({ message: '已根据您的历史账单优化了分类推荐' });
+        }
+      }
+
+    } catch (err) {
+      let error = err as Error;
       hilog.error(HILOG_DOMAIN, LOG_TAG, '加载数据失败: %{public}s', JSON.stringify(error));
       promptAction.showToast({ message: '加载分类/账户列表失败' });
     }
+  }
 
+  aboutToAppear() {
+    // 检查是否有预填参数（来自OCR扫描）
+    const params = router.getParams() as Record<string, string | number>;
+    if (params) {
+      if (params['prefilledAmount']) {
+        this.amount = String(params['prefilledAmount']);
+      }
+      if (params['prefilledNote']) {
+        this.notes = String(params['prefilledNote']);
+      }
+      if (params['prefilledCategoryId']) {
+        this.selectedCategoryId = Number(params['prefilledCategoryId']);
+      }
+      if (params['prefilledDate']) {
+        const dateStr = String(params['prefilledDate']);
+        const parts = dateStr.split('-');
+        if (parts.length === 3) {
+          this.selectedDate = new Date(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2]));
+        }
+      }
+    }
+    
+    this.loadData();
   }
   //创建一个辅助函数:将Date对象转换成相应的格式
-  private formatDate(date:Date):string{
-    const y = date.getFullYear();
-    const m = (date.getMonth() + 1).toString().padStart(2, '0');
-    const d = date.getDate().toString().padStart(2, '0');
+  private formatDate(date: Date): string {
+    const y: number = date.getFullYear();
+    const m: string = (date.getMonth() + 1).toString().padStart(2, '0');
+    const d: string = date.getDate().toString().padStart(2, '0');
     return `${y}-${m}-${d}`;
   }
 
@@ -218,8 +273,9 @@ struct AddBill{
           .type(InputType.Number) // 使用数字输入法
           .fontSize(this.inputFontSize.getValue(this.currentBreakpoint) as number)
           .fontWeight(FontWeight.Bold)
-          .onChange((value) => {
+          .onChange((value: string) => {
             this.amount = value;
+            this.updateRecommendations();
           })
           .margin({ top: 20 })
         //画一条分割线
@@ -235,7 +291,7 @@ struct AddBill{
           //使用Select组件
 
           Select(this.categoryOptions)
-            .value(this.allCategories.find(c => c.categoryId === this.selectedCategoryId)?.name ?? '请选择分类')
+            .value(this.allCategories.find((c: Category) => c.categoryId === this.selectedCategoryId)?.name ?? '请选择分类')
             .onSelect((index: number) => {
               this.selectedCategoryId = this.allCategories[index].categoryId;
             })
@@ -245,6 +301,34 @@ struct AddBill{
         .width('100%')
         .padding(10)
         .backgroundColor(Color.White)
+
+        // --- 智能推荐区域 ---
+        if (this.recommendations.length > 0) {
+          Flex({ wrap: FlexWrap.Wrap, justifyContent: FlexAlign.Start }) {
+            ForEach(this.recommendations, (item: CategoryRecommendation) => {
+              Row() {
+                Text(item.categoryName)
+                  .fontSize(12)
+                  .fontColor('#FFFFFF')
+                if (item.reason.includes('关键词')) {
+                  Text(' ⚡')
+                    .fontSize(10)
+                    .fontColor('#FFEB3B')
+                }
+              }
+              .padding({ left: 12, right: 12, top: 6, bottom: 6 })
+              .backgroundColor('#4A90E2')
+              .borderRadius(16)
+              .margin({ right: 8, bottom: 8 })
+              .onClick(() => {
+                this.selectedCategoryId = item.categoryId;
+                promptAction.showToast({ message: `已采纳推荐: ${item.reason}` });
+              })
+            })
+          }
+          .width('100%')
+          .padding({ left: 10, right: 10, bottom: 5 })
+        }
 
         Divider()
 
@@ -297,6 +381,7 @@ struct AddBill{
         TextArea({placeholder:'点击添加备注...'})
           .onChange((value:string)=>{
             this.notes = value;
+            this.updateRecommendations();
           })
           .layoutWeight(1)  //占据剩余空间
           .backgroundColor(Color.White)
@@ -356,14 +441,14 @@ struct AddBill{
                  return;
                }
                
-               if (this.billType === 'expense') {
+                if (this.billType === 'expense') {
                   if (account.balance < finalAmount) {
-                     // 余额不足提醒，但允许记账（或者根据需求拦截）
-                     promptAction.showToast({ message: `余额不足！当前: ${account.balance}` });
-                     // 这里我们暂时允许继续，只是提醒
+                      // 余额不足，阻止记账
+                      promptAction.showToast({ message: `余额不足！当前余额: ${account.balance.toFixed(2)}` });
+                      return;
                   }
                   account.balance -= finalAmount;
-               } else {
+                } else {
                   account.balance += finalAmount;
                }
                
@@ -386,10 +471,24 @@ struct AddBill{
                 this.anomalyDialogController.open();
                 // 不立即返回，等待用户点击弹窗确认
               } else {
+                // 智能分类学习
+                const selectedCategory = this.allCategories.find(c => c.categoryId === this.selectedCategoryId);
+                if (selectedCategory) {
+                  SmartCategoryService.learnFromUserAction(
+                    userId,
+                    this.notes,
+                    finalAmount,
+                    this.selectedCategoryId,
+                    selectedCategory.name,
+                    this.predictedCategoryId
+                  );
+                }
+
                 promptAction.showToast({ message: '保存成功，余额已更新' });
                 router.back();
               }
-            }catch (error){
+            } catch (err) {
+              let error = err as Error;
               console.error('[添加账单] 保存失败: %{public}s', JSON.stringify(error));
               promptAction.showToast({ message: `保存失败: ${error.message}` });
             }
@@ -400,6 +499,8 @@ struct AddBill{
       .width('100%')
       .height('100%')
       .backgroundColor($r('sys.color.point_color_checked'))
+
+
     }
     .title('记一笔')
     .titleMode(NavigationTitleMode.Mini)

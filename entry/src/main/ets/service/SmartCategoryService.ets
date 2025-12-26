@@ -37,6 +37,9 @@ export interface LearningResult {
   rulesCreated: number;
   rulesUpdated: number;
   trainingRecordsCreated: number;
+  scannedBills: number;
+  totalKeywords: number;
+  categoryCount: number; // Number of unique categories with keywords
 }
 
 /**
@@ -432,7 +435,10 @@ export class SmartCategoryService {
       const result: LearningResult = {
         rulesCreated: 0,
         rulesUpdated: 0,
-        trainingRecordsCreated: 0
+        trainingRecordsCreated: 0,
+        scannedBills: 0,
+        totalKeywords: 0,
+        categoryCount: 0
       };
 
       // 获取历史账单
@@ -440,14 +446,31 @@ export class SmartCategoryService {
       const startDate = new Date();
       startDate.setDate(startDate.getDate() - daysBack);
 
-      const bills = await BillDAO.getByTimeRange(userId, startDate.toISOString(), endDate.toISOString());
+      // 辅助函数：格式化日期为 YYYY-MM-DD
+      const formatDate = (date: Date): string => {
+        const y = date.getFullYear();
+        const m = (date.getMonth() + 1).toString().padStart(2, '0');
+        const d = date.getDate().toString().padStart(2, '0');
+        return `${y}-${m}-${d}`;
+      };
 
+      const startStr = formatDate(startDate);
+      const endStr = formatDate(endDate);
+
+      // use getBillsByFilters instead of getByTimeRange for better reliability
+      const bills = await BillDAO.getBillsByFilters(userId, { start: startStr, end: endStr });
+      result.scannedBills = bills.length;
+      
       // 统计每个分类的关键词频率
       const categoryKeywords: Map<number, Map<string, number>> = new Map();
 
       for (let i = 0; i < bills.length; i++) {
         const bill = bills[i];
         const keywords = SmartCategoryService.extractKeywords(bill.note);
+        
+        result.totalKeywords += keywords.length; // Count total keywords found
+
+        if (keywords.length === 0) continue;
 
         if (!categoryKeywords.has(bill.categoryId)) {
           categoryKeywords.set(bill.categoryId, new Map());
@@ -460,25 +483,33 @@ export class SmartCategoryService {
         }
 
         // 创建训练记录
-        const training = new SmartCategoryTraining();
-        training.userId = userId;
-        training.billNote = bill.note;
-        training.billAmount = bill.amount;
-        training.actualCategoryId = bill.categoryId;
-        training.actualCategoryName = ''; // 需要从CategoryDAO获取
-        training.trainingType = 'auto';
-        training.modelVersion = '1.0.0';
+        try {
+            const training = new SmartCategoryTraining();
+            training.userId = userId;
+            training.billNote = bill.note;
+            training.billAmount = bill.amount;
+            training.actualCategoryId = bill.categoryId;
+            training.actualCategoryName = ''; // 需要从CategoryDAO获取
+            training.trainingType = 'auto';
+            training.modelVersion = '1.0.0';
 
-        await SmartCategoryTrainingDAO.insert(training);
-        result.trainingRecordsCreated++;
+            await SmartCategoryTrainingDAO.insert(training);
+            result.trainingRecordsCreated++;
+        } catch (e) {
+            console.warn(`[SmartCategoryService] 创建训练记录失败: ${e.message}`);
+        }
       }
 
       // 为每个分类创建规则
       const categories = await CategoryDAO.getAll(userId);
 
-      categoryKeywords.forEach((keywordMap, categoryId) => {
-        const category = categories.find(c => c.categoryId === categoryId);
-        if (!category) return;
+      // 为每个分类创建规则 (使用 for-of 确保异步操作完成)
+      const categoryIds = Array.from(categoryKeywords.keys());
+      result.categoryCount = categoryIds.length; // Record how many categories have keywords
+      for (const categoryId of categoryIds) {
+        const keywordMap = categoryKeywords.get(categoryId)!;
+        const category = categories.find((c: Category) => c.categoryId === categoryId);
+        if (!category) continue;
 
         // 选择频率最高的前5个关键词
         const sortedKeywords: KeywordCount[] = [];
@@ -490,32 +521,38 @@ export class SmartCategoryService {
 
         const topKeywords = sortedKeywords.slice(0, 5);
 
-        // 为每个高频关键词创建规则
-        topKeywords.forEach(async (item) => {
-          if (item.count >= 2) { // 至少出现2次
-            const rule = new SmartCategoryRule();
-            rule.userId = userId;
-            rule.ruleName = `学习规则: ${item.keyword}`;
-            rule.categoryId = categoryId;
-            rule.categoryName = category.name;
-            rule.ruleType = 'keyword';
-            rule.keywords = item.keyword;
-            rule.priority = Math.min(item.count, 10); // 优先级基于频率
-            rule.isActive = 1;
-            rule.accuracy = 0.8;
-            rule.matchCount = item.count;
+        // 为每个高频关键词创建规则 (使用 for-of 确保 await 生效)
+        for (const item of topKeywords) {
+          if (item.count >= 1) { // 降低阈值：至少出现1次即可
+            try {
+                const rule = new SmartCategoryRule();
+                rule.userId = userId;
+                rule.ruleName = `学习规则: ${item.keyword}`;
+                rule.categoryId = categoryId;
+                rule.categoryName = category.name;
+                rule.ruleType = 'keyword';
+                rule.keywords = item.keyword;
+                rule.priority = Math.min(item.count + 4, 10); // 提高初始优先级 (1次 -> 优先级5)
+                rule.isActive = 1;
+                rule.accuracy = 0.8;
+                rule.matchCount = item.count;
 
-            await SmartCategoryRuleDAO.insert(rule);
-            result.rulesCreated++;
+                await SmartCategoryRuleDAO.insert(rule);
+                result.rulesCreated++;
+            } catch (e) {
+                console.error(`[SmartCategoryService] 创建规则失败: ${e.message}`);
+            }
           }
-        });
-      });
+        }
+      }
 
       return result;
     } catch (error) {
       console.error('[SmartCategoryService] 批量学习失败:', error);
-      return { rulesCreated: 0, rulesUpdated: 0, trainingRecordsCreated: 0 };
+      const emptyResult: LearningResult = { rulesCreated: 0, rulesUpdated: 0, trainingRecordsCreated: 0, scannedBills: 0, totalKeywords: 0, categoryCount: 0 };
+      return emptyResult;
     }
+
   }
 
   // ==================== 规则管理 ====================
