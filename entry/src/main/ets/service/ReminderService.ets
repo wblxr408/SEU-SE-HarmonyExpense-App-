@@ -13,6 +13,7 @@ import { BudgetDAO } from '../dao/BudgetDAO';
 import { Reminder } from '../model/Reminder';
 import { Budget } from '../model/Budget';
 import notificationManager from '@ohos.notificationManager';
+import { NotificationService } from './NotificationService';
 
 /**
  * 提醒创建选项
@@ -228,23 +229,27 @@ export class ReminderService {
    */
   private static async sendNotification(reminder: Reminder): Promise<void> {
     try {
-      const notificationRequest: notificationManager.NotificationRequest = {
-        id: reminder.reminderId,
-        content: {
-          notificationContentType: notificationManager.ContentType.NOTIFICATION_CONTENT_BASIC_TEXT,
-          normal: {
-            title: reminder.title,
-            text: reminder.description,
-            additionalText: `金额: ${reminder.amount || '无'}`
-          }
-        }
-      };
-
-      await notificationManager.publish(notificationRequest);
+      // 使用NotificationService发送通知并保存历史记录
+      if (reminder.type === 'bill') {
+        await NotificationService.sendBillReminderNotification(
+          reminder.userId,
+          reminder.reminderId,
+          reminder.title,
+          reminder.description
+        );
+      } else if (reminder.type === 'budget' && reminder.budgetId) {
+        await NotificationService.sendBudgetReminderNotification(
+          reminder.userId,
+          reminder.reminderId,
+          reminder.budgetId,
+          reminder.title,
+          reminder.description
+        );
+      }
       console.log(`[ReminderService] 通知已发送: ${reminder.title}`);
     } catch (error) {
       console.error('[ReminderService] 发送通知失败:', error);
-      // 通知失败不抛出异常，记录日志即可
+      // 通知发送失败不抛出异常，记录日志即可
     }
   }
 

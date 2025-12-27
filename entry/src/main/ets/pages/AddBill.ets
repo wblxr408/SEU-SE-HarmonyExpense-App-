@@ -11,6 +11,7 @@ import { CategoryDAO } from '../dao/CategoryDAO' //
 import { hilog } from '@kit.PerformanceAnalysisKit';
 import { BreakPointType } from '../common/BreakpointSystem';
 import { UserSessionService } from '../service/UserSessionService';
+import { SmartCategoryService } from '../service/SmartCategoryService';
 
 const HILOG_DOMAIN = 0x0001
 const LOG_TAG = 'AddBill'
@@ -38,6 +39,11 @@ struct AddBill{
 
   @State categoryOptions: SelectOption[] = [];
   @State accountOptions: SelectOption[] = []; // Added from MAIN logic requirement
+
+  // 智能分类推荐相关
+  @State suggestedCategoryId: number = 0;
+  @State suggestedCategoryName: string = '';
+  @State showSuggestion: boolean = false;
 
   @StorageProp('currentBreakpoint') currentBreakpoint: string = 'md';
   // 响应式配置
@@ -105,6 +111,48 @@ struct AddBill{
     const m = (date.getMonth() + 1).toString().padStart(2, '0');
     const d = date.getDate().toString().padStart(2, '0');
     return `${y}-${m}-${d}`;
+  }
+
+  // 智能分类推荐
+  private async getSmartCategoryRecommendation() {
+    if (!this.notes || this.notes.trim().length === 0) {
+      this.showSuggestion = false;
+      return;
+    }
+
+    const userId = UserSessionService.getCurrentUserId();
+    if (!userId) return;
+
+    try {
+      const amount = parseFloat(this.amount) || 0;
+      const recommendations = await SmartCategoryService.recommendCategory(
+        userId,
+        this.notes,
+        amount,
+        1
+      );
+
+      if (recommendations.length > 0 && recommendations[0].confidence > 0.6) {
+        this.suggestedCategoryId = recommendations[0].categoryId;
+        this.suggestedCategoryName = recommendations[0].categoryName;
+        this.showSuggestion = true;
+        hilog.info(HILOG_DOMAIN, LOG_TAG, `智能推荐分类: ${this.suggestedCategoryName}`);
+      } else {
+        this.showSuggestion = false;
+      }
+    } catch (error) {
+      hilog.error(HILOG_DOMAIN, LOG_TAG, '智能分类推荐失败: %{public}s', JSON.stringify(error));
+      this.showSuggestion = false;
+    }
+  }
+
+  // 应用智能推荐
+  private applySuggestion() {
+    if (this.suggestedCategoryId > 0) {
+      this.selectedCategoryId = this.suggestedCategoryId;
+      this.showSuggestion = false;
+      promptAction.showToast({ message: `已应用推荐分类: ${this.suggestedCategoryName}` });
+    }
   }
 
   build() {
@@ -209,9 +257,33 @@ struct AddBill{
         TextArea({placeholder:'点击添加备注...'})
           .onChange((value:string)=>{
             this.notes = value;
+            // 实时触发智能分类推荐
+            this.getSmartCategoryRecommendation();
           })
           .layoutWeight(1)  //占据剩余空间
           .backgroundColor(Color.White)
+
+        // 智能推荐提示框
+        if (this.showSuggestion) {
+          Row() {
+            Text('💡 推荐分类: ')
+              .fontSize(14)
+              .fontColor(Color.Grey)
+            Text(this.suggestedCategoryName)
+              .fontSize(14)
+              .fontColor(Color.Blue)
+              .fontWeight(FontWeight.Bold)
+            Button('应用')
+              .fontSize(12)
+              .height(30)
+              .margin({ left: 10 })
+              .onClick(() => this.applySuggestion())
+          }
+          .width('95%')
+          .padding(10)
+          .backgroundColor('#F0F8FF')
+          .borderRadius(8)
+        }
 
         //保存按钮
         Button('保存')
@@ -288,9 +360,29 @@ struct AddBill{
 
             try{
               await BillDAO.insert(newBill);
+
+              // 触发智能学习机制
+              try {
+                const selectedCategory = this.allCategories.find(c => c.categoryId === this.selectedCategoryId);
+                if (selectedCategory) {
+                  await SmartCategoryService.learnFromUserAction(
+                    userId,
+                    this.notes,
+                    finalAmount,
+                    this.selectedCategoryId,
+                    selectedCategory.name,
+                    this.suggestedCategoryId > 0 ? this.suggestedCategoryId : undefined
+                  );
+                  hilog.info(HILOG_DOMAIN, LOG_TAG, '智能学习完成');
+                }
+              } catch (learnError) {
+                hilog.error(HILOG_DOMAIN, LOG_TAG, '智能学习失败: %{public}s', JSON.stringify(learnError));
+                // 学习失败不影响主流程
+              }
+
               promptAction.showToast({ message: '保存成功，余额已更新' });
 
-              // TODO: Sprint 1 任务，通知首页刷新
+              // TODO: Sprint 1 任务,通知首页刷新
               // (目前先直接返回)
               router.back();
             }catch (error){

@@ -742,17 +742,24 @@ export class DatabaseManager {
       // 24. 创建智能分类训练数据表
       await store.executeSql(`
         CREATE TABLE IF NOT EXISTS smart_category_training (
-          training_id INTEGER PRIMARY KEY AUTOINCREMENT,
+          record_id INTEGER PRIMARY KEY AUTOINCREMENT,
           user_id INTEGER NOT NULL,
-          bill_id INTEGER NOT NULL,
-          predicted_category_id INTEGER NOT NULL,
+          bill_note TEXT NOT NULL,
+          bill_amount REAL NOT NULL DEFAULT 0,
           actual_category_id INTEGER NOT NULL,
+          actual_category_name TEXT NOT NULL,
+          predicted_category_id INTEGER DEFAULT NULL,
+          predicted_category_name TEXT DEFAULT NULL,
           confidence REAL NOT NULL DEFAULT 0,
-          features_json TEXT NOT NULL DEFAULT '{}',
           is_correct INTEGER DEFAULT 0 CHECK (is_correct IN (0, 1)),
+          keywords_matched TEXT NOT NULL DEFAULT '',
+          training_type TEXT NOT NULL DEFAULT 'manual' CHECK (training_type IN ('manual', 'auto', 'correction')),
+          model_version TEXT NOT NULL DEFAULT '1.0.0',
           created_at TEXT NOT NULL,
+          updated_at TEXT NOT NULL,
+          is_deleted INTEGER DEFAULT 0 CHECK (is_deleted IN (0, 1)),
           FOREIGN KEY (user_id) REFERENCES users(user_id),
-          FOREIGN KEY (bill_id) REFERENCES bills(bill_id)
+          FOREIGN KEY (actual_category_id) REFERENCES categories(category_id)
         );
       `);
 
@@ -771,14 +778,19 @@ export class DatabaseManager {
         CREATE TABLE IF NOT EXISTS smart_category_rules (
           rule_id INTEGER PRIMARY KEY AUTOINCREMENT,
           user_id INTEGER NOT NULL,
+          rule_name TEXT NOT NULL,
           category_id INTEGER NOT NULL,
-          rule_type TEXT NOT NULL CHECK (rule_type IN ('keyword', 'amount_range', 'time_pattern', 'merchant', 'combined')),
-          condition_json TEXT NOT NULL DEFAULT '{}',
-          priority INTEGER NOT NULL DEFAULT 0,
-          confidence REAL NOT NULL DEFAULT 1.0,
-          usage_count INTEGER NOT NULL DEFAULT 0,
-          success_count INTEGER NOT NULL DEFAULT 0,
+          category_name TEXT NOT NULL,
+          rule_type TEXT NOT NULL DEFAULT 'keyword' CHECK (rule_type IN ('keyword', 'regex', 'amount', 'merchant', 'composite')),
+          pattern TEXT NOT NULL DEFAULT '',
+          keywords TEXT NOT NULL DEFAULT '',
+          amount_min REAL NOT NULL DEFAULT 0,
+          amount_max REAL NOT NULL DEFAULT 999999999,
+          priority INTEGER NOT NULL DEFAULT 5,
           is_active INTEGER DEFAULT 1 CHECK (is_active IN (0, 1)),
+          accuracy REAL NOT NULL DEFAULT 0.8,
+          match_count INTEGER NOT NULL DEFAULT 0,
+          last_matched_at TEXT DEFAULT NULL,
           created_at TEXT NOT NULL,
           updated_at TEXT NOT NULL,
           is_deleted INTEGER DEFAULT 0 CHECK (is_deleted IN (0, 1)),
@@ -831,7 +843,40 @@ export class DatabaseManager {
       `);
       console.log('[DatabaseManager] 表 ocr_recognition_records 及索引创建成功');
 
-      console.log('[DatabaseManager] 所有数据表创建完成（共26张表）');
+      // 27. 创建通知历史表
+      await store.executeSql(`
+        CREATE TABLE IF NOT EXISTS notification_history (
+          notification_id INTEGER PRIMARY KEY AUTOINCREMENT,
+          user_id INTEGER NOT NULL,
+          type TEXT NOT NULL CHECK (type IN ('system', 'budget', 'sync', 'reminder')),
+          title TEXT NOT NULL,
+          content TEXT NOT NULL,
+          is_read INTEGER DEFAULT 0 CHECK (is_read IN (0, 1)),
+          related_type TEXT,
+          related_id INTEGER,
+          action_url TEXT,
+          created_at TEXT NOT NULL,
+          updated_at TEXT NOT NULL,
+          is_deleted INTEGER DEFAULT 0 CHECK (is_deleted IN (0, 1)),
+          FOREIGN KEY (user_id) REFERENCES users(user_id)
+        );
+      `);
+
+      await store.executeSql(`
+        CREATE INDEX IF NOT EXISTS idx_notification_user
+        ON notification_history (user_id, created_at DESC) WHERE is_deleted = 0;
+      `);
+      await store.executeSql(`
+        CREATE INDEX IF NOT EXISTS idx_notification_type
+        ON notification_history (user_id, type) WHERE is_deleted = 0;
+      `);
+      await store.executeSql(`
+        CREATE INDEX IF NOT EXISTS idx_notification_unread
+        ON notification_history (user_id, is_read) WHERE is_deleted = 0 AND is_read = 0;
+      `);
+      console.log('[DatabaseManager] 表 notification_history 及索引创建成功');
+
+      console.log('[DatabaseManager] 所有数据表创建完成（共27张表）');
     } catch (error) {
       throw DatabaseManager.toError('[DatabaseManager] 创建数据表失败', error);
     }

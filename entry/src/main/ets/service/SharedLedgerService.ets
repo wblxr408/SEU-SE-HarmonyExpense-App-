@@ -30,6 +30,7 @@ import {
   ApprovalRecord,
   MemberActivity
 } from '../model/SharedLedger';
+import { NotificationService } from './NotificationService';
 
 /**
  * 账本创建参数接口
@@ -347,6 +348,18 @@ export class SharedLedgerService {
           `邀请 ${inviteeName} 加入账本`,
           metadata
         );
+
+        // 发送共享账本通知给被邀请者
+        try {
+          await NotificationService.sendSharedLedgerNotification(
+            inviteeId,
+            ledgerId,
+            '账本邀请',
+            `${inviterName} 邀请您加入账本"${ledger.name}"`
+          );
+        } catch (notifyError) {
+          console.error('[SharedLedgerService] 发送邀请通知失败:', notifyError);
+        }
       }
 
       return invitationId;
@@ -402,6 +415,21 @@ export class SharedLedgerService {
         `${invitation.inviteeName} 加入了账本`,
         metadata
       );
+
+      // 通知邀请者：被邀请人已接受
+      try {
+        const ledger = await SharedLedgerDAO.getById(invitation.ledgerId);
+        if (ledger) {
+          await NotificationService.sendSharedLedgerNotification(
+            invitation.inviterId,
+            invitation.ledgerId,
+            '邀请已接受',
+            `${invitation.inviteeName} 已加入账本"${ledger.name}"`
+          );
+        }
+      } catch (notifyError) {
+        console.error('[SharedLedgerService] 发送接受通知失败:', notifyError);
+      }
 
       return true;
     } catch (error) {
@@ -592,6 +620,26 @@ export class SharedLedgerService {
         `创建了账单: ${description} ¥${amount.toFixed(2)}`,
         metadata
       );
+
+      // 通知账本成员（除了创建者）
+      try {
+        const members = await LedgerMemberDAO.getByLedgerId(ledgerId);
+        const ledger = await SharedLedgerDAO.getById(ledgerId);
+        if (ledger) {
+          for (const member of members) {
+            if (member.userId !== creatorId) {
+              await NotificationService.sendSharedLedgerNotification(
+                member.userId,
+                ledgerId,
+                '新账单',
+                `${creatorName} 在账本"${ledger.name}"中创建了账单: ${description} ¥${amount.toFixed(2)}`
+              );
+            }
+          }
+        }
+      } catch (notifyError) {
+        console.error('[SharedLedgerService] 发送账单创建通知失败:', notifyError);
+      }
 
       return billId;
     } catch (error) {

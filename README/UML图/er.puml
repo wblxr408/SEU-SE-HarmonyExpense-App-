@@ -1,0 +1,223 @@
+@startuml HarmonyExpense-ERD
+!theme plain
+skinparam linetype ortho
+skinparam packageStyle rectangle
+
+' 定义实体
+entity User {
+    * userId [PK]
+    --
+    username
+    email
+    passwordHash
+    createdAt
+    updatedAt
+    isDeleted
+}
+
+entity Account {
+    * accountId [PK]
+    --
+    userId [FK]
+    name
+    type
+    balance
+    currency
+    color
+    icon
+    createdAt
+    updatedAt
+    isDeleted
+}
+
+entity Category {
+    * categoryId [PK]
+    --
+    userId [FK]
+    name
+    type
+    icon
+    color
+    parentCategoryId [FK]
+    sortOrder
+    createdAt
+    updatedAt
+    isDeleted
+}
+
+entity Bill {
+    * billId [PK]
+    --
+    userId [FK]
+    accountId [FK]
+    categoryId [FK]
+    amount
+    type
+    note
+    transactionDate
+    createdAt
+    updatedAt
+    isDeleted
+}
+
+entity Budget {
+    * budgetId [PK]
+    --
+    userId [FK]
+    categoryId [FK]
+    amount
+    period
+    startDate
+    endDate
+    isActive
+    createdAt
+    updatedAt
+    isDeleted
+}
+
+entity Tag {
+    * tagId [PK]
+    --
+    userId [FK]
+    name
+    color
+    usageCount
+    createdAt
+    updatedAt
+    isDeleted
+}
+
+entity BillTag {
+    * billId [PK, FK]
+    * tagId [PK, FK]
+    --
+    createdAt
+}
+
+entity MonthlyStatistics {
+    * statisticsId [PK]
+    --
+    userId [FK]
+    categoryId [FK]
+    month
+    totalExpense
+    totalIncome
+    transactionCount
+    createdAt
+    updatedAt
+}
+
+entity CategoryStatistics {
+    * categoryId [PK]
+    --
+    categoryName
+    type
+    totalAmount
+    transactionCount
+    percentage
+}
+
+entity TagAggregation {
+    * tagId [PK]
+    --
+    tagName
+    tagColor
+    totalAmount
+    transactionCount
+    percentage
+}
+
+' 定义关系
+User ||--o{ Account : "拥有"
+User ||--o{ Category : "创建"
+User ||--o{ Bill : "有"
+User ||--o{ Budget : "设置"
+User ||--o{ Tag : "定义"
+
+Account ||--o{ Bill : "记录"
+
+Category ||--o{ Bill : "分类"
+Category ||--o{ Budget : "限制"
+Category }|--|| Category : "父子关系"
+
+Bill }o--o{ Tag : "标记"
+Bill ||--|{ BillTag : "关联"
+Tag ||--|{ BillTag : "关联"
+
+Bill ||--o{ MonthlyStatistics : "产生"
+Bill ||--o{ CategoryStatistics : "生成"
+Bill ||--o{ TagAggregation : "生成"
+
+' 添加注释
+note top of User
+  系统用户实体
+  包含基本信息和认证信息
+end note
+
+note top of Account
+  用户账户实体
+  支持多种账户类型
+end note
+
+note top of Category
+  账单分类实体
+  支持父子分类结构
+end note
+
+note top of Bill
+  账单实体
+  核心交易记录
+end note
+
+note top of Budget
+  预算实体
+  用于控制支出
+end note
+
+note top of Tag
+  标签实体
+  用于标记账单
+end note
+
+note top of BillTag
+  账单标签关联表
+  实现账单与标签的多对多关系
+end note
+
+note top of MonthlyStatistics
+  月度统计实体
+  存储预计算的统计数据
+end note
+
+note top of CategoryStatistics
+  分类统计实体
+  存储按分类的统计数据
+end note
+
+note top of TagAggregation
+  标签聚合实体
+  存储按标签的聚合数据
+end note
+
+' 添加枚举说明注释
+note right of Account
+  type字段枚举值:
+  CASH, BANK, CREDIT_CARD, OTHER
+end note
+
+note right of Category
+  type字段枚举值:
+  EXPENSE, INCOME
+end note
+
+note right of Bill
+  type字段枚举值:
+  EXPENSE, INCOME
+end note
+
+note right of Budget
+  period字段枚举值:
+  MONTHLY, YEARLY
+end note
+
+@enduml

@@ -15,6 +15,7 @@ import { AnomalyRecordDAO, UserSpendingBaselineDAO } from '../dao/AnomalyDetecti
 import { BillDAO } from '../dao/BillDAO';
 import { AnomalyRecord, UserSpendingBaseline } from '../model/AnomalyDetection';
 import { Bill } from '../model/Bill';
+import { NotificationService } from './NotificationService';
 
 /**
  * 异常检测结果接口
@@ -325,7 +326,21 @@ export class AnomalyDetectionService {
       record.description = anomaly.description;
       record.isAcknowledged = 0;
 
-      await AnomalyRecordDAO.insert(record);
+      const recordId = await AnomalyRecordDAO.insert(record);
+
+      // 发送异常检测通知
+      try {
+        await NotificationService.sendAnomalyDetectionNotification(
+          userId,
+          recordId,
+          anomaly.anomalyType,
+          anomaly.description
+        );
+        console.log(`[AnomalyDetectionService] 异常检测通知已发送 anomalyId=${recordId}`);
+      } catch (notifyError) {
+        console.error('[AnomalyDetectionService] 发送异常通知失败:', notifyError);
+        // 通知发送失败不影响异常记录的创建
+      }
     } catch (error) {
       console.error('[AnomalyDetectionService] 创建异常记录失败:', error);
     }

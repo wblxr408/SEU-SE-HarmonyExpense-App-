@@ -24,6 +24,7 @@ import { Budget } from '../model/Budget';
 import cryptoFramework from '@ohos.security.cryptoFramework';
 import { DatabaseManager } from '../database/DatabaseManager';
 import util from '@ohos.util';
+import { NotificationService } from './NotificationService';
 
 /**
  * 同步选项
@@ -217,6 +218,19 @@ export class CloudSyncService {
       const duration: number = Date.now() - startTime;
       console.log(`[CloudSyncService] 同步完成，耗时 ${duration}ms，同步 ${recordCount} 条记录`);
 
+      // 发送同步成功通知
+      try {
+        const message = `云同步成功，同步了 ${recordCount} 条记录，耗时 ${Math.round(duration / 1000)}秒`;
+        await NotificationService.sendCloudSyncNotification(
+          options.userId,
+          syncId,
+          true,
+          message
+        );
+      } catch (notifyError) {
+        console.error('[CloudSyncService] 发送同步通知失败:', notifyError);
+      }
+
       return new SyncResult(true, syncId, '同步成功', recordCount, duration, conflicts.length > 0 ? conflicts : undefined);
     } catch (error) {
       const errorMsg: string = error instanceof Error ? error.message : String(error);
@@ -224,6 +238,18 @@ export class CloudSyncService {
 
       if (syncRecord && syncRecord.syncId > 0) {
         await CloudSyncRecordDAO.updateStatus(syncRecord.syncId, 'failed', errorMsg);
+
+        // 发送同步失败通知
+        try {
+          await NotificationService.sendCloudSyncNotification(
+            options.userId,
+            syncRecord.syncId,
+            false,
+            `云同步失败: ${errorMsg}`
+          );
+        } catch (notifyError) {
+          console.error('[CloudSyncService] 发送失败通知失败:', notifyError);
+        }
       }
 
       return new SyncResult(false, syncRecord?.syncId || 0, `同步失败: ${errorMsg}`, 0, Date.now() - startTime);
