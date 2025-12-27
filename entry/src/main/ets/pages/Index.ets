@@ -249,12 +249,12 @@ struct Index {
       TabContent() {
         StatisticsPage({ refreshTrigger: this.statRefreshTrigger })
       }
-      .tabBar(this.TabBuilder('统计', 1, $r('app.media.icon')))
+      .tabBar(this.TabBuilder('统计', 1, $r('app.media.ic_bottom_home')))
 
       TabContent() {
         MinePage()
       }
-      .tabBar(this.TabBuilder('我的', 2, $r('app.media.icon')))
+      .tabBar(this.TabBuilder('我的', 2, $r('app.media.ic_bottom_home')))
     }
     .onChange((index: number) => {
       this.currentIndex = index;
@@ -373,15 +373,6 @@ struct Index {
     .title('记账APP')
     .titleMode(NavigationTitleMode.Mini)
     .hideBackButton(true)
-    .menus([
-      {
-        value: 'AI 助手',
-        icon: 'resources/base/media/ic_bottom_record.svg',
-        action: () => {
-          router.pushUrl({ url: 'pages/AIChatPage' })
-        }
-      }
-    ])
   }
 
   @Builder

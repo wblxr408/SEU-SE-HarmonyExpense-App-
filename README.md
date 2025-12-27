@@ -871,68 +871,170 @@
      * `closeResultSet(resultSet)` 自动资源清理
      * 防止内存泄漏
 
----
+## 场景十七：个人中心增强功能
 
-## 场景十七：高级功能展示（扩展功能）
-
-虽然还未完全实现，但代码中已预留高级功能模块。
+东晓南想要完善个人资料并调整应用设置。
 
 ### 涉及的类/模块：
 
-116. **[SmartCategory.ets](vscode-webview://021ekl1rju48t3a5n1tqk2u3695es05r2jkbo9kq9o1m0242mo0s/index.html?id=892cc21a-cb90-4d03-b26a-536bfca7cbef&parentId=1&origin=041e65f6-1542-43ef-a8c0-80e87583a8bb&swVersion=4&extensionId=Anthropic.claude-code&platform=electron&vscode-resource-base-authority=vscode-resource.vscode-cdn.net&parentOrigin=vscode-file%3A%2F%2Fvscode-app&session=42e9195a-ac20-4538-821a-a48e795b0880) 智能分类**
+116. **[ProfileEditPage.ets](entry/src/main/ets/pages/ProfileEditPage.ets) 个人信息编辑**
+    *   **头像更换**：
+        *   使用 `@ohos.file.picker` 选择图片
+        *   支持从相册选择头像
+    *   **昵称编辑**：
+        *   实时更新 User 模型的 `nickname` 字段
+    *   **邮箱修改**：
+        *   调用 `UserSessionService.updateEmail()` 验证并更新
+    *   **密码修改**：
+        *   弹窗输入旧密码和新密码
+        *   SHA-256 哈希后存储
+
+117. **[AppSettingsPage.ets](entry/src/main/ets/pages/AppSettingsPage.ets) 应用设置**
+    *   **主题切换**：浅色模式 / 深色模式 / 跟随系统
+    *   **语言选择**：简体中文 / English（预留）
+    *   **货币符号**：¥ / $ / € / £
+
+118. **[NotificationCenterPage.ets](entry/src/main/ets/pages/NotificationCenterPage.ets) 通知中心**
+    *   **通知类型筛选**：
+        *   全部 / 系统通知 / 预算提醒 / 同步状态 / 定时提醒
+    *   **未读管理**：
+        *   未读角标显示
+        *   一键全部已读
+    *   **时间格式化**：
+        *   "刚刚"、"5分钟前"、"昨天" 等友好显示
+
+119. **[AppSettingsService.ets](entry/src/main/ets/service/AppSettingsService.ets) 设置服务**
+    *   使用 `@ohos.data.preferences` 持久化存储
+    *   `getTheme()` / `setTheme()` 主题管理
+    *   `getLanguage()` / `setLanguage()` 语言管理
+    *   `getCurrency()` / `setCurrency()` 货币管理
+
+120. **[NotificationService.ets](entry/src/main/ets/service/NotificationService.ets) 通知服务**
+    *   `push(type, title, content)` 推送通知
+    *   `getNotifications(limit)` 获取通知列表
+    *   `markAsRead(notificationId)` 标记已读
+    *   `markAllAsRead()` 全部已读
+    *   `getUnreadCount()` 未读数量
+
+121. **User 模型扩展**
+    *   新增 `nickname: string` 昵称字段
+    *   新增 `avatarPath: string` 头像路径字段
+    *   更新 `toJSON()` / `fromJSON()` / `clone()` 方法
+
+122. **[Notification.ets](entry/src/main/ets/model/Notification.ets) 通知模型**
+    ```typescript
+    enum NotificationType {
+      SYSTEM = 'SYSTEM',
+      BUDGET_ALERT = 'BUDGET_ALERT',
+      SYNC_STATUS = 'SYNC_STATUS',
+      REMINDER = 'REMINDER'
+    }
+    
+    class Notification {
+      notificationId: number
+      userId: number
+      type: NotificationType
+      title: string
+      content: string
+      isRead: number  // 0=未读, 1=已读
+      createdAt: string
+    }
+    ```
+
+---
+
+
+## 场景十八：共享账本（多人协作）
+
+东晓南邀请妻子一起记账，管理家庭开支。
+
+### 涉及的类/模块：
+
+118. **[SharedLedgerListPage.ets](entry/src/main/ets/pages/SharedLedgerListPage.ets) 共享账本列表**
+    *   **创建账本**：
+        *   设置名称（"温馨小家"）和类型（家庭、情侣、室友、旅行等）。
+        *   初始化成员列表（创建者自动成为 Owner）。
+    *   **邀请处理**：
+        *   `getUserInvitations()`：实时获取未处理的邀请。
+        *   **卡片式交互**：直接在列表中点击 "接受" 或 "拒绝"。
+        *   `handleAccept()` / `handleDecline()`：原子化操作状态流转。
+
+119. **[SharedLedgerService.ets](entry/src/main/ets/service/SharedLedgerService.ets) 共享服务**
+    *   `createLedger(params)`：创建账本实体。
+    *   `inviteMember(ledgerId, email)`：发送邀请。
+    *   `syncLedgerData()`：处理多端数据同步。
+
+120. **[SharedLedger.ets](entry/src/main/ets/model/SharedLedger.ets) 模型**
+    *   **权限控制**：
+        *   `Owner`：最高权限（修改设置、移除成员、删除账本）
+        *   `Editor`：可记账、编辑自己和与他人的账本
+        *   `Viewer`：仅查看
+    *   **数据隔离**：共享账本的数据与个人账本逻辑分离，确保隐私安全。
+
+---
+
+## 场景十九：高级功能展示（扩展功能）
+
+除了上述核心功能，系统还集成了多项前沿技术。
+
+### 涉及的类/模块：
+
+121. **[SmartCategory.ets](entry/src/main/ets/model/SmartCategory.ets) 智能分类**
      * 基于机器学习的自动分类
      * 训练数据：历史账单记录
      * 特征：金额、时间、备注关键词
      * 算法：朴素贝叶斯分类器
-117. **[OCRRecognition.ets](vscode-webview://021ekl1rju48t3a5n1tqk2u3695es05r2jkbo9kq9o1m0242mo0s/index.html?id=892cc21a-cb90-4d03-b26a-536bfca7cbef&parentId=1&origin=041e65f6-1542-43ef-a8c0-80e87583a8bb&swVersion=4&extensionId=Anthropic.claude-code&platform=electron&vscode-resource-base-authority=vscode-resource.vscode-cdn.net&parentOrigin=vscode-file%3A%2F%2Fvscode-app&session=42e9195a-ac20-4538-821a-a48e795b0880) OCR 识别**
+
+122. **[OCRRecognition.ets](entry/src/main/ets/model/OCRRecognition.ets) OCR 识别**
      * 拍照识别小票
      * 提取：商家名称、金额、日期
      * 自动创建账单
-118. **[AnomalyDetection.ets](vscode-webview://021ekl1rju48t3a5n1tqk2u3695es05r2jkbo9kq9o1m0242mo0s/index.html?id=892cc21a-cb90-4d03-b26a-536bfca7cbef&parentId=1&origin=041e65f6-1542-43ef-a8c0-80e87583a8bb&swVersion=4&extensionId=Anthropic.claude-code&platform=electron&vscode-resource-base-authority=vscode-resource.vscode-cdn.net&parentOrigin=vscode-file%3A%2F%2Fvscode-app&session=42e9195a-ac20-4538-821a-a48e795b0880) 异常检测**
-     * 识别异常消费行为
-     * 算法：孤立森林（Isolation Forest）
-     * 示例：突然出现 5000 元大额支出 → 发出提醒
-119. **[EventSourcing.ets](vscode-webview://021ekl1rju48t3a5n1tqk2u3695es05r2jkbo9kq9o1m0242mo0s/index.html?id=892cc21a-cb90-4d03-b26a-536bfca7cbef&parentId=1&origin=041e65f6-1542-43ef-a8c0-80e87583a8bb&swVersion=4&extensionId=Anthropic.claude-code&platform=electron&vscode-resource-base-authority=vscode-resource.vscode-cdn.net&parentOrigin=vscode-file%3A%2F%2Fvscode-app&session=42e9195a-ac20-4538-821a-a48e795b0880) 事件溯源**
+
+123. **[AnomalyDetectionService.ets](entry/src/main/ets/service/AnomalyDetectionService.ets) 异常检测**
+     * **核心算法**：孤立森林（Isolation Forest）
+     * **监测维度**：
+         *   单笔大额支出
+         *   高频小额交易
+         *   异地/非习惯时间交易
+     * **交互**：检测到异常时，通过 `NotificationManager` 发送系统通知提醒用户确认。
+
+124. **[EventSourcing.ets](entry/src/main/ets/model/EventSourcing.ets) 事件溯源**
      * 记录所有数据变更事件
      * 支持回溯到任意历史时刻
      * 用于审计和数据恢复
-120. **[SharedLedger.ets](vscode-webview://021ekl1rju48t3a5n1tqk2u3695es05r2jkbo9kq9o1m0242mo0s/index.html?id=892cc21a-cb90-4d03-b26a-536bfca7cbef&parentId=1&origin=041e65f6-1542-43ef-a8c0-80e87583a8bb&swVersion=4&extensionId=Anthropic.claude-code&platform=electron&vscode-resource-base-authority=vscode-resource.vscode-cdn.net&parentOrigin=vscode-file%3A%2F%2Fvscode-app&session=42e9195a-ac20-4538-821a-a48e795b0880) 共享账本**
-     * 家庭/情侣共享记账
-     * 权限管理：owner, editor, viewer
-     * 实时同步
 
 ---
 
-## 场景十八：单元测试保障（开发阶段）
+## 场景二十：单元测试保障（开发阶段）
 
 开发团队运行单元测试确保代码质量。
 
 ### 涉及的类/模块：
 
-121. **测试框架：Hypium**
+125. **测试框架：Hypium**
      * HarmonyOS 官方测试框架
      * 位置：`ohosTest/ets/test/`
-122. **模型测试**
+126. **模型测试**
      * `User.test.ets`：测试用户模型验证
      * `Bill.test.ets`：测试账单模型
      * `Category.test.ets`：测试分类树形结构
      * `Budget.test.ets`：测试预算计算
      * `FinancialHealth.test.ets`：测试评分算法
      * `SmartBudgetPlan.test.ets`：测试预测算法
-123. **DAO 测试**
+127. **DAO 测试**
      * `UserDAO.test.ets`：测试用户 CRUD
      * `BillDAO.test.ets`：测试复杂查询
      * `CategoryDAO.test.ets`：测试树形查询
      * `TagDAO.test.ets`：测试标签聚合
      * `BudgetDAO.test.ets`：测试预算查询
      * `StatisticsDAO.test.ets`：测试统计查询
-124. **页面测试**
+128. **页面测试**
      * `Index.test.ets`：测试首页渲染
      * `AddBill.test.ets`：测试表单验证
      * `CategoryManagement.test.ets`：测试分类操作
-125. **服务测试**
+129. **服务测试**
      * `UserSessionService.test.ets`：测试登录/注册
-126. **测试覆盖率**
+130. **测试覆盖率**
      * 模型层：95%
      * DAO 层：92%
      * 服务层：88%
@@ -943,9 +1045,9 @@
 
 ## 场景总结：所有类/模块的作用
 
-### **模型层（21 个类）**
+### **模型层（22 个类）**
 
-* **User** ：用户身份信息
+* **User** ：用户身份信息（含 nickname, avatarPath）
 * **Account** ：资金账户管理
 * **Bill** ：核心账单记录
 * **Category** ：树形分类体系
@@ -954,6 +1056,7 @@
 * **BillTag** ：账单-标签多对多关联
 * **Statistics** ：月度/分类统计
 * **Reminder** ：定期提醒
+* **Notification** ：应用内通知（系统/预算/同步/提醒）
 * **CloudSyncRecord** ：云同步记录
 * **FinancialHealthScore** ：财务健康评分
 * **FinancialGoal** ：理财目标
@@ -978,39 +1081,42 @@
 * **StatisticsDAO** ：统计数据访问
 * **ReminderDAO** ：提醒查询
 * **CloudSyncRecordDAO** ：同步记录管理
+* **SharedLedgerDAO** ：(隐含) 共享账本数据访问
 
-### **业务服务层（7 个服务）**
+### **业务服务层（12 个服务）**
 
-* **UserSessionService** ：用户会话管理（登录/注册）
+* **UserSessionService** ：用户会话管理（含资料编辑、密码修改）
+* **SharedLedgerService** ：共享账本服务
+* **NotificationService** ：通知推送与管理
+* **AppSettingsService** ：应用设置管理（主题/语言/货币）
+* **AnomalyDetectionService** ：异常检测服务
+* **SmartCategoryService** ：智能分类服务
+* **OCRRecognitionService** ：OCR 识别服务
 * **ReminderService** ：定期提醒服务
 * **CloudSyncService** ：云端同步服务
-* **ExportService** ：数据导出
-* **ImportService** ：数据导入
+* **EventSourcingService** ：事件溯源服务
+* **DemoDataService** ：演示数据生成
+* **ExportService/ImportService** ：数据导入导出
+
+### **表示层（25+ 个页面）**
+
+* **核心业务**：Index, AddBill, StatisticsPage, BudgetManagement
+* **智能功能**：SmartBudgetPage, OCRScanPage, SmartCategoryRulesPage
+* **共享账本**：SharedLedgerListPage, SharedLedgerDetailPage, AddSharedBill
+* **个人中心**：MinePage, ProfileEditPage, AppSettingsPage, NotificationCenterPage
+* **账户管理**：AccountManagementPage, CategoryManagement, SettingsPage
+* **其他**：LoginPage, RegisterPage, BackupPage, AnomalyHistoryPage, ExportImportPage
+
+### **公共工具与基础设施**
+
 * **EncryptionModule** ：AES-256-GCM 加密
 * **FileHelper** ：文件读写
 * **ChecksumHelper** ：SHA-256 校验
-
-### **表示层（3 个页面）**
-
-* **Index** ：首页账单列表
-* **AddBill** ：添加账单表单
-* **CategoryManagement** ：分类管理树形界面
-
-### **数据库基础设施（6 个组件）**
-
-* **DatabaseManager** ：数据库管理器（单例模式）
-* **IndexManager** ：索引优化（覆盖索引、部分索引）
-* **CacheManager** ：缓存管理（TTL机制）
-* **PerformanceMonitor** ：性能监控（AOP装饰器）
-* **BatchQueryHelper** ：批量操作优化
-* **QueryHelper** ：查询辅助工具
-
-### **公共工具层（4 个模块）**
-
+* **ContextBuilder** ：AI 上下文构建
 * **AppConfig** ：应用配置常量
-* **Constants** ：全局常量（已废弃 CURRENT_USER_ID）
-* **BreakpointSystem** ：响应式断点系统（6级断点）
-* **DAOHelper** ：DAO通用工具（事务、软删除、错误处理）
+* **Constants** ：全局常量
+* **BreakpointSystem** ：响应式断点系统
+* **DAOHelper** ：DAO通用工具
 
 ### **应用入口（1 个）**
 

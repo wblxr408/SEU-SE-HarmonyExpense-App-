@@ -1,18 +1,29 @@
 import router from '@ohos.router';
 import { UserSessionService, SessionInfo } from '../service/UserSessionService';
+import { NotificationService } from '../service/NotificationService';
 import promptAction from '@ohos.promptAction';
 
 @Component
 export struct MinePage {
   @State currentUser: SessionInfo | null = null;
+  @State unreadCount: number = 0;
 
   aboutToAppear() {
     this.currentUser = UserSessionService.getCurrentSession();
+    this.loadUnreadCount();
+  }
+
+  async loadUnreadCount() {
+    try {
+      this.unreadCount = await NotificationService.getUnreadCount();
+    } catch (error) {
+      console.error('[MinePage] 加载未读数量失败:', error);
+    }
   }
 
   build() {
     Column() {
-      // 用户信息卡片
+      // 用户信息卡片 - 可点击编辑
       Row() {
         Image($r('app.media.icon')) // 默认头像
           .width(60)
@@ -40,74 +51,86 @@ export struct MinePage {
           }
         }
         .alignItems(HorizontalAlign.Start)
+        .layoutWeight(1)
+
+        // 编辑按钮
+        if (this.currentUser) {
+          Text('编辑')
+            .fontSize(14)
+            .fontColor('#2E65F3')
+        }
       }
       .width('100%')
       .padding(24)
       .backgroundColor(Color.White)
       .margin({ bottom: 12 })
+      .onClick(() => {
+        if (this.currentUser) {
+          router.pushUrl({ url: 'pages/ProfileEditPage' });
+        }
+      })
 
       // 功能菜单
       List() {
+        // 通知中心 - 带未读角标
+        ListItem() {
+          this.MenuRowWithBadge('通知中心', this.unreadCount, () => {
+             router.pushUrl({ url: 'pages/NotificationCenterPage' });
+          })
+        }
+
+        // 应用设置
+        ListItem() {
+          this.MenuRow('应用设置', () => {
+             router.pushUrl({ url: 'pages/AppSettingsPage' });
+          })
+        }
+
         // 账户管理
         ListItem() {
-          this.MenuRow('账户资产', $r('app.media.icon'), () => {
+          this.MenuRow('账户资产', () => {
              router.pushUrl({ url: 'pages/AccountManagementPage' });
           })
         }
 
         // 共享账本
         ListItem() {
-          this.MenuRow('多人共享账本', $r('app.media.icon'), () => {
+          this.MenuRow('多人共享账本', () => {
              router.pushUrl({ url: 'pages/SharedLedgerListPage' });
           })
         }
 
         // 数据同步
         ListItem() {
-          this.MenuRow('数据同步', $r('app.media.icon'), () => {
+          this.MenuRow('数据同步', () => {
              router.pushUrl({ url: 'pages/SyncSettingsPage' });
           })
         }
         
         // 数据备份
         ListItem() {
-          this.MenuRow('备份与恢复', $r('app.media.icon'), () => {
+          this.MenuRow('备份与恢复', () => {
             router.pushUrl({ url: 'pages/BackupPage' });
           })
         }
 
         // 提醒设置
         ListItem() {
-          this.MenuRow('提醒设置', $r('app.media.icon'), () => {
+          this.MenuRow('提醒设置', () => {
             router.pushUrl({ url: 'pages/ReminderSettingsPage' });
-          })
-        }
-
-        // 智能分类规则
-        ListItem() {
-          this.MenuRow('智能分类规则', $r('app.media.icon'), () => {
-            router.pushUrl({ url: 'pages/SmartCategoryRulesPage' });
           })
         }
 
         // 分类管理
         ListItem() {
-          this.MenuRow('分类管理', $r('app.media.icon'), () => {
+          this.MenuRow('分类管理', () => {
             router.pushUrl({ url: 'pages/CategoryManagement' });
           })
         }
-
-        // 风险通知中心
-        ListItem() {
-          this.MenuRow('风险通知中心', $r('app.media.icon'), () => {
-             router.pushUrl({ url: 'pages/AnomalyHistoryPage' });
-          })
-        }
       }
-
       .width('100%')
       .backgroundColor(Color.White)
-      .divider({ strokeWidth: 1, color: '#F0F0F0', startMargin: 56 })
+      .divider({ strokeWidth: 1, color: '#F0F0F0', startMargin: 16 })
 
       // 退出登录按钮
       if (this.currentUser) {
@@ -131,21 +154,39 @@ export struct MinePage {
   }
 
   @Builder
-  MenuRow(title: string, icon: Resource, onClick: () => void) {
+  MenuRow(title: string, onClick: () => void) {
     Row() {
-      Image(icon) // 需要确保资源存在，或者暂时用 Text 代替图标
-        .width(24)
-        .height(24)
-        .margin({ right: 16 })
-      
       Text(title)
         .fontSize(16)
         .layoutWeight(1)
-      
-      // Image($r('app.media.ic_public_arrow_right')) // 箭头图标缺失，暂时隐藏
-      //   .width(16)
-      //   .height(16)
-      //   .opacity(0.5)
+      Text('>')
+        .fontSize(16)
+        .fontColor('#8395A7')
+    }
+    .width('100%')
+    .padding(16)
+    .backgroundColor(Color.White)
+    .onClick(onClick)
+  }
+
+  @Builder
+  MenuRowWithBadge(title: string, badge: number, onClick: () => void) {
+    Row() {
+      Text(title)
+        .fontSize(16)
+        .layoutWeight(1)
+      if (badge > 0) {
+        Text(badge > 99 ? '99+' : badge.toString())
+          .fontSize(12)
+          .fontColor(Color.White)
+          .backgroundColor('#FF4D4F')
+          .borderRadius(10)
+          .padding({ left: 6, right: 6, top: 2, bottom: 2 })
+          .margin({ right: 8 })
+      }
+      Text('>')
+        .fontSize(16)
+        .fontColor('#8395A7')
     }
     .width('100%')
     .padding(16)
@@ -153,3 +194,4 @@ export struct MinePage {
     .onClick(onClick)
   }
 }
+

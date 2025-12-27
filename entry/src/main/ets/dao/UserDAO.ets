@@ -136,4 +136,40 @@ export class UserDAO {
   static async transaction(fn: () => Promise<void>) {
     await DAOHelper.transaction(fn, '[UserDAO]');
   }
+
+  /** 更新用户资料（昵称和头像） */
+  static async updateProfile(userId: number, nickname: string, avatarPath: string): Promise<void> {
+    const store = DatabaseManager.getDatabase();
+    const now = new Date().toISOString();
+    const sql = `
+      UPDATE users
+      SET nickname = ?, avatar_path = ?, updated_at = ?
+      WHERE user_id = ? AND is_deleted = 0
+    `;
+    await store.executeSql(sql, [nickname, avatarPath, now, userId]);
+  }
+
+  /** 更新用户密码 */
+  static async updatePassword(userId: number, newPasswordHash: string): Promise<void> {
+    const store = DatabaseManager.getDatabase();
+    const now = new Date().toISOString();
+    const sql = `
+      UPDATE users
+      SET password_hash = ?, updated_at = ?
+      WHERE user_id = ? AND is_deleted = 0
+    `;
+    await store.executeSql(sql, [newPasswordHash, now, userId]);
+  }
+
+  /** 更新用户邮箱 */
+  static async updateEmail(userId: number, newEmail: string): Promise<void> {
+    const store = DatabaseManager.getDatabase();
+    const now = new Date().toISOString();
+    const sql = `
+      UPDATE users
+      SET email = ?, updated_at = ?
+      WHERE user_id = ? AND is_deleted = 0
+    `;
+    await store.executeSql(sql, [newEmail, now, userId]);
+  }
 }

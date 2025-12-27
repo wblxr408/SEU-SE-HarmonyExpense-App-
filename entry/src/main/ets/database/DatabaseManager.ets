@@ -86,12 +86,33 @@ export class DatabaseManager {
           username TEXT NOT NULL,
           email TEXT UNIQUE NOT NULL,
           password_hash TEXT NOT NULL,
+          nickname TEXT DEFAULT '',
+          avatar_path TEXT DEFAULT '',
           created_at TEXT NOT NULL,
           updated_at TEXT NOT NULL,
           is_deleted INTEGER DEFAULT 0
         );
       `);
       console.log('[DatabaseManager] 表 users 创建成功');
+
+      // 1.1 创建通知表
+      await store.executeSql(`
+        CREATE TABLE IF NOT EXISTS notifications (
+          notification_id INTEGER PRIMARY KEY AUTOINCREMENT,
+          user_id INTEGER NOT NULL,
+          type TEXT NOT NULL CHECK (type IN ('SYSTEM', 'BUDGET_ALERT', 'SYNC_STATUS', 'REMINDER')),
+          title TEXT NOT NULL,
+          content TEXT NOT NULL,
+          is_read INTEGER DEFAULT 0 CHECK (is_read IN (0, 1)),
+          created_at TEXT NOT NULL,
+          FOREIGN KEY (user_id) REFERENCES users(user_id)
+        );
+      `);
+      await store.executeSql(`
+        CREATE INDEX IF NOT EXISTS idx_notifications_user
+        ON notifications (user_id, is_read, created_at DESC);
+      `);
+      console.log('[DatabaseManager] 表 notifications 及索引创建成功');
 
       // 2. 创建账户表（依赖 users）
       await store.executeSql(`

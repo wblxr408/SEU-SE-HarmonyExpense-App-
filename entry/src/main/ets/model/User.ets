@@ -7,6 +7,8 @@ export interface UserJSON {
   createdAt: string;
   updatedAt: string;
   is_deleted?: number;
+  avatarPath?: string;
+  nickname?: string;
 }
 
 export class User {
@@ -19,6 +21,8 @@ export class User {
   createdAt: string = '';
   updatedAt: string = '';
   is_deleted: number = 0; // 0=未删除, 1=已删除
+  avatarPath: string = ''; // 头像本地路径
+  nickname: string = ''; // 用户昵称
 
   constructor(
     userId: number = 0,
@@ -27,7 +31,9 @@ export class User {
     passwordHash: string = '',
     createdAt: string = '',
     updatedAt: string = '',
-    is_deleted: number = 0
+    is_deleted: number = 0,
+    avatarPath: string = '',
+    nickname: string = ''
   ) {
     this.userId = userId;
     this.username = username;
@@ -36,6 +42,8 @@ export class User {
     this.createdAt = createdAt;
     this.updatedAt = updatedAt;
     this.is_deleted = is_deleted;
+    this.avatarPath = avatarPath;
+    this.nickname = nickname;
   }
 
   // 序列化
@@ -47,7 +55,9 @@ export class User {
       passwordHash: this.passwordHash,
       createdAt: this.createdAt,
       updatedAt: this.updatedAt,
-      is_deleted: this.is_deleted
+      is_deleted: this.is_deleted,
+      avatarPath: this.avatarPath,
+      nickname: this.nickname
     };
   }
 
@@ -60,7 +70,9 @@ export class User {
       data.passwordHash,
       data.createdAt,
       data.updatedAt,
-      data.is_deleted ?? 0
+      data.is_deleted ?? 0,
+      data.avatarPath ?? '',
+      data.nickname ?? ''
     );
   }
 
@@ -83,7 +95,9 @@ export class User {
       this.passwordHash,
       this.createdAt,
       this.updatedAt,
-      this.is_deleted
+      this.is_deleted,
+      this.avatarPath,
+      this.nickname
     );
   }
 }

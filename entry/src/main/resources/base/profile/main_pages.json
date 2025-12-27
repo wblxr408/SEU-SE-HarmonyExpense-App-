@@ -13,13 +13,16 @@
     "pages/SettingsPage",
     "pages/BudgetManagement",
     "pages/ExportImportPage",
-    "pages/AIChatPage",
     "pages/AnomalyHistoryPage",
     "pages/SharedLedgerListPage",
     "pages/SharedLedgerDetailPage",
     "pages/AddSharedBill",
     "pages/OCRScanPage",
     "pages/SmartCategoryRulesPage",
-    "pages/SmartBudgetPage"
+    "pages/SmartBudgetPage",
+    "pages/PerformanceMonitorPage",
+    "pages/ProfileEditPage",
+    "pages/AppSettingsPage",
+    "pages/NotificationCenterPage"
   ]
 }

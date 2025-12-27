@@ -14,6 +14,7 @@
 import { OCRRecognitionRecordDAO } from '../dao/OCRRecognitionDAO';
 import { OCRRecognitionRecord } from '../model/OCRRecognition';
 import { SmartCategoryService } from './SmartCategoryService';
+import { CategoryDAO } from '../dao/CategoryDAO';
 
 /**
  * OCR识别参数接口
@@ -426,39 +427,46 @@ export class OCRRecognitionService {
         };
       }
 
-      // 2. 根据票据类型提供默认分类
-      const defaultCategory: CategoryMapping = { id: 0, name: '其他' };
+      // 2. 根据票据类型从数据库查询对应分类
+      const categories = await CategoryDAO.getByType(userId, 'expense');
 
-      // 使用switch语句替代索引访问
-      let categoryMapping: CategoryMapping = defaultCategory;
-      switch (receiptType) {
-        case 'supermarket':
-          categoryMapping = { id: 1, name: '日常购物' };
-          break;
-        case 'restaurant':
-          categoryMapping = { id: 2, name: '餐饮美食' };
-          break;
-        case 'transport':
-          categoryMapping = { id: 3, name: '交通出行' };
-          break;
-        case 'fuel':
-          categoryMapping = { id: 4, name: '汽车加油' };
-          break;
-        case 'medical':
-          categoryMapping = { id: 5, name: '医疗健康' };
-          break;
-        case 'hotel':
-          categoryMapping = { id: 6, name: '住宿酒店' };
-          break;
-        default:
-          categoryMapping = defaultCategory;
-          break;
+      // 定义票据类型到分类名称的映射
+      const typeToNameMap: Record<string, string> = {
+        'supermarket': '日常购物',
+        'restaurant': '餐饮美食',
+        'transport': '交通出行',
+        'fuel': '汽车加油',
+        'medical': '医疗健康',
+        'hotel': '住宿酒店',
+        'general': '其他'
+      };
+
+      const targetCategoryName = typeToNameMap[receiptType] || '其他';
+
+      // 在用户的分类中查找匹配的分类
+      const matchedCategory = categories.find(c =>
+        c.name === targetCategoryName || c.name.indexOf(targetCategoryName) >= 0
+      );
+
+      if (matchedCategory) {
+        return {
+          categoryId: matchedCategory.categoryId,
+          categoryName: matchedCategory.name
+        };
       }
 
-      // 转换 CategoryMapping 到 CategorySuggestion
+      // 3. 如果没有找到匹配的，返回第一个支出分类或默认值
+      if (categories.length > 0) {
+        return {
+          categoryId: categories[0].categoryId,
+          categoryName: categories[0].name
+        };
+      }
+
+      // 4. 兜底返回0（表示未找到）
       return {
-        categoryId: categoryMapping.id,
-        categoryName: categoryMapping.name
+        categoryId: 0,
+        categoryName: '未分类'
       };
     } catch (error) {
       console.error('[OCRRecognitionService] 推荐分类失败:', error);

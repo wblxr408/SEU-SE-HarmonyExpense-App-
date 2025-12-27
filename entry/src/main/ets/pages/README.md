@@ -1,114 +1,482 @@
-# Pages 功能与页面流转说明
+# HarmonyOS 记账应用 - 前端功能说明文档
 
-本文档详细说明了 `pages` 目录下各个页面的功能、职责以及页面之间的跳转流转关系。
-
-## 目录结构与核心流程
-
-应用的核心流转路径如下：
-
-1.  **启动与身份验证**:
-    - 应用启动 -> 检查登录状态 (`Index.ets`)
-    - 未登录 -> 跳转至 [登录页](LoginPage.ets)
-    - 登录成功 -> 进入 [主页](Index.ets)
-
-2.  **主页 (Index) 架构**:
-    `Index.ets` 是应用的入口容器，包含底部的 Tab 导航，分别对应：
-    - **Tab 0: 账本 (首页)**
-    - **Tab 1: 统计报表**
-    - **Tab 2: 我的 (个人中心)**
+本文档详细记录了 `pages` 目录下所有页面的功能实现和页面流转关系。
 
 ---
 
-## 页面详细说明
+## 目录
 
-### 1. 核心页面 (Core Pages)
+1. [应用架构概述](#应用架构概述)
+2. [核心页面](#核心页面)
+3. [记账功能模块](#记账功能模块)
+4. [统计与分析模块](#统计与分析模块)
+5. [智能功能模块](#智能功能模块)
+6. [共享账本模块](#共享账本模块)
+7. [个人中心与设置](#个人中心与设置)
+8. [数据管理模块](#数据管理模块)
+9. [页面流转关系图](#页面流转关系图)
 
-#### [Index.ets](Index.ets) (APP首页 / 账本)
-- **功能**: 展示账单列表、日期筛选、分类筛选。
-- **流转**:
-    - 点击 "记一笔" -> 跳转 [AddBill.ets](AddBill.ets)
-    - 点击 "管理分类" -> 跳转 [CategoryManagement.ets](CategoryManagement.ets)
-    - 底部导航 -> 切换至 [StatisticsPage.ets](StatisticsPage.ets) 或 [MinePage.ets](MinePage.ets)
+---
 
-#### [LoginPage.ets](LoginPage.ets) (登录)
-- **功能**: 用户登录界面，支持邮箱/密码登录。
-- **流转**:
-    - 登录成功 -> 跳转至 `Index.ets`
-    - 点击 "立即注册" -> 跳转至 [RegisterPage.ets](RegisterPage.ets)
+## 应用架构概述
 
-#### [RegisterPage.ets](RegisterPage.ets) (注册)
-- **功能**: 新用户注册。
-- **流转**: 注册成功 -> 返回或跳转登录。
+应用采用 **Tab 导航** 架构，主入口为 `Index.ets`，包含三个主要 Tab：
 
-### 2. 主要功能模块 (Function Tabs)
+| Tab | 页面 | 功能 |
+|-----|------|------|
+| 账本 | Index (BillListContent) | 账单列表、日期/分类筛选 |
+| 统计 | StatisticsPage | 月度收支统计与图表 |
+| 我的 | MinePage | 个人中心与功能入口 |
 
-#### [StatisticsPage.ets](StatisticsPage.ets) (统计)
-- **功能**: 提供月度收支统计。
-    - 支持按月筛选。
-    - 支持 "收入/支出" 视图切换。
-    - 展示每日趋势柱状图。
-    - 展示分类排行列表（含进度条及百分比）。
-- **注意**: 这是一个 Component，嵌入在 `Index.ets` 的 TabContent 中。
+---
 
-#### [MinePage.ets](MinePage.ets) (我的)
-- **功能**: 个人中心，展示用户信息及功能入口。
-- **功能入口流转**:
-    - **账户资产** -> 跳转 [AccountManagementPage.ets](AccountManagementPage.ets)
-    - **数据同步** -> 跳转 [SyncSettingsPage.ets](SyncSettingsPage.ets)
-    - **备份与恢复** -> 跳转 [BackupPage.ets](BackupPage.ets)
-    - **提醒设置** -> 跳转 [ReminderSettingsPage.ets](ReminderSettingsPage.ets)
-    - **分类管理** -> 跳转 [CategoryManagement.ets](CategoryManagement.ets)
-- **退出登录**: 清除 Session 并跳转回 `LoginPage.ets`。
+## 核心页面
 
-### 3. 功能子页面 (Sub-feature Pages)
+### 1. Index.ets（主页/账本）
 
-#### [AddBill.ets](AddBill.ets) (记账)
-- **功能**: 添加新的收支记录。
-- **位置**: 通常由 `Index.ets` 首页的 "记一笔" 按钮触发。
+**已实现功能：**
+- ✅ 账单列表展示（按月份筛选）
+- ✅ 日期选择器（年月选择）
+- ✅ 分类筛选下拉菜单
+- ✅ 左滑删除账单
+- ✅ 快捷入口：记一笔、管理分类、扫描小票、共享账本
+- ✅ Tab 导航栏（账本、统计、我的）
+- ✅ 登录状态检测与重定向
+- ✅ 共享账本邀请弹窗（登录后自动检测待处理邀请）
+- ✅ 响应式布局（BreakPoint 适配不同屏幕）
 
-#### [CategoryManagement.ets](CategoryManagement.ets) (分类管理)
-- **功能**: 管理支出和收入的类别（添加、删除、排序）。
-- **位置**: 可从首页或个人中心进入。
+**页面流转：**
+- → `AddBill.ets`（记一笔）
+- → `CategoryManagement.ets`（管理分类）
+- → `OCRScanPage.ets`（扫描小票）
+- → `SharedLedgerListPage.ets`（共享账本）
 
-#### [AccountManagementPage.ets](AccountManagementPage.ets) (账户资产管理)
-- **功能**: 查看和管理各个资产账户（如银行卡、支付宝等）的余额。
-- **位置**: 由 `MinePage` 进入。
-- **注意**: 目录下存在一个类似的 `AccountManagement.ets`，请留意二者区别，当前 `MinePage` 使用的是 `AccountManagementPage.ets`。
+---
 
-### 4. 设置与工具 (Settings & Tools)
+### 2. LoginPage.ets（登录页）
 
-#### [SettingsPage.ets](SettingsPage.ets) (综合设置)
-- **功能**: 包含更丰富的管理选项。
-    - **分类管理**: `CategoryManagement`
-    - **账户管理**: 跳转至 `AccountManagement` (注意这里链接的是 `AccountManagement.ets`)
-    - **预算设置**: 跳转至 [BudgetManagement.ets](BudgetManagement.ets) (设置月度预算)
-    - **数据导出与导入**: 跳转至 [ExportImportPage.ets](ExportImportPage.ets)
-- **说明**: 此页面整合了高级功能，但在目前的 `MinePage` 中尚未发现直接入口，可能作为独立的设置页存在。
+**已实现功能：**
+- ✅ 邮箱/密码登录
+- ✅ 登录状态持久化
+- ✅ 跳转注册页面
 
-#### [BudgetManagement.ets](BudgetManagement.ets) (预算管理)
-- **功能**: 设置和监控各类别的月度预算，显示超支/剩余状态。
-- **入口**: 通过 `SettingsPage` 进入。
+**页面流转：**
+- → `Index.ets`（登录成功）
+- → `RegisterPage.ets`（立即注册）
 
-#### [ExportImportPage.ets](ExportImportPage.ets) (导入导出)
-- **功能**: 数据的导出（Excel/CSV）与导入功能。
-- **入口**: 通过 `SettingsPage` 进入。
+---
 
-#### [SyncSettingsPage.ets](SyncSettingsPage.ets) / [BackupPage.ets](BackupPage.ets) / [ReminderSettingsPage.ets](ReminderSettingsPage.ets)
-- **功能**: 分别对应云同步设置、本地备份恢复、每日提醒功能设置。
-- **入口**: 均有 `MinePage` 直接进入。
+### 3. RegisterPage.ets（注册页）
 
-### 5. 智能与高级功能
+**已实现功能：**
+- ✅ 新用户注册
+- ✅ 表单验证
+- ✅ 注册成功后自动登录
 
-#### [SmartBudgetPage.ets](SmartBudgetPage.ets) (智能预算分析)
-- **功能**: 基于历史账单数据，提供智能的月度收支预测与预算优化建议。
-- **入口**: 可通过 `BudgetManagement.ets` 或 `SettingsPage.ets` 的相关入口进入。
-- **逻辑**: 使用本地算法 (`BudgetForecastUtils`) 进行离线预测，不依赖云端计算。
+---
 
-#### [OCRScanPage.ets](OCRScanPage.ets) (OCR 票据扫描)
-- **功能**: 拍摄或选择票据图片，自动识别金额和日期并填充至记账页。
-- **入口**: `Index.ets` 首页底部或 `AddBill.ets`。
+## 记账功能模块
 
-#### [SmartCategoryRulesPage.ets](SmartCategoryRulesPage.ets) (智能分类规则)
-- **功能**: 管理自动分类规则（如“关键词匹配”）。
-- **入口**: `SettingsPage` 或 `MinePage`。
+### 4. AddBill.ets（记账页）
 
+**已实现功能：**
+- ✅ 金额输入（数字键盘）
+- ✅ 日期选择
+- ✅ 分类选择（支持/收入切换）
+- ✅ 账户选择
+- ✅ 备注输入
+- ✅ 标签选择
+- ✅ **智能分类推荐**（根据备注自动推荐分类）
+- ✅ **异常消费检测**（保存前检测异常并弹窗提醒）
+- ✅ OCR 预填充支持（从扫描页跳转时自动填充）
+- ✅ 响应式布局
+
+**智能特性：**
+- 根据历史账单学习用户习惯，自动创建分类规则
+- 输入备注时实时推荐匹配的分类
+- 检测金额异常、频率异常等风险
+
+---
+
+### 5. CategoryManagement.ets（分类管理）
+
+**已实现功能：**
+- ✅ 分类列表展示（树形结构）
+- ✅ 支出/收入分类切换
+- ✅ **多级分类**（支持父子分类关系）
+- ✅ 新增分类（支持设置父分类）
+- ✅ 编辑分类（名称、图标、类型、父分类）
+- ✅ 删除分类（软删除）
+- ✅ 分类展开/折叠
+- ✅ 层级缩进显示
+
+---
+
+### 6. AccountManagementPage.ets（账户资产管理）
+
+**已实现功能：**
+- ✅ 账户列表展示
+- ✅ 账户余额显示
+- ✅ 新增账户
+- ✅ 编辑账户信息
+- ✅ 删除账户
+
+---
+
+## 统计与分析模块
+
+### 7. StatisticsPage.ets（统计报表）
+
+**已实现功能：**
+- ✅ 月度收支汇总
+- ✅ 收入/支出视图切换
+- ✅ **每日趋势柱状图**
+- ✅ **分类排行榜**（含百分比进度条）
+- ✅ 月份选择器
+
+---
+
+### 8. SmartBudgetPage.ets（智能预算分析）
+
+**已实现功能：**
+- ✅ **预算健康度评分**（0-100 分）
+- ✅ **历史消费趋势图**（Canvas 绑定绘制）
+- ✅ **未来消费预测**（基于历史数据）
+- ✅ **智能预算建议卡片**
+  - 分类级别的预算优化建议
+  - 优先级排序（紧急/重要/一般）
+  - 建议类型：减少/保持/优化/增加
+  - 预估节省金额
+- ✅ 渐变色 UI 设计
+
+**算法特性：**
+- 使用 `BudgetForecastUtils` 进行本地离线预测
+- Ensemble 集成算法提高预测准确性
+
+---
+
+### 9. AnomalyHistoryPage.ets（风险通知中心）
+
+**已实现功能：**
+- ✅ 异常消费记录列表
+- ✅ **待处理风险计数卡片**
+- ✅ **高危预警计数卡片**
+- ✅ 风险等级标签（严重/高/中/低）
+- ✅ 异常类型标题映射
+- ✅ 标记已读功能
+
+**异常类型：**
+- 金额过高 (`high_amount`)
+- 金额异常 (`low_amount`)
+- 交易频繁 (`frequency_spike`)
+- 分类异常 (`unusual_category`)
+- 消费习惯改变 (`pattern_break`)
+
+---
+
+## 智能功能模块
+
+### 10. OCRScanPage.ets（OCR 票据扫描）
+
+**已实现功能：**
+- ✅ 图片选择（相册/拍照）
+- ✅ **OCR 识别处理**
+- ✅ 识别结果预览
+  - 商家名称
+  - 金额
+  - 交易日期
+  - 推荐分类
+  - 识别置信度
+- ✅ 确认后跳转记账页面（预填充数据）
+- ✅ 重新选择功能
+- ✅ 错误状态处理
+
+---
+
+### 11. SmartCategoryRulesPage.ets（智能分类规则）
+
+**已实现功能：**
+- ✅ 分类规则列表展示
+- ✅ 规则类型筛选
+- ✅ 新增规则
+- ✅ 编辑规则
+- ✅ 删除规则
+- ✅ 规则优先级排序
+
+**规则类型：**
+- 关键词匹配
+- 商家匹配
+- 金额范围匹配
+
+---
+
+## 共享账本模块
+
+### 12. SharedLedgerListPage.ets（共享账本列表）
+
+**已实现功能：**
+- ✅ 共享账本列表展示
+- ✅ 待处理邀请列表
+- ✅ **创建新账本弹窗**
+  - 账本名称
+  - 账本类型（家庭/情侣/室友/旅行/团队/项目）
+- ✅ 接受/拒绝邀请
+- ✅ 跳转账本详情
+
+---
+
+### 13. SharedLedgerDetailPage.ets（共享账本详情）
+
+**已实现功能：**
+- ✅ 账本信息展示
+- ✅ 成员列表
+- ✅ 共享账单列表
+- ✅ 邀请新成员
+- ✅ 添加共享账单入口
+
+---
+
+### 14. AddSharedBill.ets（添加共享账单）
+
+**已实现功能：**
+- ✅ 金额输入
+- ✅ 分类选择
+- ✅ 参与成员选择
+- ✅ 分摊方式选择
+- ✅ 备注输入
+
+---
+
+### 15. SharedBillDetailPage.ets（共享账单详情）
+
+**已实现功能：**
+- ✅ 账单详细信息
+- ✅ 分摊成员及金额
+- ✅ 结算状态
+
+---
+
+## 个人中心与设置
+
+### 16. MinePage.ets（个人中心）
+
+**已实现功能：**
+- ✅ 用户信息卡片（头像、用户名、邮箱）
+- ✅ 编辑个人资料入口
+- ✅ **通知中心**（带未读角标）
+- ✅ 功能菜单入口
+  - 应用设置
+  - 账户资产
+  - 多人共享账本
+  - 数据同步
+  - 备份与恢复
+  - 提醒设置
+  - 分类管理
+- ✅ 退出登录
+
+---
+
+### 17. ProfileEditPage.ets（个人资料编辑）
+
+**已实现功能：**
+- ✅ 修改用户名
+- ✅ 修改邮箱
+- ✅ 修改密码
+- ✅ 表单验证
+
+---
+
+### 18. NotificationCenterPage.ets（通知中心）
+
+**已实现功能：**
+- ✅ 通知列表展示
+- ✅ **Tab 筛选**（全部/系统/预算/同步/提醒）
+- ✅ 未读消息高亮
+- ✅ 未读计数显示
+- ✅ 标记单条已读
+- ✅ 全部标记已读
+- ✅ 空状态展示
+- ✅ 时间格式化（刚刚/X分钟前/X天前）
+
+---
+
+### 19. AppSettingsPage.ets（应用设置）
+
+**已实现功能：**
+- ✅ 主题设置
+- ✅ 语言设置
+- ✅ 货币单位设置
+- ✅ 隐私设置
+
+---
+
+### 20. ReminderSettingsPage.ets（提醒设置）
+
+**已实现功能：**
+- ✅ 记账提醒开关
+- ✅ 提醒时间设置
+- ✅ 提醒频率设置
+
+---
+
+### 21. SettingsPage.ets（综合设置）
+
+**已实现功能：**
+- ✅ 分类管理入口
+- ✅ 账户管理入口
+- ✅ 预算设置入口
+- ✅ 数据导出导入入口
+
+---
+
+### 22. BudgetManagement.ets（预算管理）
+
+**已实现功能：**
+- ✅ 月度总预算设置
+- ✅ 分类预算设置
+- ✅ 预算使用进度展示
+- ✅ 超支预警
+- ✅ **智能分析入口**（跳转 SmartBudgetPage）
+
+---
+
+## 数据管理模块
+
+### 23. ExportImportPage.ets（导入导出）
+
+**已实现功能：**
+- ✅ 数据导出（Excel/CSV）
+- ✅ 数据导入
+- ✅ 导出文件预览
+
+---
+
+### 24. SyncSettingsPage.ets（数据同步设置）
+
+**已实现功能：**
+- ✅ 云同步开关
+- ✅ 同步账户绑定
+- ✅ 手动同步触发
+- ✅ 同步状态显示
+
+---
+
+### 25. BackupPage.ets（备份与恢复）
+
+**已实现功能：**
+- ✅ 本地数据备份
+- ✅ 备份文件列表
+- ✅ 数据恢复
+- ✅ 删除备份文件
+
+---
+
+### 26. PerformanceMonitorPage.ets（性能监控）
+
+**已实现功能：**
+- ✅ 应用性能指标展示
+- ✅ 数据库查询性能统计
+- ✅ 内存使用情况
+
+---
+
+## 页面流转关系图
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                         应用启动                                  │
+└─────────────────────────────────────────────────────────────────┘
+                              │
+                              ▼
+┌─────────────────────────────────────────────────────────────────┐
+│                      Index.ets (主页)                            │
+│  ┌─────────────┬─────────────┬─────────────┐                    │
+│  │   账本 Tab   │   统计 Tab   │   我的 Tab   │                    │
+│  │ BillList    │ Statistics  │  MinePage   │                    │
+│  └─────────────┴─────────────┴─────────────┘                    │
+└─────────────────────────────────────────────────────────────────┘
+         │                │                │
+         ▼                ▼                ▼
+  ┌──────────┐    ┌──────────┐    ┌──────────────────┐
+  │ AddBill  │    │ 月度统计   │    │ 功能菜单           │
+  │ 记账页面   │    │ 趋势图表   │    ├──────────────────┤
+  └──────────┘    │ 分类排行   │    │ 通知中心           │
+       │          └──────────┘    │ 账户资产           │
+       ▼                          │ 共享账本           │
+  ┌──────────┐                    │ 数据同步           │
+  │ OCRScan  │                    │ 备份恢复           │
+  │ 扫描小票   │                    │ 提醒设置           │
+  └──────────┘                    │ 分类管理           │
+                                  └──────────────────┘
+```
+
+---
+
+## 技术特性总结
+
+### 已完成的核心功能
+
+| 功能模块 | 状态 | 备注 |
+|---------|------|------|
+| 用户认证 | ✅ | 登录/注册/会话管理 |
+| 账单管理 | ✅ | CRUD + 筛选 |
+| 多级分类 | ✅ | 树形结构/父子关系 |
+| 账户管理 | ✅ | 多账户支持 |
+| 统计图表 | ✅ | 趋势图/排行榜 |
+| 智能预算 | ✅ | 预测/建议/健康度评分 |
+| 异常检测 | ✅ | 多维度风险识别 |
+| OCR 识别 | ✅ | 票据扫描/自动填充 |
+| 智能分类 | ✅ | 规则管理/自动推荐 |
+| 共享账本 | ✅ | 多人协作/邀请机制 |
+| 通知系统 | ✅ | 多类型/筛选/角标 |
+| 数据备份 | ✅ | 本地备份/恢复 |
+| 数据同步 | ✅ | 云端同步 |
+| 数据导出 | ✅ | Excel/CSV |
+| 响应式布局 | ✅ | BreakPoint 适配 |
+
+### UI/UX 特性
+
+- 📱 响应式设计，适配多种屏幕尺寸
+- 🎨 现代化 UI 风格，渐变色卡片设计
+- 🔔 通知角标实时更新
+- ⚡ 加载状态/空状态优雅处理
+- 🖱️ 手势支持（左滑删除）
+
+---
+
+## 文件清单
+
+| 文件名 | 大小 | 功能描述 |
+|-------|------|---------|
+| Index.ets | 16KB | 主页/Tab容器/邀请弹窗 |
+| LoginPage.ets | 2.7KB | 登录 |
+| RegisterPage.ets | 2.4KB | 注册 |
+| AddBill.ets | 18KB | 记账（含智能分类、异常检测） |
+| CategoryManagement.ets | 17KB | 分类管理（多级分类） |
+| AccountManagement.ets | 8KB | 账户管理组件 |
+| AccountManagementPage.ets | 6.7KB | 账户资产页面 |
+| StatisticsPage.ets | 12KB | 统计报表 |
+| SmartBudgetPage.ets | 19KB | 智能预算分析 |
+| AnomalyHistoryPage.ets | 7.3KB | 风险通知中心 |
+| OCRScanPage.ets | 9.7KB | OCR票据扫描 |
+| SmartCategoryRulesPage.ets | 9.3KB | 智能分类规则 |
+| SharedLedgerListPage.ets | 12KB | 共享账本列表 |
+| SharedLedgerDetailPage.ets | 11KB | 共享账本详情 |
+| AddSharedBill.ets | 11KB | 添加共享账单 |
+| SharedBillDetailPage.ets | 9.7KB | 共享账单详情 |
+| MinePage.ets | 5.4KB | 个人中心 |
+| ProfileEditPage.ets | 8.9KB | 资料编辑 |
+| NotificationCenterPage.ets | 6.8KB | 通知中心 |
+| AppSettingsPage.ets | 6.7KB | 应用设置 |
+| ReminderSettingsPage.ets | 3.8KB | 提醒设置 |
+| SettingsPage.ets | 4.5KB | 综合设置 |
+| BudgetManagement.ets | 9.7KB | 预算管理 |
+| ExportImportPage.ets | 8.5KB | 导入导出 |
+| SyncSettingsPage.ets | 3.6KB | 同步设置 |
+| BackupPage.ets | 7KB | 备份恢复 |
+| PerformanceMonitorPage.ets | 8.9KB | 性能监控 |
+| StatisticsView.ets | 9KB | 统计视图组件 |
+
+---
+
+*文档最后更新：2025年12月27日*

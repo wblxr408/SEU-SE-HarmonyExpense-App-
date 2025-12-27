@@ -33,7 +33,7 @@ interface CacheEntry<T> {
 /**
  * 缓存统计接口
  */
-interface CacheStats {
+export interface CacheStats {
   totalCount: number;
   validCount: number;
   expiredCount: number;

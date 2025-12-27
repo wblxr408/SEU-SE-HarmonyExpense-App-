@@ -274,6 +274,28 @@ export class CategoryDAO {
     }
   }
 
+  /**
+   * 批量更新分类排序
+   * @param categories 已重新排序的分类列表
+   */
+  static async updateSortOrders(categories: Category[]): Promise<void> {
+    if (categories.length === 0) return;
+    
+    // 假设 categories 已经是排好序的，我们更新它们的 sort_order
+    const userId = categories[0].userId; 
+    
+    await DAOHelper.transaction(async () => {
+      const store = DatabaseManager.getDatabase();
+      const sql = `UPDATE categories SET sort_order = ? WHERE category_id = ?`;
+      
+      for (const cat of categories) {
+        await store.executeSql(sql, [cat.sortOrder, cat.categoryId]);
+      }
+    }, '[CategoryDAO] 批量更新排序');
+
+    CacheManager.clear(new RegExp(`^categories:user:${userId}:`));
+  }
+
   /** 
    * 软删除分类（自动清除缓存）
    * 

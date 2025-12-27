@@ -56,6 +56,19 @@ export class LoginResult {
 }
 
 /**
+ * 操作结果（用于密码修改、邮箱更新等操作）
+ */
+export class OperationResult {
+  success: boolean = false;
+  message: string = '';
+
+  constructor(success: boolean, message: string) {
+    this.success = success;
+    this.message = message;
+  }
+}
+
+/**
  * 用户会话管理服务
  */
 export class UserSessionService {
@@ -274,4 +287,99 @@ export class UserSessionService {
     const remaining: number = UserSessionService.SESSION_TIMEOUT - (now - lastActive);
     return Math.max(0, remaining);
   }
+
+  /**
+   * 更新用户资料（昵称和头像）
+   * @param nickname 新昵称
+   * @param avatarPath 新头像路径
+   */
+  static async updateProfile(nickname: string, avatarPath: string): Promise<boolean> {
+    if (!UserSessionService.isLoggedIn()) {
+      console.error('[UserSessionService] 未登录，无法更新资料');
+      return false;
+    }
+
+    try {
+      const userId: number = UserSessionService.currentSession!.userId;
+      await UserDAO.updateProfile(userId, nickname, avatarPath);
+      console.log('[UserSessionService] 资料更新成功');
+      return true;
+    } catch (error) {
+      console.error('[UserSessionService] 更新资料失败:', error);
+      return false;
+    }
+  }
+
+  /**
+   * 修改密码
+   * @param oldPassword 旧密码
+   * @param newPassword 新密码
+   */
+  static async changePassword(oldPassword: string, newPassword: string): Promise<OperationResult> {
+    if (!UserSessionService.isLoggedIn()) {
+      return new OperationResult(false, '未登录');
+    }
+
+    try {
+      const userId: number = UserSessionService.currentSession!.userId;
+      const user: User | null = await UserDAO.getById(userId);
+      if (!user) {
+        return new OperationResult(false, '用户不存在');
+      }
+
+      // 验证旧密码
+      const oldHash: string = await UserSessionService.hashPassword(oldPassword);
+      if (user.passwordHash !== oldHash) {
+        return new OperationResult(false, '旧密码错误');
+      }
+
+      // 更新新密码
+      const newHash: string = await UserSessionService.hashPassword(newPassword);
+      await UserDAO.updatePassword(userId, newHash);
+      console.log('[UserSessionService] 密码修改成功');
+      return new OperationResult(true, '密码修改成功');
+    } catch (error) {
+      console.error('[UserSessionService] 密码修改失败:', error);
+      const errorMsg: string = error instanceof Error ? error.message : String(error);
+      return new OperationResult(false, `密码修改失败: ${errorMsg}`);
+    }
+  }
+
+  /**
+   * 更新邮箱
+   * @param newEmail 新邮箱
+   */
+  static async updateEmail(newEmail: string): Promise<OperationResult> {
+    if (!UserSessionService.isLoggedIn()) {
+      return new OperationResult(false, '未登录');
+    }
+
+    // 简单邮箱格式校验
+    const emailRegex: RegExp = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(newEmail)) {
+      return new OperationResult(false, '邮箱格式不正确');
+    }
+
+    try {
+      const userId: number = UserSessionService.currentSession!.userId;
+
+      // 检查邮箱是否已被其他用户使用
+      const users: User[] = await UserDAO.getAll();
+      const existing: User | undefined = users.find(u => u.email === newEmail && u.userId !== userId);
+      if (existing) {
+        return new OperationResult(false, '该邮箱已被其他用户使用');
+      }
+
+      await UserDAO.updateEmail(userId, newEmail);
+      // 更新会话中的邮箱
+      UserSessionService.currentSession!.email = newEmail;
+      console.log('[UserSessionService] 邮箱更新成功');
+      return new OperationResult(true, '邮箱更新成功');
+    } catch (error) {
+      console.error('[UserSessionService] 邮箱更新失败:', error);
+      const errorMsg: string = error instanceof Error ? error.message : String(error);
+      return new OperationResult(false, `邮箱更新失败: ${errorMsg}`);
+    }
+  }
 }
+
