@@ -121,6 +121,13 @@ export struct MinePage {
           })
         }
 
+        // 智能分类规则
+        ListItem() {
+          this.MenuRow('智能分类规则', $r('app.media.icon'), () => {
+            router.pushUrl({ url: 'pages/SmartCategoryRulesPage' });
+          })
+        }
+
         // 分类管理
         ListItem() {
           this.MenuRow('分类管理', () => {

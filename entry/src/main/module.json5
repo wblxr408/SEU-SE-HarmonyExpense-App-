@@ -29,6 +29,10 @@
       {
         "name": "ArkTSPartialUpdate",
         "value": "true"
+      },
+      {
+        "name": "network_config",
+        "value": "network_config"
       }
     ],
     "abilities": [
