@@ -323,7 +323,7 @@ export class SharedLedgerService {
       const existingInvitation = invitations.find(i => i.inviteeId === inviteeId && i.status === 'pending');
       
       if (existingInvitation) {
-          // If expired, we can re-invite, but if pending, warn
+          // 如果已过期，我们可以重新邀请，但如果是待处理状态，则警告
           const isExpired = new Date(existingInvitation.expiresAt).getTime() < new Date().getTime();
           if (!isExpired) {
              throw new Error('该用户已有待处理的邀请');
@@ -337,14 +337,14 @@ export class SharedLedgerService {
       invitation.inviterName = inviterName;
       invitation.inviteeId = inviteeId;
       invitation.inviteeName = inviteeName;
-      invitation.inviteeEmail = ''; // Ensure this is not null if schema requires it, though schema says NOT NULL. 
-      // If inviteeId is used, email might be empty string? 
-      // Schema: invitee_email TEXT NOT NULL. So we must set it. 
-      // DAO mapRowToInvitation uses result.getString...
+      invitation.inviteeEmail = ''; // 确保此项不为空，即使模式要求非空
+      // 如果使用了 inviteeId，email 可能为空字符串？
+      // Schema: invitee_email TEXT NOT NULL。所以我们必须设置它。
+      // DAO mapRowToInvitation 使用 result.getString...
       
       invitation.role = role;
       invitation.status = 'pending';
-      invitation.generateInvitationCode(); // FIX: Generate Code
+      invitation.generateInvitationCode(); // 修复：生成代码
 
       // 设置过期时间（7天后）
       const expiresAt = new Date();

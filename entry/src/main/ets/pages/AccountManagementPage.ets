@@ -104,7 +104,7 @@ struct AccountManagementPage {
   handleCreate() {
     const userId = UserSessionService.getCurrentUserId();
     if (!userId) return;
-    this.editingAccount = new Account(0, userId); // Check Account constructor signature
+    this.editingAccount = new Account(0, userId); // 检查 Account 构造函数签名
     this.dialogController.open();
   }
 
@@ -115,7 +115,7 @@ struct AccountManagementPage {
 
   async handleDelete(accId: number) {
     try {
-      await AccountDAO.delete(accId); // Physical delete for simplicity, or soft delete
+      await AccountDAO.delete(accId); // 物理删除以简化，或者使用软删除
       promptAction.showToast({ message: '删除成功' });
       this.loadAccounts();
     } catch (e) {
@@ -145,7 +145,7 @@ struct AccountManagementPage {
 
   build() {
     Column() {
-      // Header
+      // 头部
       Row() {
         Image($r('app.media.back'))
           .width(24).height(24)
@@ -157,7 +157,7 @@ struct AccountManagementPage {
       }
       .width('100%').padding(16).backgroundColor(Color.White)
 
-      // List
+      // 列表
       List({ space: 10 }) {
         ForEach(this.accounts, (item: Account) => {
           ListItem() {

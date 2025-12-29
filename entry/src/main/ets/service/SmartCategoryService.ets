@@ -458,6 +458,7 @@ export class SmartCategoryService {
       const endStr = formatDate(endDate);
 
       // use getBillsByFilters instead of getByTimeRange for better reliability
+      // 使用 getBillsByFilters 代替 getByTimeRange 以获得更好的可靠性
       const bills = await BillDAO.getBillsByFilters(userId, { start: startStr, end: endStr });
       result.scannedBills = bills.length;
       
@@ -468,7 +469,7 @@ export class SmartCategoryService {
         const bill = bills[i];
         const keywords = SmartCategoryService.extractKeywords(bill.note);
         
-        result.totalKeywords += keywords.length; // Count total keywords found
+        result.totalKeywords += keywords.length; // 统计发现的总关键词数量
 
         if (keywords.length === 0) continue;
 
@@ -505,7 +506,7 @@ export class SmartCategoryService {
 
       // 为每个分类创建规则 (使用 for-of 确保异步操作完成)
       const categoryIds = Array.from(categoryKeywords.keys());
-      result.categoryCount = categoryIds.length; // Record how many categories have keywords
+      result.categoryCount = categoryIds.length; // 记录有多少个分类包含关键词
       for (const categoryId of categoryIds) {
         const keywordMap = categoryKeywords.get(categoryId)!;
         const category = categories.find((c: Category) => c.categoryId === categoryId);

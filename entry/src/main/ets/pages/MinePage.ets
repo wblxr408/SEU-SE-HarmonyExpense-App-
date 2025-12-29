@@ -123,7 +123,7 @@ export struct MinePage {
 
         // 智能分类规则
         ListItem() {
-          this.MenuRow('智能分类规则', $r('app.media.icon'), () => {
+          this.MenuRow('智能分类规则', () => {
             router.pushUrl({ url: 'pages/SmartCategoryRulesPage' });
           })
         }

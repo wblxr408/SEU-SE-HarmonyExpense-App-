@@ -51,10 +51,10 @@ struct Index {
   @State statRefreshTrigger: number = 0;
   @StorageProp('currentBreakpoint') currentBreakpoint: string = 'md';
   
-  // Invitation State
+  // 邀请状态
   @State pendingInvitations: LedgerInvitation[] = [];
   
-  // Dialog Controller
+  // 弹窗控制器
   invitationController: CustomDialogController = new CustomDialogController({
     builder: InvitationProcessingDialog({
       invitations: $pendingInvitations,
@@ -81,7 +81,7 @@ struct Index {
     await this.loadFilterData();
     await this.loadBills();
     
-    // Check Invitations
+    // 检查邀请
     this.checkInvitations();
   }
 

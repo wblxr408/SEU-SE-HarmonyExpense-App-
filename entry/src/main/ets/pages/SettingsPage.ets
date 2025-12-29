@@ -8,8 +8,8 @@ import { LedgerInvitation } from '../model/SharedLedger';
 struct SettingsPage {
   @State pendingInvitations: LedgerInvitation[] = [];
 
-  // Dialog Controller
-  // TODO: InvitationProcessingDialog is missing in the codebase.
+  // 弹窗控制器
+  // TODO: 代码库中缺少 InvitationProcessingDialog。
   // invitationController: CustomDialogController = new CustomDialogController({
   //   builder: InvitationProcessingDialog({
   //     invitations: $pendingInvitations,
@@ -20,7 +20,7 @@ struct SettingsPage {
   // });
 
   handleInvitation(invite: LedgerInvitation, action: string) {
-    // TODO: Implement handleInvitation
+    // TODO: 实现 handleInvitation
     console.info(`Handling invitation: ${JSON.stringify(invite)}, action: ${action}`);
   }
 

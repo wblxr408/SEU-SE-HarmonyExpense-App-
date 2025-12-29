@@ -3,19 +3,19 @@ import { BudgetDAO } from '../dao/BudgetDAO';
 import { Budget } from '../model/Budget';
 
 /**
- * Builds the financial context for the LLM
+ * 构建 LLM 的财务上下文
  */
 export class ContextBuilder {
   /**
-   * Get a summary of the user's financial status for the current month
-   * @param userId User ID
-   * @returns Formatted string with context
+   * 获取用户当月的财务状况摘要
+   * @param userId 用户ID
+   * @returns 带有上下文的格式化字符串
    */
   static async getFinancialSummary(userId: number): Promise<string> {
     const now = new Date();
     const currentMonthStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
     
-    // 1. Get Bill Stats
+    // 1. 获取账单统计
     let billContext = "暂无本月收支数据。";
     try {
       const stats: MonthlyStats[] = await BillDAO.getMonthlyStats(userId, currentMonthStr, currentMonthStr);
@@ -27,7 +27,7 @@ export class ContextBuilder {
       console.error('[ContextBuilder] Failed to get bill stats', e);
     }
 
-    // 2. Get Budget Info
+    // 2. 获取预算信息
     let budgetContext = "暂无预算数据。";
     try {
       const budgets: Budget[] = await BudgetDAO.getByUserId(userId);
@@ -41,7 +41,7 @@ export class ContextBuilder {
       console.error('[ContextBuilder] Failed to get budgets', e);
     }
 
-    // 3. Assemble Prompt
+    // 3. 组装 Prompt
     return `
 === 用户财务背景 ===
 ${billContext}

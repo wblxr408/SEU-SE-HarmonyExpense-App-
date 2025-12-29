@@ -31,7 +31,7 @@ export default class EntryAbility extends UIAbility {
   private breakpointSystem: BreakpointSystem = new BreakpointSystem();
 
   async onCreate(want:Want, launchParam:AbilityConstant.LaunchParam) {
-    // Initialize PersistentStorage for API Key
+    // 初始化 API Key 的持久化存储
     PersistentStorage.PersistProp('LLM_API_KEY', 'sk-db4d76d137084e459292cb477ccde584');
 
     hilog.isLoggable(LogConfig.DOMAIN, LogConfig.TAG, hilog.LogLevel.INFO)
@@ -63,7 +63,7 @@ export default class EntryAbility extends UIAbility {
   }
 
   onWindowStageCreate(windowStage: Window.WindowStage) {
-    // Main window is created, set main page for this ability
+    // 主窗口已创建，为该 Ability 设置主页面
     hilog.isLoggable(LogConfig.DOMAIN, LogConfig.TAG, hilog.LogLevel.INFO);
     hilog.info(LogConfig.DOMAIN, LogConfig.TAG, '%{public}s', 'Ability onWindowStageCreate')
     
@@ -82,7 +82,7 @@ export default class EntryAbility extends UIAbility {
   }
 
   onWindowStageDestroy() {
-    // Main window is destroyed, release UI related resources
+    // 主窗口已销毁，释放 UI 相关资源
     hilog.isLoggable(LogConfig.DOMAIN, LogConfig.TAG, hilog.LogLevel.INFO)
     hilog.info(LogConfig.DOMAIN, LogConfig.TAG, '%{public}s', 'Ability onWindowStageDestroy')
     
@@ -91,13 +91,13 @@ export default class EntryAbility extends UIAbility {
   }
 
   onForeground() {
-    // Ability has brought to foreground
+    // Ability 已切换到前台
     hilog.isLoggable(LogConfig.DOMAIN, LogConfig.TAG, hilog.LogLevel.INFO)
     hilog.info(LogConfig.DOMAIN, LogConfig.TAG, '%{public}s', 'Ability onForeground')
   }
 
   onBackground() {
-    // Ability has back to background
+    // Ability 已切换到后台
     hilog.isLoggable(LogConfig.DOMAIN, LogConfig.TAG, hilog.LogLevel.INFO)
     hilog.info(LogConfig.DOMAIN, LogConfig.TAG, '%{public}s', 'Ability onBackground')
   }

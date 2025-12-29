@@ -106,7 +106,7 @@ struct AddBill{
   @State selectedAccountId: number = 1;
 
   @State categoryOptions: SelectOption[] = [];
-  @State accountOptions: SelectOption[] = []; // Added from MAIN logic requirement
+  @State accountOptions: SelectOption[] = []; // 根据 MAIN 逻辑需求添加
   
   // 异常检测相关
   @State detectionAnomalies: AnomalyDetectionResult[] = [];
@@ -433,7 +433,7 @@ struct AddBill{
             newBill.updatedAt = now;
             newBill.isDeleted = 0;
             //调用接口插入数据
-            // 余额检查与更新 (HEAD Logic)
+            // 余额检查与更新 (HEAD 逻辑)
             try {
                const account = await AccountDAO.getById(this.selectedAccountId);
                if (!account) {
@@ -467,6 +467,7 @@ struct AddBill{
               const anomalies = await AnomalyDetectionService.detectBillAnomaly(newBill, userId);
               
               if (anomalies.length > 0) {
+                //后端有异常，则返回前端
                 this.detectionAnomalies = anomalies;
                 this.anomalyDialogController.open();
                 // 不立即返回，等待用户点击弹窗确认

@@ -57,7 +57,7 @@ struct SharedLedgerListPage {
         return;
       }
       // Load Ledgers and Invitations in parallel
-      // Load Ledgers and Invitations in parallel
+      // 并行加载账本和邀请
       const results = await Promise.all([
         SharedLedgerService.getUserLedgers(userId),
         SharedLedgerService.getUserInvitations(userId)
@@ -129,7 +129,7 @@ struct SharedLedgerListPage {
   build() {
     Stack() {
       Column() {
-        // Header
+        // 头部
         Row() {
           Image($r('app.media.back')) // 假设有
             .width(24).height(24)
@@ -159,7 +159,7 @@ struct SharedLedgerListPage {
            Text('加载中...').margin({ top: 50 })
         } else {
            List({ space: 12 }) {
-             // 1. Invitations Section
+             // 1. 邀请部分
              if (this.invitations.length > 0) {
                ListItem() {
                  Text('待处理邀请')
@@ -175,7 +175,7 @@ struct SharedLedgerListPage {
                }
              }
 
-             // 2. Ledgers Section
+             // 2. 账本部分
              if (this.ledgers.length === 0 && this.invitations.length === 0) {
                  ListItem() {
                    Column() {
@@ -239,7 +239,7 @@ struct SharedLedgerListPage {
          Button('拒绝')
            .fontSize(12)
            .fontColor(Color.Red)
-           .backgroundColor('#FFEBEE') // Light Red
+           .backgroundColor('#FFEBEE') // 浅红
            .height(28)
            .onClick(() => this.handleDecline(invite))
            .margin({ right: 8 })
@@ -247,7 +247,7 @@ struct SharedLedgerListPage {
          Button('接受')
            .fontSize(12)
            .fontColor(Color.Green)
-           .backgroundColor('#E8F5E9') // Light Green
+           .backgroundColor('#E8F5E9') // 浅绿
            .height(28)
            .onClick(() => this.handleAccept(invite))
        }
@@ -257,12 +257,12 @@ struct SharedLedgerListPage {
     .backgroundColor(Color.White)
     .borderRadius(10)
     .shadow({ radius: 2, color: '#E0E0E0', offsetY: 1 })
-    .border({ width: 1, color: '#FF9800', style: BorderStyle.Solid }) // Orange border for attention
+    .border({ width: 1, color: '#FF9800', style: BorderStyle.Solid }) // 橙色边框用于引起注意
   }
 
   @Builder LedgerCard(ledger: SharedLedger) {
     Row() {
-      // Icon Placeholder
+      // 图标占位符
       Column() {
         Text(ledger.name.substring(0, 1))
           .fontSize(20)
@@ -300,7 +300,7 @@ struct SharedLedgerListPage {
       
       Blank()
       
-      // Arrow
+      // 箭头
       Text('>')
         .fontSize(18)
         .fontColor(Color.Gray)

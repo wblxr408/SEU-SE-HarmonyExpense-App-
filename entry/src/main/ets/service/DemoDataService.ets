@@ -169,7 +169,7 @@ export class DemoDataService {
 
   private static addBill(list: Bill[], userId: number, accountId: number, catId: number, amount: number, type: 'expense'|'income', baseDate: Date, day: number, note: string) {
     const d = new Date(baseDate.getFullYear(), baseDate.getMonth(), day);
-    // Add random hour
+    // 添加随机小时
     d.setHours(Math.floor(Math.random() * 24), Math.floor(Math.random() * 60));
     
     const b = new Bill();
@@ -178,7 +178,7 @@ export class DemoDataService {
     b.categoryId = catId;
     b.amount = amount;
     b.type = type;
-    b.transactionDate = d.toISOString(); // Use ISO format
+    b.transactionDate = d.toISOString(); // 使用 ISO 格式
     b.note = note;
     
     list.push(b);
@@ -233,7 +233,7 @@ export class DemoDataService {
       await BudgetDAO.insert(b);
   }
 
-  // ---------------- Tags Seeding ----------------
+  // ---------------- 标签数据填充 ----------------
   private static async seedTags(userId: number) {
     try {
       const existingTags = await TagDAO.getAll(userId);
@@ -262,7 +262,7 @@ export class DemoDataService {
     }
   }
 
-  // ---------------- Reminders Seeding ----------------
+  // ---------------- 提醒数据填充 ----------------
   private static async seedReminders(userId: number, categories: Category[]) {
     try {
       const existingReminders = await ReminderDAO.getByUserId(userId);
@@ -326,7 +326,7 @@ export class DemoDataService {
     }
   }
 
-  // ---------------- Smart Category Rules Seeding ----------------
+  // ---------------- 智能分类规则填充 ----------------
   private static async seedSmartCategoryRules(userId: number, categories: Category[]) {
     try {
       const existingRules = await SmartCategoryRuleDAO.getByUserId(userId);
@@ -408,7 +408,7 @@ export class DemoDataService {
     }
   }
 
-  // ---------------- Anomaly Detection Data Seeding ----------------
+  // ---------------- 异常检测数据填充 ----------------
   private static async seedAnomalyData(userId: number, categories: Category[]) {
     try {
       const existingBaselines = await UserSpendingBaselineDAO.getAllByUser(userId);
@@ -486,7 +486,7 @@ export class DemoDataService {
     }
   }
 
-  // ---------------- Notifications Seeding ----------------
+  // ---------------- 通知数据填充 ----------------
   private static async seedNotifications(userId: number) {
     try {
       const existingNotifications = await NotificationDAO.getByUserId(userId, 1);
@@ -603,7 +603,7 @@ export class DemoDataService {
     }
   }
 
-  // ---------------- Shared Ledger Seeding ----------------
+  // ---------------- 共享账本填充 ----------------
   private static async seedSharedLedger(userId: number) {
     const daoModule = await import('../dao/SharedLedgerDAO');
     const SharedLedgerDAO = daoModule.SharedLedgerDAO;
@@ -613,7 +613,7 @@ export class DemoDataService {
     const ledgers = await SharedLedgerDAO.getByUserId(userId);
     if (ledgers.length > 0) return;
 
-    // 1. Create a Shared Ledger
+    // 1. 创建一个共享账本
     const ledger = new (await import('../model/SharedLedger')).SharedLedger();
     ledger.name = '家庭账本';
     ledger.type = 'family';
@@ -623,10 +623,10 @@ export class DemoDataService {
     ledger.color = '#4CAF50';
     ledger.createdAt = new Date().toISOString();
     
-    // SharedLedgerDAO.insert returns number|void, assuming number as per code viewing
+    // SharedLedgerDAO.insert 返回 number|void，根据代码假定为 number
     const ledgerId = await SharedLedgerDAO.insert(ledger);
 
-    // 2. Add Owner as Member
+    // 2. 将所有者添加为成员
     const LedgerMember = (await import('../model/SharedLedger')).LedgerMember;
     const ownerMember = new LedgerMember();
     ownerMember.ledgerId = ledgerId;
@@ -634,29 +634,29 @@ export class DemoDataService {
     ownerMember.role = 'owner';
     ownerMember.username = DemoDataService.DEMO_NAME;
     ownerMember.joinedAt = new Date().toISOString();
-    // Correct method: LedgerMemberDAO.insert
+    // 正确方法: LedgerMemberDAO.insert
     await LedgerMemberDAO.insert(ownerMember);
 
-    // 3. Add a Demo Partner
-    const partnerId = 9999; // Dummy ID for partner
+    // 3. 添加一个演示伙伴
+    const partnerId = 9999; // 伙伴的虚拟ID
     const partnerMember = new LedgerMember();
     partnerMember.ledgerId = ledgerId;
     partnerMember.userId = partnerId;
-    partnerMember.role = 'editor'; // Note: Check 'editor' is valid role, default usually 'member', 'admin', 'owner'
-    // In SharedLedger.ets: ALL_MEMBER_ROLES = ['owner', 'admin', 'member', 'viewer']
-    // 'editor' is not in the list. I should use 'member' or 'admin'. Let's use 'member' with permissions. 
-    // Or check if 'editor' was valid in previous context? 'admin' seems safer.
+    // 注意: 检查 'editor' 是否为有效角色，默认为 'member', 'admin', 'owner'
+    // 在 SharedLedger.ets 中: ALL_MEMBER_ROLES = ['owner', 'admin', 'member', 'viewer']
+    // 'editor' 不在列表中。应该使用 'member' 或 'admin'。这里使用 'member'。
+    // 或者之前的上下文中 'editor' 是有效的？ 'admin' 似乎更安全。
     partnerMember.role = 'member'; 
     partnerMember.username = '亲爱的';
     partnerMember.joinedAt = new Date().toISOString();
     await LedgerMemberDAO.insert(partnerMember);
 
-    // 4. Add Shared Bills
+    // 4. 添加共享账单
     const SharedBill = (await import('../model/SharedLedger')).SharedBill;
     const now = new Date();
     
-    // Bill 1: Supermarket (Owner paid 258.50)
-    // Split: Owner 129.25, Partner 129.25
+    // 账单 1: 超市 (所有者支付 258.50)
+    // 分摊: 所有者 129.25, 伙伴 129.25
     const b1 = new SharedBill();
     b1.ledgerId = ledgerId;
     b1.creatorId = userId;
@@ -670,11 +670,11 @@ export class DemoDataService {
       { memberId: userId, amount: 129.25, percentage: 50 },
       { memberId: partnerId, amount: 129.25, percentage: 50 }
     ]);
-    // Correct method: SharedBillDAO.insert
+    // 正确方法: SharedBillDAO.insert
     await SharedBillDAO.insert(b1);
 
-    // Bill 2: Dinner (Partner paid 320.00)
-    // Split: Owner 160.00, Partner 160.00
+    // 账单 2: 晚餐 (伙伴支付 320.00)
+    // 分摊: 所有者 160.00, 伙伴 160.00
     const b2 = new SharedBill();
     b2.ledgerId = ledgerId;
     b2.creatorId = partnerId;

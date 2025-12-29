@@ -119,10 +119,10 @@ export class ReminderService {
         options.frequency,
         options.reminderDate,
         nextReminderDate,
-        1, // isActive
+        1, // 激活状态
         '',
         '',
-        0, // isDeleted
+        0, // 删除状态
         options.amount,
         options.categoryId,
         options.accountId,

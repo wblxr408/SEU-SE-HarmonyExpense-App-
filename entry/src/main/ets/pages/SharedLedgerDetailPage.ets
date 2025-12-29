@@ -83,7 +83,7 @@ struct SharedLedgerDetailPage {
 
   build() {
     Column() {
-      // Header
+      // 头部
       Row() {
         Button({ type: ButtonType.Circle, stateEffect: true }) {
            Text('<').fontSize(20).fontColor(Color.Black)
@@ -124,9 +124,9 @@ struct SharedLedgerDetailPage {
              }
              .width('100%').height('100%')
 
-             // Add Bill FAB
+             // 添加账单浮动按钮
              Button({ type: ButtonType.Circle, stateEffect: true }) {
-                Text('+').fontSize(30).fontColor(Color.White).margin({bottom: 4}) // Slight offset for centering
+                Text('+').fontSize(30).fontColor(Color.White).margin({bottom: 4}) // 略微偏移以居中
              }
              .width(56).height(56)
              .backgroundColor('#2196F3')
@@ -201,7 +201,7 @@ struct SharedLedgerDetailPage {
 
   @Builder SettlementRow(item: SettlementResult) {
     Row() {
-      // From
+      // 支付方
       Row() {
         Text(item.from.memberName.substring(0, 1))
           .fontSize(12).fontColor(Color.White).fontWeight(FontWeight.Bold)
@@ -210,7 +210,7 @@ struct SharedLedgerDetailPage {
           .fontSize(16).margin({ left: 5 })
       }
       
-      // Arrow & Amount
+      // 箭头和金额
       Column() {
         Text(`支付 ¥${item.amount.toFixed(2)}`)
           .fontSize(14).fontWeight(FontWeight.Bold).fontColor('#2196F3')
@@ -219,7 +219,7 @@ struct SharedLedgerDetailPage {
       }
       .margin({ left: 10, right: 10 })
       
-      // To
+      // 接收方
       Row() {
         Text(item.to.memberName)
           .fontSize(16).margin({ right: 5 })
@@ -264,7 +264,7 @@ struct SharedLedgerDetailPage {
 
   @Builder MemberRow(member: LedgerMember) {
     Row() {
-      // Avatar placeholder
+      // 头像占位符
       Text(member.userName.substring(0, 1).toUpperCase())
         .fontSize(16)
         .fontWeight(FontWeight.Bold)

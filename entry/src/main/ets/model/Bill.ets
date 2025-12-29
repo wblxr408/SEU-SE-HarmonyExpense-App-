@@ -18,15 +18,15 @@ export class Bill {
 
   billId: number = 0;
   userId: number = 0;
-  accountId: number = 0;   // FK -> Account
-  categoryId: number = 0;  // FK -> Category
+  accountId: number = 0;   // 外键 -> 账户
+  categoryId: number = 0;  // 外键 -> 分类
   amount: number = 0.0;
   note: string = '';
   transactionDate: string = '';
   type: 'income' | 'expense' = 'expense';
   createdAt: string = '';
   updatedAt: string = '';
-  isDeleted: number = 0; // 0 = active, 1 = deleted
+  isDeleted: number = 0; // 0 = 正常, 1 = 已删除
 
   constructor(
     billId: number = 0,

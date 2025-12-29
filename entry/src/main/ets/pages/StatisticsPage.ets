@@ -8,7 +8,7 @@ import hilog from '@ohos.hilog';
 @Component
 export struct StatisticsPage {
   @Prop @Watch('onRefreshTrigger') refreshTrigger: number = 0;
-  @State displayType: 'expense' | 'income' = 'expense'; // Toggle state
+  @State displayType: 'expense' | 'income' = 'expense'; // 切换状态
 
   @State currentYear: number = new Date().getFullYear();
   @State currentMonth: number = new Date().getMonth() + 1;
@@ -18,10 +18,10 @@ export struct StatisticsPage {
   @State categoryRanking: CategoryStatItem[] = [];
   @State isLoading: boolean = false;
   
-  // Data Holder to support toggling without reloading DB
+  // 数据持有者，支持切换而无需重新加载数据库
   private allBills: Bill[] = [];
   
-  // Constants for chart
+  // 图表常量
   private readonly DAYS_IN_MONTH = 31;
   private readonly CHART_MAX_HEIGHT = 150;
 
@@ -39,17 +39,17 @@ export struct StatisticsPage {
       const userId = UserSessionService.getCurrentUserId();
       if (!userId) return;
 
-      // 1. Calculate date range for current month
+      // 1. 计算当前月份的日期范围
       const startDate = `${this.currentYear}-${this.currentMonth.toString().padStart(2, '0')}-01`;
       const lastDay = new Date(this.currentYear, this.currentMonth, 0).getDate();
       const endDate = `${this.currentYear}-${this.currentMonth.toString().padStart(2, '0')}-${lastDay}`;
       const dateRange: DateRangeFilter = { start: startDate, end: endDate };
 
-      // 2. Fetch all bills for the month
+      // 2. 获取本月所有账单
       const bills = await BillDAO.getBillsByFilters(userId, dateRange);
-      this.allBills = bills; // Ensure data is saved for toggling
+      this.allBills = bills; // 确保保存数据以供切换
 
-      // 3. Process data
+      // 3. 处理数据
       this.processData(bills, lastDay);
 
     } catch (error) {
@@ -63,23 +63,23 @@ export struct StatisticsPage {
     let tExpense = 0;
     let tIncome = 0;
     const dTrend: number[] = new Array(daysInMonth).fill(0);
-    const catMap = new Map<number, number>(); // categoryId -> amount
+    const catMap = new Map<number, number>(); // 分类ID -> 金额
 
     bills.forEach(bill => {
       if (bill.type === 'expense') {
         tExpense += bill.amount;
         
-        // Daily Trend (Day index is date - 1)
+        // 每日趋势（天数索引为日期 - 1）
         const date = new Date(bill.transactionDate);
-        // Ensure date parsing is correct (assuming YYYY-MM-DD string)
-        // Note: new Date('2023-01-01') in JS acts as UTC often, but getDate() uses local. 
-        // Safer to parse string manually to avoid timezone issues or use reliable parsing.
+        // 确保日期解析正确（假设 YYYY-MM-DD 字符串）
+        // 注意：JS 中的 new Date('2023-01-01') 通常表现为 UTC，但 getDate() 使用本地时间。
+        // 为了避免时区问题，手动解析字符串或使用可靠的解析方法更安全。
         const day = parseInt(bill.transactionDate.split('-')[2]);
         if (day >= 1 && day <= daysInMonth) {
           dTrend[day - 1] += bill.amount;
         }
 
-        // Category Ranking
+        // 分类排行
         const currentCatAmount = catMap.get(bill.categoryId) || 0;
         catMap.set(bill.categoryId, currentCatAmount + bill.amount);
 
@@ -91,7 +91,7 @@ export struct StatisticsPage {
     this.totalExpense = tExpense;
     this.totalIncome = tIncome;
     
-    // Calculate trend based on displayType
+    // 根据显示类型计算趋势
     this.recalculateTrendAndRanking(daysInMonth);
   }
 
@@ -110,7 +110,7 @@ export struct StatisticsPage {
 
     this.dailyTrend = dTrend; 
     
-    // Recalculate ranking total for percentages
+    // 重新计算排行的总一百分比
     const totalBase = this.displayType === 'expense' ? this.totalExpense : this.totalIncome;
     this.loadCategories(catMap, totalBase);
   }
@@ -130,24 +130,24 @@ export struct StatisticsPage {
           name: cat.name,
           amount: amount,
           percentage: totalExpense > 0 ? (amount / totalExpense) * 100 : 0,
-          color: '#E0E0E0' // Placeholder color, ideally from Category if available
+          color: '#E0E0E0' // 占位符颜色，如果有的话最好从 Category 获取
         });
       }
     });
 
-    // Sort by amount desc
+    // 按金额降序排序
     ranking.sort((a, b) => b.amount - a.amount);
     this.categoryRanking = ranking;
   }
 
   build() {
     Column() {
-      // Header
+      // 头部
       Row() {
-        Image($r('app.media.back')) // Assuming this is navigation back or maybe just title for tab
+        Image($r('app.media.back')) // 假设这是导航返回或仅是 tab 标题
           .width(24)
           .height(24)
-          .visibility(Visibility.Hidden) // Hidden since it's in a tab
+          .visibility(Visibility.Hidden) // 因为在 tab 中所以隐藏
         Text('统计报表')
           .fontSize(20)
           .fontWeight(FontWeight.Bold)
@@ -158,13 +158,13 @@ export struct StatisticsPage {
       
       Scroll() {
         Column() {
-          // Month Selector and Total
+          // 月份选择器和总计
           Column() {
             Row() {
               Text(`${this.currentYear}年${this.currentMonth}月`)
                 .fontSize(16)
                 .fontColor(Color.Gray)
-              Text(' ▽') // Simple indicator
+              Text(' ▽') // 简单指示器
                 .fontSize(12)
                 .fontColor(Color.Gray)
             }
@@ -192,7 +192,7 @@ export struct StatisticsPage {
           }
           .width('100%')
           .alignItems(HorizontalAlign.Center)
-          .backgroundColor(Color.Black) // Matches screenshot dark header area
+          .backgroundColor(Color.Black) // 匹配截图中的深色头部区域
           .padding({ top: 20, bottom: 20 })
           .onClick(() => {
              this.displayType = this.displayType === 'expense' ? 'income' : 'expense';
@@ -200,27 +200,27 @@ export struct StatisticsPage {
              this.recalculateTrendAndRanking(lastDay);
           })
 
-          // Daily Trend Chart
+          // 每日趋势图表
           Column() {
-            Text('每日趋势')
+             Text('每日趋势')
               .fontSize(14)
               .fontColor(Color.White)
               .width('100%')
               .margin({ bottom: 10 })
             
-            // Bar Chart Area
+            // 柱状图区域
             Scroll() {
               Row({ space: 10 }) {
                 ForEach(this.getChartData(), (item: ChartItem) => {
                   Column() {
-                    // Bar
+                    // 柱子
                     Column()
                       .width(8)
                       .height(this.getBarHeight(item.amount))
-                      .backgroundColor('#4A90E2') // Blue bars
+                      .backgroundColor('#4A90E2') // 蓝色柱子
                       .borderRadius({ topLeft: 4, topRight: 4 })
                     
-                    // Date
+                    // 日期
                     Text(item.day.toString())
                       .fontSize(10)
                       .fontColor(Color.Gray)
@@ -238,11 +238,11 @@ export struct StatisticsPage {
           }
           .width('95%')
           .padding(15)
-          .backgroundColor('#1C1C1E') // Dark card background
+          .backgroundColor('#1C1C1E') // 深色卡片背景
           .borderRadius(16)
-          .margin({ top: -10, bottom: 10 }) // Overlap slightly if needed, or just margin
-
-          // Category Ranking
+          .margin({ top: -10, bottom: 10 }) // 如果需要可以稍微重叠，或者仅设置边距
+ 
+          // 分类排行
           Column() {
             Text(this.displayType === 'expense' ? '支出分类排行' : '收入分类排行')
               .fontSize(16)
@@ -256,7 +256,7 @@ export struct StatisticsPage {
                 ListItem() {
                   Column() {
                     Row() {
-                      // Icon placeholder
+                      // 图标占位符
                       Image($r('app.media.icon')) 
                         .width(30)
                         .height(30)
@@ -281,7 +281,7 @@ export struct StatisticsPage {
                         .width('100%')
                         .justifyContent(FlexAlign.SpaceBetween)
 
-                        // Progress Bar
+                        // 进度条
                         Progress({ value: item.percentage, total: 100, type: ProgressType.Linear })
                           .color('#4A90E2')
                           .backgroundColor('#333333')
@@ -299,12 +299,12 @@ export struct StatisticsPage {
             .width('100%')
           }
           .width('100%')
-          .padding(20) // Matches screenshot spacing
+          .padding(20) // 匹配截图中的间距
           
         }
         .width('100%')
         .constraintSize({ minHeight: '100%' })
-        .backgroundColor(Color.Black) // Main generic background
+        .backgroundColor(Color.Black) // 主通用背景
       }
       .layoutWeight(1)
     }
