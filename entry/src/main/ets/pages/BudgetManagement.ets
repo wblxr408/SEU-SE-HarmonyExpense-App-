@@ -119,12 +119,12 @@ struct BudgetManagement {
     autoCancel: true
   });
 
-  onPageShow() {
+  onPageShow(): void {
     this.initUser();
     this.loadData();
   }
 
-  initUser() {
+  initUser(): void {
     const uid = UserSessionService.getCurrentUserId();
     if (uid) {
       this.currentUserId = uid;
@@ -134,7 +134,7 @@ struct BudgetManagement {
     }
   }
 
-  async loadData() {
+  async loadData(): Promise<void> {
     try {
       // 1. 获取该用户所有支出分类 (预算通常针对支出)
       this.allCategories = await CategoryDAO.getByType(this.currentUserId, 'expense'); //
@@ -178,7 +178,7 @@ struct BudgetManagement {
     }
   }
 
-  async handleAddBudget(categoryId: number, amount: number) {
+  async handleAddBudget(categoryId: number, amount: number): Promise<void> {
     try {
       // 检查该分类是否已存在预算 (简单处理：如果存在则暂不处理或覆盖，这里假设是新增)
       const newBudget = new Budget();
@@ -198,11 +198,15 @@ struct BudgetManagement {
   }
 
   // 删除预算
-  async handleDelete(budgetId: number) {
-    console.debug(`[BudgetManagement] Trying to delete budget: ${budgetId}`);
-    await BudgetDAO.softDelete(budgetId);
-    promptAction.showToast({ message: '删除成功' });
-    this.loadData();
+  async handleDelete(budgetId: number): Promise<void> {
+    try {
+      await BudgetDAO.softDelete(budgetId);
+      this.budgetItems = this.budgetItems.filter((item: BudgetViewItem) => item.budget.budgetId !== budgetId);
+      promptAction.showToast({ message: '删除成功' });
+    } catch (error) {
+      hilog.error(HILOG_DOMAIN, LOG_TAG, '删除预算失败: %{public}s', JSON.stringify(error));
+      promptAction.showToast({ message: '删除失败，请重试' });
+    }
   }
 
   @Builder NavigationMenus() {
@@ -287,6 +291,32 @@ struct BudgetManagement {
 
   @Builder
   SwipeDelete(id: number) {
-    Button('删除').type(ButtonType.Circle).backgroundColor(Color.Red).onClick(() => this.handleDelete(id));
+    Button({ type: ButtonType.Normal }) {
+      Image($r('app.media.ic_public_delete'))
+        .width(20)
+        .height(20)
+        .fillColor(Color.White)
+        .objectFit(ImageFit.Contain)
+    }
+    .width(60)
+    .height('100%')
+    .backgroundColor(Color.Red)
+    .onClick(() => {
+      AlertDialog.show({
+        title: '确认删除',
+        message: '确定删除该预算吗？',
+        primaryButton: {
+          value: '取消',
+          action: () => { }
+        },
+        secondaryButton: {
+          value: '删除',
+          fontColor: Color.Red,
+          action: () => {
+            void this.handleDelete(id);
+          }
+        }
+      })
+    })
   }
 }

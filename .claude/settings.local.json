@@ -4,7 +4,11 @@
       "Bash(grep:*)",
       "Bash(rm:*)",
       "Bash(done)",
-      "Bash(find:*)"
+      "Bash(find:*)",
+      "Bash(npm run build:*)",
+      "Bash(dir \"c:\\\\Users\\\\wblxr\\\\SEU-SE-HarmonyExpense-App-\\\\entry\\\\src\\\\main\\\\ets\" /s /b)",
+      "Bash(wc:*)",
+      "Bash(xargs:*)"
     ]
   }
 }

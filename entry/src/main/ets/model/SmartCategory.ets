@@ -912,6 +912,18 @@ export class SmartCategoryRule {
     return SmartCategoryRule.fromJSON(this.toJSON());
   }
 
+  private splitKeywords(raw: string): string[] {
+    const trimmed: string = raw.trim();
+    if (trimmed.length === 0) {
+      return [];
+    }
+
+    return trimmed
+      .split(/[\s,，;；、]+/)
+      .map((part: string) => part.trim())
+      .filter((part: string) => part.length > 0);
+  }
+
   /**
    * 检查规则是否匹配账单
    */
@@ -927,10 +939,10 @@ export class SmartCategoryRule {
 
     // 关键词匹配
     if (this.ruleType === 'keyword' && this.keywords.trim().length > 0) {
-      const keywordList = this.keywords.split(',');
+      const keywordList: string[] = this.splitKeywords(this.keywords);
       const lowerNote = billNote.toLowerCase();
       for (let i = 0; i < keywordList.length; i++) {
-        const keyword = keywordList[i].trim().toLowerCase();
+        const keyword = keywordList[i].toLowerCase();
         if (keyword.length > 0 && lowerNote.indexOf(keyword) >= 0) {
           return true;
         }

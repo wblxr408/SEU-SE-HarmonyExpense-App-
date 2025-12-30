@@ -115,7 +115,14 @@ export class BudgetDAO {
    * 软删除预算 - 使用 DAOHelper 统一方法
    */
   static async softDelete(budgetId: number): Promise<void> {
-    await DAOHelper.softDelete('budgets', 'budget_id', budgetId, '[BudgetDAO]');
+    const store: relationalStore.RdbStore = DatabaseManager.getDatabase();
+    const sql = 'UPDATE budgets SET is_deleted = 1 WHERE budget_id = ?';
+    try {
+      await store.executeSql(sql, [budgetId]);
+      console.log(`[BudgetDAO] 软删除成功 id=${budgetId}`);
+    } catch (err) {
+      throw DAOHelper.toError('[BudgetDAO] 软删除失败', err as object);
+    }
   }
 
   static async getAllActive(): Promise<Budget[]> {

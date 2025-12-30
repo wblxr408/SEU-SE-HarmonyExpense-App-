@@ -3,6 +3,7 @@ import { BillDAO, DateRangeFilter } from '../dao/BillDAO';
 import { Category } from '../model/Category';
 import { CategoryDAO } from '../dao/CategoryDAO';
 import { UserSessionService } from '../service/UserSessionService';
+import { AppSettingsService, ThemeMode } from '../service/AppSettingsService';
 import hilog from '@ohos.hilog';
 
 @Component
@@ -17,6 +18,7 @@ export struct StatisticsPage {
   @State dailyTrend: number[] = [];
   @State categoryRanking: CategoryStatItem[] = [];
   @State isLoading: boolean = false;
+  @State isDarkTheme: boolean = false;
   
   // 数据持有者，支持切换而无需重新加载数据库
   private allBills: Bill[] = [];
@@ -25,8 +27,40 @@ export struct StatisticsPage {
   private readonly DAYS_IN_MONTH = 31;
   private readonly CHART_MAX_HEIGHT = 150;
 
+  private get pageBackgroundColor() {
+    return this.isDarkTheme ? '#000000' : '#F5F7F9';
+  }
+
+  private get cardBackgroundColor() {
+    return this.isDarkTheme ? '#1C1C1E' : '#FFFFFF';
+  }
+
+  private get textMainColor() {
+    return this.isDarkTheme ? Color.White : '#333333';
+  }
+
+  private isSystemDarkTheme(): boolean {
+    // 默认返回false，因为ArkTS不支持动态获取系统主题
+    // 用户可以通过手动设置深色/浅色模式来控制
+    return false;
+  }
+
   async aboutToAppear() {
+    await this.loadTheme();
     await this.loadData();
+  }
+
+  async loadTheme() {
+    const theme = await AppSettingsService.getTheme();
+    if (theme === ThemeMode.DARK) {
+      this.isDarkTheme = true;
+      return;
+    }
+    if (theme === ThemeMode.LIGHT) {
+      this.isDarkTheme = false;
+      return;
+    }
+    this.isDarkTheme = this.isSystemDarkTheme();
   }
 
   onRefreshTrigger() {
@@ -151,10 +185,12 @@ export struct StatisticsPage {
         Text('统计报表')
           .fontSize(20)
           .fontWeight(FontWeight.Bold)
+          .fontColor(this.textMainColor)
           .margin({ left: 16 })
       }
       .width('100%')
       .padding(16)
+      .backgroundColor(this.pageBackgroundColor)
       
       Scroll() {
         Column() {
@@ -183,7 +219,7 @@ export struct StatisticsPage {
             Text(`¥${(this.displayType === 'expense' ? this.totalExpense : this.totalIncome).toFixed(2)}`)
               .fontSize(36)
               .fontWeight(FontWeight.Bold)
-              .fontColor('#FFFFFF')
+              .fontColor(this.textMainColor)
             
             Text(this.displayType === 'expense' ? '总支出 (点击切换)' : '总收入 (点击切换)')
               .fontSize(12)
@@ -192,7 +228,7 @@ export struct StatisticsPage {
           }
           .width('100%')
           .alignItems(HorizontalAlign.Center)
-          .backgroundColor(Color.Black) // 匹配截图中的深色头部区域
+          .backgroundColor(this.pageBackgroundColor)
           .padding({ top: 20, bottom: 20 })
           .onClick(() => {
              this.displayType = this.displayType === 'expense' ? 'income' : 'expense';
@@ -204,7 +240,7 @@ export struct StatisticsPage {
           Column() {
              Text('每日趋势')
               .fontSize(14)
-              .fontColor(Color.White)
+              .fontColor(this.textMainColor)
               .width('100%')
               .margin({ bottom: 10 })
             
@@ -238,7 +274,7 @@ export struct StatisticsPage {
           }
           .width('95%')
           .padding(15)
-          .backgroundColor('#1C1C1E') // 深色卡片背景
+          .backgroundColor(this.cardBackgroundColor)
           .borderRadius(16)
           .margin({ top: -10, bottom: 10 }) // 如果需要可以稍微重叠，或者仅设置边距
  
@@ -247,7 +283,7 @@ export struct StatisticsPage {
             Text(this.displayType === 'expense' ? '支出分类排行' : '收入分类排行')
               .fontSize(16)
               .fontWeight(FontWeight.Bold)
-              .fontColor(Color.White)
+              .fontColor(this.textMainColor)
               .width('100%')
               .margin({ bottom: 15 })
 
@@ -265,7 +301,7 @@ export struct StatisticsPage {
                       Column() {
                         Row() {
                           Text(item.name)
-                            .fontColor(Color.White)
+                            .fontColor(this.textMainColor)
                             .fontSize(16)
                           Blank()
                            Row() {
@@ -275,7 +311,7 @@ export struct StatisticsPage {
                             Text(`¥${item.amount.toFixed(0)}`)
                               .fontSize(16)
                               .fontWeight(FontWeight.Bold)
-                              .fontColor(Color.White)
+                              .fontColor(this.textMainColor)
                           }
                         }
                         .width('100%')
@@ -284,7 +320,7 @@ export struct StatisticsPage {
                         // 进度条
                         Progress({ value: item.percentage, total: 100, type: ProgressType.Linear })
                           .color('#4A90E2')
-                          .backgroundColor('#333333')
+                          .backgroundColor(this.isDarkTheme ? '#333333' : '#E0E0E0')
                           .height(6)
                           .margin({ top: 8 })
                       }
@@ -304,13 +340,13 @@ export struct StatisticsPage {
         }
         .width('100%')
         .constraintSize({ minHeight: '100%' })
-        .backgroundColor(Color.Black) // 主通用背景
+        .backgroundColor(this.pageBackgroundColor) // 主通用背景
       }
       .layoutWeight(1)
     }
     .width('100%')
     .height('100%')
-    .backgroundColor(Color.Black)
+    .backgroundColor(this.pageBackgroundColor)
   }
 
   getBarHeight(amount: number): number {

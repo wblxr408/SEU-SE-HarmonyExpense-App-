@@ -2,6 +2,7 @@ import router from '@ohos.router';
 import { UserSessionService, SessionInfo } from '../service/UserSessionService';
 import { NotificationService } from '../service/NotificationService';
 import promptAction from '@ohos.promptAction';
+import { AppTheme } from '../common/AppTheme';
 
 @Component
 export struct MinePage {
@@ -157,7 +158,7 @@ export struct MinePage {
     }
     .width('100%')
     .height('100%')
-    .backgroundColor('#F1F3F5')
+    .backgroundColor(AppTheme.Background)
   }
 
   @Builder

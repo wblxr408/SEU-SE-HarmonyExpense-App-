@@ -49,16 +49,40 @@ const KEY_CURRENCY = 'currency_symbol';
 
 export class AppSettingsService {
   private static preferencesInstance: preferences.Preferences | null = null;
+  private static initPromise: Promise<void> | null = null;
 
   /**
    * 初始化 Preferences
    */
   static async init(context: common.UIAbilityContext): Promise<void> {
-    try {
-      AppSettingsService.preferencesInstance = await preferences.getPreferences(context, PREFERENCES_NAME);
-      console.log('[AppSettingsService] 初始化成功');
-    } catch (error) {
-      console.error('[AppSettingsService] 初始化失败:', error);
+    if (AppSettingsService.initPromise) {
+      return AppSettingsService.initPromise;
+    }
+
+    AppSettingsService.initPromise = (async () => {
+      try {
+        AppSettingsService.preferencesInstance = await preferences.getPreferences(context, PREFERENCES_NAME);
+        console.log('[AppSettingsService] 初始化成功');
+      } catch (err) {
+        const error = err as Error;
+        console.error('[AppSettingsService] 初始化失败:', error.message);
+        throw new Error('Failed to initialize AppSettingsService');
+      }
+    })();
+
+    return AppSettingsService.initPromise;
+  }
+
+  /**
+   * 确保已初始化
+   */
+  private static async ensureInitialized(): Promise<void> {
+    if (!AppSettingsService.preferencesInstance) {
+      if (AppSettingsService.initPromise) {
+        await AppSettingsService.initPromise;
+      } else {
+        throw new Error('AppSettingsService not initialized. Call init() first.');
+      }
     }
   }
 
@@ -66,10 +90,8 @@ export class AppSettingsService {
    * 获取当前主题
    */
   static async getTheme(): Promise<ThemeMode> {
-    if (!AppSettingsService.preferencesInstance) {
-      return ThemeMode.SYSTEM;
-    }
-    const value = await AppSettingsService.preferencesInstance.get(KEY_THEME, ThemeMode.SYSTEM);
+    await AppSettingsService.ensureInitialized();
+    const value = await AppSettingsService.preferencesInstance!.get(KEY_THEME, ThemeMode.SYSTEM);
     return value as ThemeMode;
   }
 
@@ -77,11 +99,10 @@ export class AppSettingsService {
    * 设置主题
    */
   static async setTheme(theme: ThemeMode): Promise<void> {
-    if (!AppSettingsService.preferencesInstance) {
-      return;
-    }
-    await AppSettingsService.preferencesInstance.put(KEY_THEME, theme);
-    await AppSettingsService.preferencesInstance.flush();
+    console.log(`[AppSettingsService] setTheme called with: ${theme}`);
+    await AppSettingsService.ensureInitialized();
+    await AppSettingsService.preferencesInstance!.put(KEY_THEME, theme);
+    await AppSettingsService.preferencesInstance!.flush();
     console.log(`[AppSettingsService] 主题已设置为: ${theme}`);
   }
 
@@ -89,10 +110,8 @@ export class AppSettingsService {
    * 获取当前语言
    */
   static async getLanguage(): Promise<LanguageSetting> {
-    if (!AppSettingsService.preferencesInstance) {
-      return LanguageSetting.ZH_CN;
-    }
-    const value = await AppSettingsService.preferencesInstance.get(KEY_LANGUAGE, LanguageSetting.ZH_CN);
+    await AppSettingsService.ensureInitialized();
+    const value = await AppSettingsService.preferencesInstance!.get(KEY_LANGUAGE, LanguageSetting.ZH_CN);
     return value as LanguageSetting;
   }
 
@@ -100,11 +119,10 @@ export class AppSettingsService {
    * 设置语言
    */
   static async setLanguage(language: LanguageSetting): Promise<void> {
-    if (!AppSettingsService.preferencesInstance) {
-      return;
-    }
-    await AppSettingsService.preferencesInstance.put(KEY_LANGUAGE, language);
-    await AppSettingsService.preferencesInstance.flush();
+    console.log(`[AppSettingsService] setLanguage called with: ${language}`);
+    await AppSettingsService.ensureInitialized();
+    await AppSettingsService.preferencesInstance!.put(KEY_LANGUAGE, language);
+    await AppSettingsService.preferencesInstance!.flush();
     console.log(`[AppSettingsService] 语言已设置为: ${language}`);
   }
 
@@ -112,10 +130,8 @@ export class AppSettingsService {
    * 获取货币符号
    */
   static async getCurrencySymbol(): Promise<CurrencySymbol> {
-    if (!AppSettingsService.preferencesInstance) {
-      return CurrencySymbol.CNY;
-    }
-    const value = await AppSettingsService.preferencesInstance.get(KEY_CURRENCY, CurrencySymbol.CNY);
+    await AppSettingsService.ensureInitialized();
+    const value = await AppSettingsService.preferencesInstance!.get(KEY_CURRENCY, CurrencySymbol.CNY);
     return value as CurrencySymbol;
   }
 
@@ -123,11 +139,10 @@ export class AppSettingsService {
    * 设置货币符号
    */
   static async setCurrencySymbol(symbol: CurrencySymbol): Promise<void> {
-    if (!AppSettingsService.preferencesInstance) {
-      return;
-    }
-    await AppSettingsService.preferencesInstance.put(KEY_CURRENCY, symbol);
-    await AppSettingsService.preferencesInstance.flush();
+    console.log(`[AppSettingsService] setCurrencySymbol called with: ${symbol}`);
+    await AppSettingsService.ensureInitialized();
+    await AppSettingsService.preferencesInstance!.put(KEY_CURRENCY, symbol);
+    await AppSettingsService.preferencesInstance!.flush();
     console.log(`[AppSettingsService] 货币符号已设置为: ${symbol}`);
   }
 

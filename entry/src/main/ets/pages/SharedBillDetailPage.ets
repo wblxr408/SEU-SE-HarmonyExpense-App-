@@ -18,16 +18,19 @@ struct SharedBillDetailPage {
     builder: ConfirmDialog({
       title: '删除账单',
       message: '确定要删除这条账单吗？此操作无法撤销。',
-      onConfirm: () => this.handleDelete()
+      onConfirm: (): void => {
+        this.handleDelete();
+      }
     }),
     alignment: DialogAlignment.Center
   });
 
-  aboutToAppear() {
+  aboutToAppear(): void {
     const params = router.getParams() as Record<string, number>;
     if (params && params.billId) {
       this.billId = params.billId;
-      this.currentUserId = UserSessionService.getCurrentUserId();
+      const userId: number | null = UserSessionService.getCurrentUserId();
+      this.currentUserId = userId ?? 0;
       this.loadData();
     } else {
       promptAction.showToast({ message: '参数错误' });
@@ -35,18 +38,18 @@ struct SharedBillDetailPage {
     }
   }
 
-  onPageShow() {
+  onPageShow(): void {
     if (this.billId) {
       this.loadData();
     }
   }
 
-  async loadData() {
+  async loadData(): Promise<void> {
     this.isLoading = true;
     try {
       if (!this.currentUserId) return;
-      
-      const bill = await SharedLedgerService.getSharedBillById(this.billId);
+
+      const bill: SharedBill | null = await SharedLedgerService.getSharedBillById(this.billId);
       if (!bill) {
         promptAction.showToast({ message: '账单不存在或已删除' });
         router.back();
@@ -54,9 +57,8 @@ struct SharedBillDetailPage {
       }
       this.bill = bill;
 
-      // Check permissions (Admin or Creator can edit/delete)
-      const role = await SharedLedgerService.getMemberRole(bill.ledgerId, this.currentUserId);
-      this.isOwnerOrAdmin = (role === 'owner' || role === 'admin' || bill.creatorId === this.currentUserId);
+      // Check permissions (Creator can edit/delete)
+      this.isOwnerOrAdmin = (bill.creatorId === this.currentUserId);
 
     } catch (error) {
       console.error('[SharedBillDetail] 加载失败:', error);
@@ -66,18 +68,19 @@ struct SharedBillDetailPage {
     }
   }
 
-  async handleDelete() {
+  async handleDelete(): Promise<void> {
     if (!this.bill) return;
     try {
       await SharedLedgerService.deleteSharedBill(this.bill.billId, this.currentUserId);
       promptAction.showToast({ message: '删除成功' });
       router.back();
     } catch (error) {
-      promptAction.showToast({ message: '删除失败: ' + error.message });
+      const errorMsg: string = (error as Error).message || String(error);
+      promptAction.showToast({ message: '删除失败: ' + errorMsg });
     }
   }
 
-  handleEdit() {
+  handleEdit(): void {
     if (!this.bill) return;
     router.pushUrl({
       url: 'pages/AddSharedBill',
@@ -94,19 +97,19 @@ struct SharedBillDetailPage {
       Row() {
         Image($r('app.media.back')) // Assumption: Resource exists
           .width(24).height(24)
-          .onClick(() => router.back())
+          .onClick((): void => router.back())
           .margin({ right: 10 })
         Text('账单详情')
           .fontSize(20)
           .fontWeight(FontWeight.Bold)
-        
+
         Blank()
 
         if (this.isOwnerOrAdmin) {
           // Edit Button (Icon or Text)
            Text('编辑')
             .fontSize(16).fontColor(Color.Blue)
-            .onClick(() => this.handleEdit())
+            .onClick((): void => this.handleEdit())
         }
       }
       .width('100%').padding(16).backgroundColor(Color.White)
@@ -121,10 +124,16 @@ struct SharedBillDetailPage {
               // Category Icon & Name
               Row() {
                  // Placeholder for category icon
-                 Circle({ width: 40, height: 40 }).fill('#E3F2FD')
-                   .overlay(Text(this.bill.categoryName.substring(0, 1)).fontSize(18).fontColor('#2196F3'))
-                   .margin({ right: 12 })
-                 
+                 Stack() {
+                   Circle({ width: 40, height: 40 }).fill('#E3F2FD')
+                   Text(this.bill.categoryName.substring(0, 1))
+                     .fontSize(18)
+                     .fontColor('#2196F3')
+                 }
+                 .width(40)
+                 .height(40)
+                 .margin({ right: 12 })
+
                  Column() {
                    Text(this.bill.categoryName)
                      .fontSize(18).fontWeight(FontWeight.Medium)
@@ -165,15 +174,19 @@ struct SharedBillDetailPage {
                   ListItem() {
                     Row() {
                       // Avatar placeholder
-                      Circle({ width: 32, height: 32 }).fill('#F5F5F5')
-                        .overlay(Text(split.memberName.substring(0, 1)).fontSize(12))
-                        .margin({ right: 10 })
-                      
+                      Stack() {
+                        Circle({ width: 32, height: 32 }).fill('#F5F5F5')
+                        Text(split.memberName.substring(0, 1)).fontSize(12)
+                      }
+                      .width(32)
+                      .height(32)
+                      .margin({ right: 10 })
+
                       Text(split.memberName)
                         .fontSize(16)
-                      
+
                       Blank()
-                      
+
                       Column() {
                         Text(`¥${split.amount.toFixed(2)}`)
                           .fontSize(16).fontWeight(FontWeight.Medium)
@@ -200,7 +213,7 @@ struct SharedBillDetailPage {
                 .backgroundColor('#FFEBEE')
                 .fontColor(Color.Red)
                 .margin({ top: 20 })
-                .onClick(() => {
+                .onClick((): void => {
                   this.deleteController.open();
                 })
             }
@@ -234,7 +247,10 @@ struct SharedBillDetailPage {
     return map[type] || '未知';
   }
 
-  parseSplits(bill: SharedBill): BillSplitDetail[] {
+  parseSplits(bill: SharedBill | null): BillSplitDetail[] {
+    if (!bill) {
+      return [];
+    }
     try {
       // Prefer splitsJson if available, fallback to legacy field if needed
       // Check interface definition: SharedBill has `splitDetailsJson` or `splitsJson`?
@@ -242,15 +258,16 @@ struct SharedBillDetailPage {
       // Wait, SharedBill CLASS has `splitDetailsJson: string` (Line 796) and `splitsJson: string` (Line 797).
       // Let's assume usage of `splitDetailsJson` storage as per DAO logic.
       if (bill.splitDetailsJson && bill.splitDetailsJson !== '[]') {
-         return JSON.parse(bill.splitDetailsJson);
+         return JSON.parse(bill.splitDetailsJson) as BillSplitDetail[];
       }
       if (bill.splitsJson && bill.splitsJson !== '[]') {
          // This might be the raw splits, not details with names.
          // If names are missing, we might need to map IDs to names, but simple for now.
-         return JSON.parse(bill.splitsJson);
+         return JSON.parse(bill.splitsJson) as BillSplitDetail[];
       }
       return [];
     } catch (e) {
+      console.error('[SharedBillDetail] 解析分摊详情失败:', e);
       return [];
     }
   }
@@ -258,10 +275,12 @@ struct SharedBillDetailPage {
 
 @CustomDialog
 struct ConfirmDialog {
-  controller: CustomDialogController;
-  title: string;
-  message: string;
-  onConfirm: () => void = () => {};
+  controller: CustomDialogController = new CustomDialogController({
+    builder: ConfirmDialog({})
+  });
+  title: string = '';
+  message: string = '';
+  onConfirm: () => void = (): void => {};
 
   build() {
     Column() {
@@ -269,9 +288,9 @@ struct ConfirmDialog {
       Text(this.message).fontSize(16).margin({ bottom: 20 })
       Row() {
         Button('取消').backgroundColor('#F0F0F0').fontColor('#333')
-          .onClick(() => this.controller.close()).width('40%')
+          .onClick((): void => this.controller.close()).width('40%')
         Button('确定').backgroundColor(Color.Red).fontColor(Color.White)
-          .onClick(() => {
+          .onClick((): void => {
              this.controller.close();
              this.onConfirm();
           }).width('40%')

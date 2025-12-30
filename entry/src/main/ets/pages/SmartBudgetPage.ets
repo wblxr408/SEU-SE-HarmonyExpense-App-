@@ -4,8 +4,10 @@ import { Category } from '../model/Category';
 import { BillDAO } from '../dao/BillDAO';
 import { CategoryDAO } from '../dao/CategoryDAO';
 import { BudgetDAO } from '../dao/BudgetDAO';
+import { Budget } from '../model/Budget';
 import { UserSessionService } from '../service/UserSessionService';
 import { BudgetForecastUtils, ADVICE_DECREASE, ADVICE_MAINTAIN, ADVICE_OPTIMIZATION, ADVICE_INCREASE, FORECAST_ENSEMBLE, EnsembleForecastResult } from '../model/SmartBudgetPlan';
+import promptAction from '@ohos.promptAction';
 
 @Entry
 @Component
@@ -21,6 +23,80 @@ struct SmartBudgetPage {
   // -----------------------------------
   aboutToAppear() {
     this.loadData();
+  }
+
+  // -----------------------------------
+  // Apply Budget Actions
+  // -----------------------------------
+  async applyAdvice(advice: BudgetAdvice) {
+    try {
+      const userId = UserSessionService.getCurrentUserId();
+      if (!userId) return;
+
+      // 查找该分类的现有预算
+      const existingBudgets = await BudgetDAO.getByUserId(userId);
+      const existingBudget = existingBudgets.find(b => b.categoryId === advice.categoryId);
+
+      if (existingBudget) {
+        // 更新现有预算
+        existingBudget.amount = advice.suggestedBudget;
+        await BudgetDAO.update(existingBudget);
+      } else {
+        // 创建新预算
+        const newBudget = new Budget();
+        newBudget.userId = userId;
+        newBudget.categoryId = advice.categoryId;
+        newBudget.amount = advice.suggestedBudget;
+        newBudget.period = 'monthly';
+        newBudget.startDate = new Date().toISOString();
+        newBudget.createdAt = new Date().toISOString();
+        newBudget.isActive = 1;
+        await BudgetDAO.insert(newBudget);
+      }
+
+      promptAction.showToast({ message: `已调整 ${advice.categoryName} 的预算为 ¥${advice.suggestedBudget}` });
+    } catch (error) {
+      console.error('[SmartBudgetPage] Apply advice failed:', error);
+      promptAction.showToast({ message: '预算调整失败' });
+    }
+  }
+
+  async applyAllOptimizations() {
+    try {
+      if (!this.smartPlan) return;
+
+      const userId = UserSessionService.getCurrentUserId();
+      if (!userId) return;
+
+      const advices = this.smartPlan.getAdvices();
+      const existingBudgets = await BudgetDAO.getByUserId(userId);
+
+      let updateCount = 0;
+      for (const advice of advices) {
+        const existingBudget = existingBudgets.find(b => b.categoryId === advice.categoryId);
+
+        if (existingBudget) {
+          existingBudget.amount = advice.suggestedBudget;
+          await BudgetDAO.update(existingBudget);
+        } else {
+          const newBudget = new Budget();
+          newBudget.userId = userId;
+          newBudget.categoryId = advice.categoryId;
+          newBudget.amount = advice.suggestedBudget;
+          newBudget.period = 'monthly';
+          newBudget.startDate = new Date().toISOString();
+          newBudget.createdAt = new Date().toISOString();
+          newBudget.isActive = 1;
+          await BudgetDAO.insert(newBudget);
+        }
+        updateCount++;
+      }
+
+      promptAction.showToast({ message: `成功优化 ${updateCount} 个预算项` });
+    } catch (error) {
+      console.error('[SmartBudgetPage] Apply all optimizations failed:', error);
+      promptAction.showToast({ message: '批量优化失败' });
+    }
   }
 
   // -----------------------------------
@@ -501,11 +577,7 @@ struct SmartBudgetPage {
           .margin({ top: 5 })
           .backgroundColor(item.adviceType === 'decrease' ? '#F5222D' : '#1890FF')
           .onClick(() => {
-            AlertDialog.show({
-              title: '提示',
-              message: `已自动调整 ${item.categoryName} 的预算为 ¥${item.suggestedBudget}`,
-              confirm: { value: '知道了', action: () => {} }
-            })
+            this.applyAdvice(item);
           })
       }
       .width(70)
@@ -545,12 +617,8 @@ struct SmartBudgetPage {
         .backgroundColor('#1890FF')
         .margin({ bottom: 20 })
         .shadow({ radius: 10, color: 'rgba(24, 144, 255, 0.4)', offsetY: 5 })
-        .onClick(() => {
-             AlertDialog.show({
-              title: '优化成功',
-              message: '已根据智能算法调整您的月度预算结构。',
-              confirm: { value: '好的', action: () => {} }
-            })
+        .onClick(async () => {
+          await this.applyAllOptimizations();
         })
     }
     .width('100%')

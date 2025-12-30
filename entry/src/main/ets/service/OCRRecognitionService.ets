@@ -109,7 +109,7 @@ export interface CategorySuggestion {
  */
 export class OCRRecognitionService {
 
-  // ==================== OCR识别 ====================
+  //  OCR识别
 
   /**
    * 识别票据图片

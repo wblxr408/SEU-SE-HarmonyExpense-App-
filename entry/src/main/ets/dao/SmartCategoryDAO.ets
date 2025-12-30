@@ -15,6 +15,11 @@ import { DatabaseManager } from '../database/DatabaseManager';
 import { SmartCategoryTraining, SmartCategoryRule } from '../model/SmartCategory';
 import { DAOHelper } from '../common/DAOHelper';
 
+interface ColumnSpec {
+  name: string;
+  addSql: string;
+}
+
 // 智能分类训练DAO
 
 /**
@@ -376,11 +381,102 @@ export interface RuleStatistics {
  * 智能分类规则DAO
  */
 export class SmartCategoryRuleDAO {
+  private static schemaEnsured: boolean = false;
+
+  private static async ensureSchema(): Promise<void> {
+    if (SmartCategoryRuleDAO.schemaEnsured) {
+      return;
+    }
+
+    const store = DatabaseManager.getDatabase();
+
+    // 1) Ensure table exists
+    const tableInfoRs = await store.querySql(`PRAGMA table_info(${SmartCategoryRule.tableName});`);
+    const existingColumns: Set<string> = new Set<string>();
+
+    try {
+      while (tableInfoRs.goToNextRow()) {
+        const nameIndex = tableInfoRs.getColumnIndex('name');
+        if (nameIndex >= 0) {
+          const colName = tableInfoRs.getString(nameIndex);
+          existingColumns.add(colName);
+        }
+      }
+    } finally {
+      tableInfoRs.close();
+    }
+
+    if (existingColumns.size === 0) {
+      await store.executeSql(`
+        CREATE TABLE IF NOT EXISTS ${SmartCategoryRule.tableName} (
+          rule_id INTEGER PRIMARY KEY AUTOINCREMENT,
+          user_id INTEGER NOT NULL,
+          rule_name TEXT NOT NULL,
+          category_id INTEGER NOT NULL,
+          category_name TEXT NOT NULL,
+          rule_type TEXT NOT NULL DEFAULT 'keyword',
+          pattern TEXT NOT NULL DEFAULT '',
+          keywords TEXT NOT NULL DEFAULT '',
+          amount_min REAL NOT NULL DEFAULT 0,
+          amount_max REAL NOT NULL DEFAULT 999999999,
+          priority INTEGER NOT NULL DEFAULT 5,
+          is_active INTEGER DEFAULT 1,
+          accuracy REAL NOT NULL DEFAULT 0.8,
+          match_count INTEGER NOT NULL DEFAULT 0,
+          last_matched_at TEXT DEFAULT NULL,
+          created_at TEXT NOT NULL,
+          updated_at TEXT NOT NULL,
+          is_deleted INTEGER DEFAULT 0,
+          FOREIGN KEY (user_id) REFERENCES users(user_id),
+          FOREIGN KEY (category_id) REFERENCES categories(category_id)
+        );
+      `);
+
+      SmartCategoryRuleDAO.schemaEnsured = true;
+      return;
+    }
+
+    // 2) Ensure required columns exist (for legacy DB schemas)
+    const requiredColumns: ColumnSpec[] = [
+      { name: 'user_id', addSql: 'user_id INTEGER NOT NULL DEFAULT 0' },
+      { name: 'rule_name', addSql: "rule_name TEXT NOT NULL DEFAULT ''" },
+      { name: 'category_id', addSql: 'category_id INTEGER NOT NULL DEFAULT 0' },
+      { name: 'category_name', addSql: "category_name TEXT NOT NULL DEFAULT ''" },
+      { name: 'rule_type', addSql: "rule_type TEXT NOT NULL DEFAULT 'keyword'" },
+      { name: 'pattern', addSql: "pattern TEXT NOT NULL DEFAULT ''" },
+      { name: 'keywords', addSql: "keywords TEXT NOT NULL DEFAULT ''" },
+      { name: 'amount_min', addSql: 'amount_min REAL NOT NULL DEFAULT 0' },
+      { name: 'amount_max', addSql: 'amount_max REAL NOT NULL DEFAULT 999999999' },
+      { name: 'priority', addSql: 'priority INTEGER NOT NULL DEFAULT 5' },
+      { name: 'is_active', addSql: 'is_active INTEGER DEFAULT 1' },
+      { name: 'accuracy', addSql: 'accuracy REAL NOT NULL DEFAULT 0.8' },
+      { name: 'match_count', addSql: 'match_count INTEGER NOT NULL DEFAULT 0' },
+      { name: 'last_matched_at', addSql: 'last_matched_at TEXT DEFAULT NULL' },
+      { name: 'created_at', addSql: "created_at TEXT NOT NULL DEFAULT ''" },
+      { name: 'updated_at', addSql: "updated_at TEXT NOT NULL DEFAULT ''" },
+      { name: 'is_deleted', addSql: 'is_deleted INTEGER DEFAULT 0' }
+    ];
+
+    for (const col of requiredColumns) {
+      if (!existingColumns.has(col.name)) {
+        await store.executeSql(`ALTER TABLE ${SmartCategoryRule.tableName} ADD COLUMN ${col.addSql};`);
+      }
+    }
+
+    SmartCategoryRuleDAO.schemaEnsured = true;
+  }
+
   /**
    * 插入分类规则
    */
   static async insert(rule: SmartCategoryRule): Promise<number> {
     try {
+      if (!rule.validate()) {
+        throw new Error('[SmartCategoryRuleDAO] 无效规则数据');
+      }
+
+      await SmartCategoryRuleDAO.ensureSchema();
+
       const store = DatabaseManager.getDatabase();
       const now = new Date().toISOString();
       rule.createdAt = now;
@@ -418,6 +514,7 @@ export class SmartCategoryRuleDAO {
    */
   static async getById(ruleId: number): Promise<SmartCategoryRule | null> {
     try {
+      await SmartCategoryRuleDAO.ensureSchema();
       const store = DatabaseManager.getDatabase();
       const predicates = new relationalStore.RdbPredicates(SmartCategoryRule.tableName);
       predicates.equalTo('rule_id', ruleId).and().equalTo('is_deleted', 0);
@@ -442,6 +539,7 @@ export class SmartCategoryRuleDAO {
    */
   static async getByUserId(userId: number): Promise<SmartCategoryRule[]> {
     try {
+      await SmartCategoryRuleDAO.ensureSchema();
       const store = DatabaseManager.getDatabase();
       const sql = `
         SELECT *
@@ -470,6 +568,7 @@ export class SmartCategoryRuleDAO {
    */
   static async getActiveRules(userId: number): Promise<SmartCategoryRule[]> {
     try {
+      await SmartCategoryRuleDAO.ensureSchema();
       const store = DatabaseManager.getDatabase();
       const sql = `
         SELECT *

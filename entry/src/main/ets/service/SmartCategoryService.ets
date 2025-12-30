@@ -84,6 +84,18 @@ export class SmartCategoryService {
 
   // ==================== 智能推荐 ====================
 
+  private static splitKeywords(raw: string): string[] {
+    const trimmed: string = raw.trim();
+    if (trimmed.length === 0) {
+      return [];
+    }
+
+    return trimmed
+      .split(/[\s,，;；、]+/)
+      .map((part: string) => part.trim())
+      .filter((part: string) => part.length > 0);
+  }
+
   /**
    * 为账单推荐分类
    * @param userId 用户ID
@@ -170,13 +182,13 @@ export class SmartCategoryService {
     switch (rule.ruleType) {
       case 'keyword':
         // 关键词匹配
-        const keywords = rule.keywords.split(',');
+        const keywords = SmartCategoryService.splitKeywords(rule.keywords);
         for (let i = 0; i < keywords.length; i++) {
-          const keyword = keywords[i].trim().toLowerCase();
+          const keyword = keywords[i].toLowerCase();
           if (keyword && lowerNote.indexOf(keyword) >= 0) {
             matched = true;
             score += 30;
-            matchedKeywords.push(keywords[i].trim());
+            matchedKeywords.push(keywords[i]);
           }
         }
         break;
@@ -215,13 +227,13 @@ export class SmartCategoryService {
 
       case 'composite':
         // 组合匹配（关键词 + 金额）
-        const compositeKeywords = rule.keywords.split(',');
+        const compositeKeywords = SmartCategoryService.splitKeywords(rule.keywords);
         let keywordMatched = false;
         for (let i = 0; i < compositeKeywords.length; i++) {
-          const kw = compositeKeywords[i].trim().toLowerCase();
+          const kw = compositeKeywords[i].toLowerCase();
           if (kw && lowerNote.indexOf(kw) >= 0) {
             keywordMatched = true;
-            matchedKeywords.push(compositeKeywords[i].trim());
+            matchedKeywords.push(compositeKeywords[i]);
             break;
           }
         }
@@ -357,9 +369,9 @@ export class SmartCategoryService {
 
         // 检查是否已有包含该关键词的规则
         let found = false;
-        for (let j = 0; j < keywordRules.length; j++) {
+      for (let j = 0; j < keywordRules.length; j++) {
           const rule = keywordRules[j];
-          const ruleKeywords = rule.keywords.split(',').map(k => k.trim());
+          const ruleKeywords = SmartCategoryService.splitKeywords(rule.keywords);
 
           if (ruleKeywords.indexOf(keyword) >= 0) {
             // 更新规则统计

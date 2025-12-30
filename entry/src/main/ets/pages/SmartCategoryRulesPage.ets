@@ -6,9 +6,23 @@ import { SmartCategoryRule } from '../model/SmartCategory';
 import { UserSessionService } from '../service/UserSessionService';
 import { CategoryDAO } from '../dao/CategoryDAO';
 import { Category } from '../model/Category';
+import type { BusinessError } from '@ohos.base';
 
 const HILOG_DOMAIN = 0x0001;
 const LOG_TAG = 'SmartCategoryRulesPage';
+
+class SelectOption {
+  value: string;
+
+  constructor(value: string) {
+    this.value = value;
+  }
+}
+
+interface ErrorLike {
+  code?: number;
+  message?: string;
+}
 
 @Entry
 @Component
@@ -17,30 +31,88 @@ struct SmartCategoryRulesPage {
   @State categories: Category[] = [];
   @State isLoading: boolean = true;
 
-  // Dialog controllers
-  addRuleController: CustomDialogController = new CustomDialogController({
-    builder: AddRuleDialog({
-      categories: this.categories,
-      onConfirm: (ruleName, categoryId, categoryName, keywords) => {
-        this.addRule(ruleName, categoryId, categoryName, keywords);
-      }
-    }),
-    autoCancel: true,
-    customStyle: true
-  });
+  addRuleController: CustomDialogController | null = null;
 
-  editRuleController: CustomDialogController | null = null;
-  @State currentEditingRule: SmartCategoryRule | null = null;
-
-  async aboutToAppear() {
-    await this.loadData();
+  aboutToAppear(): void {
+    void this.loadData();
   }
 
-  async loadData() {
+  private openAddRuleDialog(): void {
+    if (this.categories.length === 0) {
+      promptAction.showToast({ message: '暂无分类可选，请先创建分类' });
+      return;
+    }
+
+    this.addRuleController = new CustomDialogController({
+      builder: AddRuleDialog({
+        categories: this.categories,
+        onConfirm: (ruleName: string, categoryId: number, categoryName: string, keywords: string): void => {
+          void this.addRule(ruleName, categoryId, categoryName, keywords);
+        }
+      }),
+      autoCancel: true,
+      customStyle: true
+    });
+
+    this.addRuleController.open();
+  }
+
+  private normalizeKeywords(raw: string): string {
+    const trimmed: string = raw.trim();
+    if (trimmed.length === 0) {
+      return '';
+    }
+
+    const parts: string[] = trimmed
+      .split(/[\s,，;；、]+/)
+      .map((part: string) => part.trim())
+      .filter((part: string) => part.length > 0);
+
+    const unique: string[] = [];
+    const seen: Set<string> = new Set<string>();
+    for (const part of parts) {
+      if (!seen.has(part)) {
+        unique.push(part);
+        seen.add(part);
+      }
+    }
+
+    return unique.join(',');
+  }
+
+  private formatError(error: Error | BusinessError | object | string | number | boolean | null | undefined): string {
+    if (error === null || error === undefined) {
+      return String(error);
+    }
+
+    if (typeof error === 'string' || typeof error === 'number' || typeof error === 'boolean') {
+      return String(error);
+    }
+
+    if (error instanceof Error) {
+      return error.message;
+    }
+
+    const typed: ErrorLike = error as ErrorLike;
+    const code = typeof typed.code === 'number' ? typed.code : undefined;
+    const message = typeof typed.message === 'string' ? typed.message : '';
+
+    if (message.length > 0) {
+      return code !== undefined ? `code=${code}, message=${message}` : message;
+    }
+
+    try {
+      return JSON.stringify(error);
+    } catch (e) {
+      return String(error);
+    }
+  }
+
+  async loadData(): Promise<void> {
     this.isLoading = true;
     try {
-      const userId = UserSessionService.getCurrentUserId();
-      if (!userId) {
+      const userId: number | null = UserSessionService.getCurrentUserId();
+      if (userId === null) {
         router.replaceUrl({ url: 'pages/LoginPage' });
         return;
       }
@@ -50,16 +122,27 @@ struct SmartCategoryRulesPage {
       this.categories = await CategoryDAO.getAll(userId);
       
     } catch (error) {
-      hilog.error(HILOG_DOMAIN, LOG_TAG, 'Failed to load data: %{public}s', JSON.stringify(error));
+      const errorMsg: string = this.formatError(error as object);
+      hilog.error(HILOG_DOMAIN, LOG_TAG, 'Failed to load data: %{public}s', errorMsg);
       promptAction.showToast({ message: '加载数据失败' });
     } finally {
       this.isLoading = false;
     }
   }
 
-  async addRule(ruleName: string, categoryId: number, categoryName: string, keywords: string) {
-    const userId = UserSessionService.getCurrentUserId();
-    if (!userId) return;
+  async addRule(ruleName: string, categoryId: number, categoryName: string, keywords: string): Promise<void> {
+    const userId: number | null = UserSessionService.getCurrentUserId();
+    if (userId === null) {
+      promptAction.showToast({ message: '请先登录' });
+      router.replaceUrl({ url: 'pages/LoginPage' });
+      return;
+    }
+
+    const normalizedKeywords: string = this.normalizeKeywords(keywords);
+    if (normalizedKeywords.length === 0) {
+      promptAction.showToast({ message: '请输入关键词' });
+      return;
+    }
 
     try {
       await SmartCategoryService.createCustomRule(
@@ -69,42 +152,47 @@ struct SmartCategoryRulesPage {
         categoryName,
         'keyword',
         '', // pattern (not used for keywords)
-        keywords
+        normalizedKeywords
       );
       promptAction.showToast({ message: '规则添加成功' });
-      this.loadData(); // Refresh list
+      await this.loadData(); // Refresh list
     } catch (error) {
-      hilog.error(HILOG_DOMAIN, LOG_TAG, 'Failed to add rule: %{public}s', JSON.stringify(error));
-      promptAction.showToast({ message: '添加规则失败' });
+      const errorMsg: string = this.formatError(error as object);
+      hilog.error(HILOG_DOMAIN, LOG_TAG, 'Failed to add rule: %{public}s', errorMsg);
+      promptAction.showToast({ message: `添加规则失败: ${errorMsg}` });
     }
   }
 
-  async deleteRule(ruleId: number) {
+  async deleteRule(ruleId: number): Promise<void> {
     try {
       await SmartCategoryService.deleteRule(ruleId);
       promptAction.showToast({ message: '规则已删除' });
       // Enhance UX: Remove from local list immediately
-      this.rules = this.rules.filter(r => r.ruleId !== ruleId);
+      this.rules = this.rules.filter((r: SmartCategoryRule) => r.ruleId !== ruleId);
     } catch (error) {
-      hilog.error(HILOG_DOMAIN, LOG_TAG, 'Failed to delete rule: %{public}s', JSON.stringify(error));
-      promptAction.showToast({ message: '删除规则失败' });
+      const errorMsg: string = this.formatError(error as object);
+      hilog.error(HILOG_DOMAIN, LOG_TAG, 'Failed to delete rule: %{public}s', errorMsg);
+      promptAction.showToast({ message: `删除规则失败: ${errorMsg}` });
     }
   }
 
-  async toggleRuleActive(rule: SmartCategoryRule, isOn: boolean) {
+  async toggleRuleActive(rule: SmartCategoryRule, isOn: boolean): Promise<void> {
     try {
       await SmartCategoryService.toggleRule(rule.ruleId, isOn);
       // Update local state is handled by the toggle switch, but good to confirm
       rule.isActive = isOn ? 1 : 0;
+      this.rules = [...this.rules];
     } catch (error) {
-      hilog.error(HILOG_DOMAIN, LOG_TAG, 'Failed to toggle rule: %{public}s', JSON.stringify(error));
-      promptAction.showToast({ message: '更新状态失败' });
+      const errorMsg: string = this.formatError(error as object);
+      hilog.error(HILOG_DOMAIN, LOG_TAG, 'Failed to toggle rule: %{public}s', errorMsg);
+      promptAction.showToast({ message: `更新状态失败: ${errorMsg}` });
       // Revert if failed
       rule.isActive = isOn ? 0 : 1;
+      this.rules = [...this.rules];
     }
   }
 
-  build() {
+  build(): void {
     Navigation() {
       Column() {
         if (this.isLoading) {
@@ -134,8 +222,9 @@ struct SmartCategoryRulesPage {
           .height(50)
           .type(ButtonType.Capsule)
           .margin({ bottom: 20, top: 10 })
+          .enabled(!this.isLoading)
           .onClick(() => {
-            this.addRuleController.open();
+            this.openAddRuleDialog();
           })
       }
       .width('100%')
@@ -147,7 +236,7 @@ struct SmartCategoryRulesPage {
   }
 
   @Builder
-  RuleItem(rule: SmartCategoryRule) {
+  RuleItem(rule: SmartCategoryRule): void {
     Row() {
       Column() {
         Row() {
@@ -178,7 +267,7 @@ struct SmartCategoryRulesPage {
 
       Toggle({ type: ToggleType.Switch, isOn: rule.isActive === 1 })
         .onChange((isOn: boolean) => {
-          this.toggleRuleActive(rule, isOn);
+          void this.toggleRuleActive(rule, isOn);
         })
     }
     .width('100%')
@@ -189,7 +278,7 @@ struct SmartCategoryRulesPage {
   }
 
   @Builder
-  DeleteButton(ruleId: number) {
+  DeleteButton(ruleId: number): void {
     Button({ type: ButtonType.Normal }) {
       Image($r('app.media.ic_public_delete'))
         .width(20)
@@ -200,7 +289,7 @@ struct SmartCategoryRulesPage {
     .height('100%')
     .backgroundColor(Color.Red)
     .onClick(() => {
-      this.deleteRule(ruleId);
+      void this.deleteRule(ruleId);
     })
   }
 }
@@ -215,7 +304,14 @@ struct AddRuleDialog {
   @State keywords: string = '';
   @State selectedIndex: number = 0;
 
-  build() {
+  private getSafeSelectedIndex(): number {
+    if (this.categories.length === 0) {
+      return 0;
+    }
+    return Math.min(this.selectedIndex, this.categories.length - 1);
+  }
+
+  build(): void {
     Column() {
       Text('添加智能分类规则')
         .fontSize(18)
@@ -224,17 +320,17 @@ struct AddRuleDialog {
 
       // Rule Name
       TextInput({ placeholder: '规则名称（如：打车规则）' })
-        .onChange((value) => { this.ruleName = value; })
+        .onChange((value: string) => { this.ruleName = value; })
         .width('90%')
         .margin({ bottom: 15 })
 
       // Category Selection
       Row() {
         Text('分类：').fontSize(16)
-        Select(this.categories.map(c => ({ value: c.name } as SelectOption)))
-          .selected(this.selectedIndex)
-          .value(this.categories.length > 0 ? this.categories[this.selectedIndex].name : '无分类')
-          .onSelect((index) => {
+        Select(this.categories.map((category: Category): SelectOption => new SelectOption(category.name)))
+          .selected(this.getSafeSelectedIndex())
+          .value(this.categories.length > 0 ? this.categories[this.getSafeSelectedIndex()].name : '无分类')
+          .onSelect((index: number) => {
             this.selectedIndex = index;
           })
           .font({ size: 16 })
@@ -245,8 +341,8 @@ struct AddRuleDialog {
       .padding({ left: 5 })
 
       // Keywords
-      TextInput({ placeholder: '关键词（用空格分隔，如：滴滴 出租车）' })
-        .onChange((value) => { this.keywords = value; })
+      TextInput({ placeholder: '关键词（空格/逗号分隔，如：滴滴 出租车）' })
+        .onChange((value: string) => { this.keywords = value; })
         .width('90%')
         .margin({ bottom: 15 })
       
@@ -274,7 +370,7 @@ struct AddRuleDialog {
               promptAction.showToast({ message: '暂无分类可选' });
               return;
             }
-            const selectedCategory = this.categories[this.selectedIndex];
+            const selectedCategory: Category = this.categories[this.getSafeSelectedIndex()];
             this.onConfirm(this.ruleName, selectedCategory.categoryId, selectedCategory.name, this.keywords);
             this.controller.close();
           })

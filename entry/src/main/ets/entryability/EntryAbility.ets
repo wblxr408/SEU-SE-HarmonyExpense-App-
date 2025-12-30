@@ -26,6 +26,7 @@ import { AbilityConstant } from '@kit.AbilityKit';
 import { BusinessError} from '@kit.BasicServicesKit';
 import { LogConfig } from '../common/AppConfig';
 import { BreakpointSystem } from '../common/BreakpointSystem';
+import { AppSettingsService } from '../service/AppSettingsService';
 
 export default class EntryAbility extends UIAbility {
   private breakpointSystem: BreakpointSystem = new BreakpointSystem();
@@ -39,21 +40,25 @@ export default class EntryAbility extends UIAbility {
     hilog.info(LogConfig.DOMAIN, LogConfig.TAG, '%{public}s', 'want param:' + JSON.stringify(want) ?? '')
     hilog.info(LogConfig.DOMAIN, LogConfig.TAG, '%{public}s', 'launchParam:' + JSON.stringify(launchParam) ?? '')
     
-    // 统一初始化数据库（使用DatabaseManager）
+    // 统一初始化数据库和设置服务
     try {
       const context = this.context;
-      
+
       // 使用DatabaseManager统一初始化
       await DatabaseManager.initDatabase(context);
-      
+
       hilog.info(LogConfig.DOMAIN, LogConfig.TAG, '✅ 数据库初始化成功');
+
+      // 初始化应用设置服务
+      await AppSettingsService.init(context);
+      hilog.info(LogConfig.DOMAIN, LogConfig.TAG, '✅ 应用设置服务初始化成功');
 
       // 添加临时的外键依赖数据
       // BillDAO里面有validateForeignKeys检查，需要至少一个账户和分类
       await this.insertMockPrerequisites();
 
     } catch (error) {
-      hilog.error(LogConfig.DOMAIN, LogConfig.TAG, '❌ 数据库初始化失败: %{public}s', JSON.stringify(error));
+      hilog.error(LogConfig.DOMAIN, LogConfig.TAG, '❌ 初始化失败: %{public}s', JSON.stringify(error));
     }
   }
 

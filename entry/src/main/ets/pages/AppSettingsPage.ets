@@ -20,10 +20,14 @@ struct AppSettingsPage {
   @State isLoading: boolean = true;
 
   async aboutToAppear() {
+    console.log('[AppSettingsPage] aboutToAppear called');
     try {
+      // 不需要在这里初始化，EntryAbility已经初始化了
+      // ensureInitialized()会等待初始化完成
       this.currentTheme = await AppSettingsService.getTheme();
       this.currentLanguage = await AppSettingsService.getLanguage();
       this.currentCurrency = await AppSettingsService.getCurrencySymbol();
+      console.log(`[AppSettingsPage] Loaded settings - Theme: ${this.currentTheme}, Language: ${this.currentLanguage}, Currency: ${this.currentCurrency}`);
     } catch (error) {
       console.error('[AppSettingsPage] 加载设置失败:', error);
     } finally {
@@ -172,35 +176,50 @@ struct AppSettingsPage {
 
 
   async setTheme(theme: ThemeMode) {
+    console.log(`[AppSettingsPage] setTheme called with: ${theme}`);
     // 先更新UI状态，确保立即响应
     this.currentTheme = theme;
     try {
       await AppSettingsService.setTheme(theme);
+      console.log(`[AppSettingsPage] Theme set successfully: ${theme}`);
       promptAction.showToast({ message: '主题已切换' });
     } catch (error) {
-      promptAction.showToast({ message: '切换失败' });
+      console.error(`[AppSettingsPage] Failed to set theme:`, error);
+      // 恢复原状态
+      this.currentTheme = await AppSettingsService.getTheme();
+      promptAction.showToast({ message: '切换失败，请重启应用' });
     }
   }
 
   async setLanguage(language: LanguageSetting) {
+    console.log(`[AppSettingsPage] setLanguage called with: ${language}`);
     // 先更新UI状态，确保立即响应
     this.currentLanguage = language;
     try {
       await AppSettingsService.setLanguage(language);
+      console.log(`[AppSettingsPage] Language set successfully: ${language}`);
       promptAction.showToast({ message: '语言已切换，重启后生效' });
     } catch (error) {
-      promptAction.showToast({ message: '切换失败' });
+      console.error(`[AppSettingsPage] Failed to set language:`, error);
+      // 恢复原状态
+      this.currentLanguage = await AppSettingsService.getLanguage();
+      promptAction.showToast({ message: '切换失败，请重启应用' });
     }
   }
 
   async setCurrency(currency: CurrencySymbol) {
+    console.log(`[AppSettingsPage] setCurrency called with: ${currency}`);
     // 先更新UI状态，确保立即响应
     this.currentCurrency = currency;
     try {
       await AppSettingsService.setCurrencySymbol(currency);
+      console.log(`[AppSettingsPage] Currency set successfully: ${currency}`);
       promptAction.showToast({ message: '货币符号已更新' });
     } catch (error) {
-      promptAction.showToast({ message: '更新失败' });
+      console.error(`[AppSettingsPage] Failed to set currency:`, error);
+      // 恢复原状态
+      this.currentCurrency = await AppSettingsService.getCurrencySymbol();
+      promptAction.showToast({ message: '更新失败，请重启应用' });
     }
   }
 

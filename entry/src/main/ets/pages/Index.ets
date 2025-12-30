@@ -262,7 +262,7 @@ struct Index {
          this.statRefreshTrigger++;
       }
     })
-    .backgroundColor('#FFFFFF')
+    .backgroundColor(AppTheme.Background)
   }
 
   @Builder
@@ -311,7 +311,7 @@ struct Index {
         }
         .padding(10)
         .width('100%')
-        .backgroundColor('#F1F3F5')
+        .backgroundColor(AppTheme.Background)
 
         List() {
           ForEach(this.transactions, (item: Bill) => {
@@ -369,7 +369,7 @@ struct Index {
     }
     .width('100%')
     .height('100%')
-    .backgroundColor($r('sys.color.point_color_checked'))
+    .backgroundColor(AppTheme.Background)
     .title('记账APP')
     .titleMode(NavigationTitleMode.Mini)
     .hideBackButton(true)
