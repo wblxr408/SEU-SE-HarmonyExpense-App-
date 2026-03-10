@@ -1,11 +1,43 @@
+## HarmonyOS 项目标准 .gitignore
+
+# 依赖
 /node_modules
 /oh_modules
+
+# 本地配置
 /local.properties
+
+# IDE 配置
 /.idea
+/.vscode
+*.iml
+
+# 构建产物
 **/build
 /.hvigor
+
+# C/C++ 配置
 .cxx
 /.clangd
 /.clang-format
 /.clang-tidy
+
+# 测试文件
 **/.test
+
+# 临时文件
+*.tmp
+*.log
+*.cache
+temp_*.txt
+*.bak
+*.swp
+*~
+
+# 统计文件
+.VSCodeCounter/
+
+# 系统文件
+.DS_Store
+Thumbs.db
+Desktop.ini

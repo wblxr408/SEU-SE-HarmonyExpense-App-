@@ -1,1138 +1,1315 @@
-# HarmonyExpense 完整使用场景：东晓南的使用方式
+# HarmonyExpense - 鸿蒙记账应用
 
-## 角色介绍
+## 目录
 
- **东晓南**：希望通过该软件记账改善财务状况。
+- [项目概述](#项目概述)
+- [功能特性](#功能特性)
+- [技术架构](#技术架构)
+- [项目结构](#项目结构)
+- [环境要求](#环境要求)
+- [安装部署](#安装部署)
+- [使用说明手册](#使用说明手册)
+- [数据库设计](#数据库设计)
+- [API接口文档](#api接口文档)
+- [测试指南](#测试指南)
+- [安全机制](#安全机制)
+- [性能优化](#性能优化)
+- [版本历史](#版本历史)
+- [常见问题](#常见问题)
+- [参考资料](#参考资料)
 
 ---
 
-## 场景一：应用启动与初始化
+## 项目概述
 
-东晓南打开 HarmonyExpense 应用。
+### 基本信息
 
-### 涉及的类/模块：
+| 项目属性 | 说明 |
+|---------|------|
+| 项目名称 | HarmonyExpense (健康记账) |
+| 应用包名 | com.example.healthydiet |
+| 当前版本 | 1.2.0 |
+| 技术栈 | HarmonyOS + ArkTS + RelationalStore |
+| 架构模式 | 分层架构 (Layered Architecture) |
+| 数据库 | SQLite (通过 RelationalStore API) |
+| 测试框架 | Hypium |
 
-1. **[EntryAbility.ets](vscode-webview://021ekl1rju48t3a5n1tqk2u3695es05r2jkbo9kq9o1m0242mo0s/index.html?id=892cc21a-cb90-4d03-b26a-536bfca7cbef&parentId=1&origin=041e65f6-1542-43ef-a8c0-80e87583a8bb&swVersion=4&extensionId=Anthropic.claude-code&platform=electron&vscode-resource-base-authority=vscode-resource.vscode-cdn.net&parentOrigin=vscode-file%3A%2F%2Fvscode-app&session=42e9195a-ac20-4538-821a-a48e795b0880)**
+### 项目简介
 
-   * `onCreate()` 被调用
-   * 作用：应用生命周期入口
-2. **[DatabaseManager.ets](vscode-webview://021ekl1rju48t3a5n1tqk2u3695es05r2jkbo9kq9o1m0242mo0s/index.html?id=892cc21a-cb90-4d03-b26a-536bfca7cbef&parentId=1&origin=041e65f6-1542-43ef-a8c0-80e87583a8bb&swVersion=4&extensionId=Anthropic.claude-code&platform=electron&vscode-resource-base-authority=vscode-resource.vscode-cdn.net&parentOrigin=vscode-file%3A%2F%2Fvscode-app&session=42e9195a-ac20-4538-821a-a48e795b0880)**
+HarmonyExpense是一款基于HarmonyOS平台开发的个人记账应用，采用ArkTS语言和声明式UI框架ArkUI构建。应用提供完整的账单管理、分类管理、预算管理、标签系统、数据统计、数据导出备份及云端同步等功能，帮助用户有效管理个人财务。
 
-   * `initDatabase()` 初始化数据库
-   * 作用：创建 SQLite 数据库连接，数据库名为 `harmony_expense.db`
-3. **DatabaseConfigOptimizer.ets**
+### 设计目标
 
-   * `applyOptimizations()` 应用数据库优化配置
-   * 作用：执行以下 PRAGMA 优化
+1. **功能完整性**: 提供从记账到统计分析的全流程财务管理功能
+2. **数据安全性**: 采用AES-256-GCM加密算法保护用户敏感数据
+3. **高性能**: 通过索引优化、缓存机制、批量操作等手段确保应用流畅运行
+4. **可扩展性**: 采用分层架构设计，便于功能扩展和维护
+5. **代码规范**: 遵循单一职责、依赖倒置等设计原则，确保代码质量
 
-   ```sql
-   PRAGMA journal_mode=WAL;        -- 写前日志模式，提升并发性能
-   PRAGMA synchronous=NORMAL;      -- 同步模式平衡
-   PRAGMA cache_size=10000;        -- 缓存大小约 40MB
-   PRAGMA temp_store=MEMORY;       -- 临时表存储在内存
-   PRAGMA foreign_keys=ON;         -- 启用外键约束
+---
+
+## 功能特性
+
+### 核心功能模块
+
+#### 1. 用户管理
+- 用户注册与登录
+- 用户信息维护
+- 密码哈希存储 (SHA-256)
+- 会话管理与自动过期机制
+- 邮箱唯一性验证
+
+#### 2. 账户管理
+- 多账户创建与管理 (现金、银行卡、信用卡等)
+- 账户余额实时更新
+- 账户类型分类
+- 批量操作支持
+- 余额范围查询
+
+#### 3. 分类管理
+- 支出/收入分类创建
+- 树形层级结构 (支持无限层级)
+- 分类图标和颜色自定义
+- 排序功能
+- 软删除与恢复
+- 分类聚合统计
+
+#### 4. 账单管理
+- 账单CRUD操作
+- 按日期范围查询
+- 按分类筛选
+- 分页查询与游标分页
+- 批量操作
+- 软删除
+
+#### 5. 预算管理
+- 预算创建与编辑
+- 周期管理 (月度/年度)
+- 预算状态监控
+- 预算提醒功能
+
+#### 6. 标签系统
+- 标签创建与管理
+- 账单-标签多对多关联
+- 批量标签设置
+- 热门标签查询
+- 标签聚合统计
+
+#### 7. 统计分析
+- 月度收支统计
+- 分类统计报表
+- 按分类/标签聚合
+- 收支趋势分析
+
+#### 8. 数据导出与备份
+- JSON格式数据导出
+- AES-256-GCM加密备份
+- 数据导入恢复
+- SHA-256校验和验证
+- 事务化导入保证数据完整性
+
+#### 9. 云端同步 (v1.2.0新增)
+- 数据上传至云端
+- 云端数据下载
+- 双向增量同步
+- 同步历史记录
+- 可选数据加密
+
+#### 10. 定期提醒 (v1.2.0新增)
+- 账单提醒创建
+- 预算提醒
+- 多种频率支持 (一次性/每日/每周/每月/每年)
+- 系统通知集成
+
+---
+
+## 技术架构
+
+### 分层架构设计
+
+项目采用经典的四层架构设计，各层职责明确，依赖关系单向:
+
+```
++--------------------------------------------------+
+|           Presentation Layer (表示层)             |
+|               pages/ (UI组件)                     |
+|          - Index.ets (首页)                       |
+|          - AddBill.ets (添加账单)                 |
+|          - CategoryManagement.ets (分类管理)      |
++--------------------------------------------------+
+                        |
+                        v
++--------------------------------------------------+
+|          Business Logic Layer (业务层)            |
+|               service/ (业务服务)                 |
+|          - UserSessionService (会话管理)          |
+|          - ExportService (导出服务)               |
+|          - ImportService (导入服务)               |
+|          - ReminderService (提醒服务)             |
+|          - CloudSyncService (云同步服务)          |
+|          - EncryptionModule (加密模块)            |
++--------------------------------------------------+
+                        |
+                        v
++--------------------------------------------------+
+|         Data Access Layer (数据访问层)            |
+|               dao/ (数据访问对象)                 |
+|          - UserDAO, AccountDAO, BillDAO           |
+|          - CategoryDAO, BudgetDAO, TagDAO         |
+|          - StatisticsDAO, ReminderDAO             |
+|          - CloudSyncRecordDAO                     |
++--------------------------------------------------+
+                        |
+                        v
++--------------------------------------------------+
+|       Infrastructure Layer (基础设施层)           |
+|          database/ (数据库基础设施)               |
+|          - DatabaseManager (数据库管理)           |
+|          - IndexManager (索引管理)                |
+|          - BatchQueryHelper (批量查询)            |
+|          - CacheManager (缓存管理)                |
+|          - PerformanceMonitor (性能监控)          |
+|          - DatabaseConfigOptimizer (配置优化)     |
+|                                                   |
+|          model/ (数据模型)                        |
+|          - User, Account, Bill, Category          |
+|          - Budget, Tag, Statistics, Reminder      |
++--------------------------------------------------+
+```
+
+### 架构设计原则
+
+#### 单一职责原则 (SRP)
+- DAO层: 仅负责单表的CRUD操作，不包含业务逻辑
+- Service层: 处理跨表业务逻辑和复杂操作
+- Database层: 专注于数据库连接、事务、索引等基础设施
+
+#### 依赖倒置原则 (DIP)
+- 上层依赖下层的抽象接口，而非具体实现
+- 所有DAO通过 `DatabaseManager.getDatabase()` 获取数据库实例
+- 统一的错误处理和日志记录机制
+
+#### 开闭原则 (OCP)
+- 通过继承和组合扩展功能，而非修改现有代码
+- 新增DAO只需实现标准接口，无需修改DatabaseManager
+
+---
+
+## 项目结构
+
+```
+HarmonyExpense/
+|-- AppScope/                          # 应用全局配置
+|   |-- app.json5                      # 应用配置文件
+|   +-- resources/                     # 全局资源文件
+|
+|-- entry/                             # 主模块入口
+|   |-- src/
+|   |   +-- main/
+|   |       |-- ets/                   # ArkTS源代码
+|   |       |   |-- common/            # 公共模块
+|   |       |   |   |-- AppConfig.ets      # 应用配置
+|   |       |   |   |-- Constants.ets      # 常量定义
+|   |       |   |   |-- BreakpointSystem.ets # 响应式断点
+|   |       |   |   +-- DAOHelper.ets      # DAO辅助工具
+|   |       |   |
+|   |       |   |-- dao/               # 数据访问对象层
+|   |       |   |   |-- UserDAO.ets        # 用户数据访问
+|   |       |   |   |-- AccountDAO.ets     # 账户数据访问
+|   |       |   |   |-- BillDAO.ets        # 账单数据访问
+|   |       |   |   |-- CategoryDAO.ets    # 分类数据访问
+|   |       |   |   |-- BudgetDAO.ets      # 预算数据访问
+|   |       |   |   |-- TagDAO.ets         # 标签数据访问
+|   |       |   |   |-- StatisticsDAO.ets  # 统计数据访问
+|   |       |   |   |-- ReminderDAO.ets    # 提醒数据访问
+|   |       |   |   |-- CloudSyncRecordDAO.ets # 云同步记录
+|   |       |   |   +-- index.ets          # 导出索引
+|   |       |   |
+|   |       |   |-- database/          # 数据库基础设施
+|   |       |   |   |-- DatabaseManager.ets    # 数据库管理器
+|   |       |   |   |-- IndexManager.ets       # 索引管理器
+|   |       |   |   |-- BatchQueryHelper.ets   # 批量查询助手
+|   |       |   |   |-- CacheManager.ets       # 缓存管理器
+|   |       |   |   |-- PerformanceMonitor.ets # 性能监控
+|   |       |   |   |-- DatabaseConfigOptimizer.ets # 配置优化器
+|   |       |   |   +-- QueryHelper.ets        # 查询助手
+|   |       |   |
+|   |       |   |-- model/             # 数据模型层
+|   |       |   |   |-- User.ets           # 用户模型
+|   |       |   |   |-- Account.ets        # 账户模型
+|   |       |   |   |-- Bill.ets           # 账单模型
+|   |       |   |   |-- Category.ets       # 分类模型
+|   |       |   |   |-- Budget.ets         # 预算模型
+|   |       |   |   |-- Tag.ets            # 标签模型
+|   |       |   |   |-- BillTag.ets        # 账单标签关联
+|   |       |   |   |-- Statistics.ets     # 统计模型
+|   |       |   |   |-- Reminder.ets       # 提醒模型
+|   |       |   |   |-- CloudSyncRecord.ets # 云同步记录模型
+|   |       |   |   |-- AggregationTypes.ets # 聚合类型定义
+|   |       |   |   +-- index.ets          # 导出索引
+|   |       |   |
+|   |       |   |-- pages/             # 页面组件层
+|   |       |   |   |-- Index.ets          # 首页
+|   |       |   |   |-- AddBill.ets        # 添加账单页
+|   |       |   |   +-- CategoryManagement.ets # 分类管理页
+|   |       |   |
+|   |       |   |-- service/           # 业务服务层
+|   |       |   |   |-- UserSessionService.ets # 用户会话服务
+|   |       |   |   |-- ReminderService.ets    # 提醒服务
+|   |       |   |   |-- CloudSyncService.ets   # 云同步服务
+|   |       |   |   |-- export/            # 导出相关
+|   |       |   |   |   |-- ExportService.ets  # 导出服务
+|   |       |   |   |   |-- ImportService.ets  # 导入服务
+|   |       |   |   |   |-- EncryptionModule.ets # 加密模块
+|   |       |   |   |   |-- FileHelper.ets     # 文件助手
+|   |       |   |   |   |-- ChecksumHelper.ets # 校验和助手
+|   |       |   |   |   +-- types/         # 类型定义
+|   |       |   |   +-- index.ets          # 导出索引
+|   |       |   |
+|   |       |   |-- entryability/      # 入口能力
+|   |       |   |   +-- EntryAbility.ets   # 应用入口
+|   |       |   |
+|   |       |   +-- mock/              # 模拟数据
+|   |       |       +-- MockData.ets       # 测试数据
+|   |       |
+|   |       +-- resources/             # 资源文件
+|   |
+|   +-- ohosTest/                      # 测试目录
+|       +-- ets/test/
+|           |-- model/                 # 模型层测试
+|           |-- dao/                   # DAO层测试
+|           |-- pages/                 # 页面层测试
+|           +-- services/              # 服务层测试
+|
+|-- README说明/                        # 项目文档
+|   |-- UML图/                         # UML设计图
+|   |-- 测试说明/                      # 测试文档
+|   |-- 导出备份与加密/                # 导出功能文档
+|   |-- 索引优化与批量查询/            # 性能优化文档
+|   +-- categories-tag/                # 分类标签文档
+|
+|-- oh-package.json5                   # 包配置文件
+|-- build-profile.json5                # 构建配置
++-- hvigorfile.ts                      # 构建脚本
+```
+
+---
+
+## 环境要求
+
+### 开发环境
+
+| 组件 | 版本要求 |
+|------|---------|
+| DevEco Studio | 4.0及以上 |
+| HarmonyOS SDK | API 9及以上 |
+| Node.js | 14.x及以上 |
+| ohpm | 1.0及以上 |
+
+### 运行环境
+
+| 设备类型 | 系统版本 |
+|---------|---------|
+| HarmonyOS手机 | HarmonyOS 3.0及以上 |
+| HarmonyOS平板 | HarmonyOS 3.0及以上 |
+| 模拟器 | DevEco Studio内置模拟器 |
+
+### 依赖项
+
+```json
+{
+  "dependencies": {},
+  "devDependencies": {
+    "@ohos/hypium": "1.0.6"
+  }
+}
+```
+
+---
+
+## 安装部署
+
+### 方式一: DevEco Studio打开项目
+
+1. **下载项目源码**
+   ```bash
+   git clone https://github.com/your-repo/HarmonyExpense.git
+   cd HarmonyExpense
    ```
-4. **DatabaseManager.createAllTables()**
 
-   * 作用：按依赖顺序创建 11 张数据表
-   * 顺序：users → accounts → categories → bills → budgets → tags → bill_tags → reminders → cloud_sync_records → statistics
-5. **[IndexManager.ets](vscode-webview://021ekl1rju48t3a5n1tqk2u3695es05r2jkbo9kq9o1m0242mo0s/index.html?id=892cc21a-cb90-4d03-b26a-536bfca7cbef&parentId=1&origin=041e65f6-1542-43ef-a8c0-80e87583a8bb&swVersion=4&extensionId=Anthropic.claude-code&platform=electron&vscode-resource-base-authority=vscode-resource.vscode-cdn.net&parentOrigin=vscode-file%3A%2F%2Fvscode-app&session=42e9195a-ac20-4538-821a-a48e795b0880)**
+2. **打开DevEco Studio**
+   - 启动DevEco Studio
+   - 选择 File -> Open -> 选择项目根目录
 
-   * `createAllIndexes()` 创建性能优化索引
-   * 作用：创建 15+ 个索引，包括：
-     * **覆盖索引** `idx_bills_stat`：避免回表查询，性能提升
-     * **部分索引** `idx_category_user_type`：仅索引未删除数据，节省存储空间
-     * **复合索引** `idx_bills_date`：优化日期范围查询
-6. **[BreakpointSystem.ets](vscode-webview://021ekl1rju48t3a5n1tqk2u3695es05r2jkbo9kq9o1m0242mo0s/index.html?id=892cc21a-cb90-4d03-b26a-536bfca7cbef&parentId=1&origin=041e65f6-1542-43ef-a8c0-80e87583a8bb&swVersion=4&extensionId=Anthropic.claude-code&platform=electron&vscode-resource-base-authority=vscode-resource.vscode-cdn.net&parentOrigin=vscode-file%3A%2F%2Fvscode-app&session=42e9195a-ac20-4538-821a-a48e795b0880)**
+3. **同步项目依赖**
+   - DevEco Studio会自动检测并下载依赖
+   - 或手动执行: File -> Sync and Refresh Project
 
-   * `register()` 注册响应式断点系统
-   * 作用：监听屏幕尺寸变化，支持 6 级断点（xs, sm, md, lg, xl, xxl）
-7. **插入模拟数据**
+4. **配置签名**
+   - 打开 File -> Project Structure -> Signing Configs
+   - 配置自动签名或手动配置签名证书
 
-   * `insertMockPrerequisites()` 插入模拟账户和分类
-   * [Account.ets](vscode-webview://021ekl1rju48t3a5n1tqk2u3695es05r2jkbo9kq9o1m0242mo0s/index.html?id=892cc21a-cb90-4d03-b26a-536bfca7cbef&parentId=1&origin=041e65f6-1542-43ef-a8c0-80e87583a8bb&swVersion=4&extensionId=Anthropic.claude-code&platform=electron&vscode-resource-base-authority=vscode-resource.vscode-cdn.net&parentOrigin=vscode-file%3A%2F%2Fvscode-app&session=42e9195a-ac20-4538-821a-a48e795b0880)：创建"模拟现金账户"，余额 10000 元
-   * [Category.ets](vscode-webview://021ekl1rju48t3a5n1tqk2u3695es05r2jkbo9kq9o1m0242mo0s/index.html?id=892cc21a-cb90-4d03-b26a-536bfca7cbef&parentId=1&origin=041e65f6-1542-43ef-a8c0-80e87583a8bb&swVersion=4&extensionId=Anthropic.claude-code&platform=electron&vscode-resource-base-authority=vscode-resource.vscode-cdn.net&parentOrigin=vscode-file%3A%2F%2Fvscode-app&session=42e9195a-ac20-4538-821a-a48e795b0880)：创建"模拟餐饮"分类
-8. **加载首页**
+5. **连接设备或启动模拟器**
+   - 连接真实HarmonyOS设备，并开启USB调试
+   - 或启动DevEco Studio内置模拟器
 
-   * 导航到 [pages/Index.ets](vscode-webview://021ekl1rju48t3a5n1tqk2u3695es05r2jkbo9kq9o1m0242mo0s/index.html?id=892cc21a-cb90-4d03-b26a-536bfca7cbef&parentId=1&origin=041e65f6-1542-43ef-a8c0-80e87583a8bb&swVersion=4&extensionId=Anthropic.claude-code&platform=electron&vscode-resource-base-authority=vscode-resource.vscode-cdn.net&parentOrigin=vscode-file%3A%2F%2Fvscode-app&session=42e9195a-ac20-4538-821a-a48e795b0880)
+6. **运行应用**
+   - 点击工具栏的运行按钮
+   - 或使用快捷键 Shift + F10
 
----
+### 方式二: 命令行构建
 
-## 场景二：用户注册与登录
+1. **安装ohpm**
+   ```bash
+   npm install -g @aspect/ohpm
+   ```
 
-小李第一次使用应用，需要注册账号。
+2. **安装项目依赖**
+   ```bash
+   cd HarmonyExpense
+   ohpm install
+   ```
 
-### 涉及的类/模块：
+3. **构建项目**
+   ```bash
+   hvigorw assembleHap
+   ```
 
-9. **[UserSessionService.ets](vscode-webview://021ekl1rju48t3a5n1tqk2u3695es05r2jkbo9kq9o1m0242mo0s/index.html?id=892cc21a-cb90-4d03-b26a-536bfca7cbef&parentId=1&origin=041e65f6-1542-43ef-a8c0-80e87583a8bb&swVersion=4&extensionId=Anthropic.claude-code&platform=electron&vscode-resource-base-authority=vscode-resource.vscode-cdn.net&parentOrigin=vscode-file%3A%2F%2Fvscode-app&session=42e9195a-ac20-4538-821a-a48e795b0880)**
-   * `register(username, email, password)` 注册用户
-   * 输入：
-     * username: "小李"
-     * email: "[xiaoli@example.com](mailto:xiaoli@example.com)"
-     * password: "MySecurePassword123"
-10. **UserSessionService.hashPassword()**
-    * 作用：使用 **SHA-256** 算法对密码进行哈希
-    * 使用 `@ohos.security.cryptoFramework` 的 `createMd('SHA256')`
-    * 输出：64位十六进制哈希字符串
-11. **[User.ets](vscode-webview://021ekl1rju48t3a5n1tqk2u3695es05r2jkbo9kq9o1m0242mo0s/index.html?id=892cc21a-cb90-4d03-b26a-536bfca7cbef&parentId=1&origin=041e65f6-1542-43ef-a8c0-80e87583a8bb&swVersion=4&extensionId=Anthropic.claude-code&platform=electron&vscode-resource-base-authority=vscode-resource.vscode-cdn.net&parentOrigin=vscode-file%3A%2F%2Fvscode-app&session=42e9195a-ac20-4538-821a-a48e795b0880)**
-    * 创建 User 对象
-    * 字段：userId, username, email, passwordHash, createdAt, updatedAt
-12. **[UserDAO.ets](vscode-webview://021ekl1rju48t3a5n1tqk2u3695es05r2jkbo9kq9o1m0242mo0s/index.html?id=892cc21a-cb90-4d03-b26a-536bfca7cbef&parentId=1&origin=041e65f6-1542-43ef-a8c0-80e87583a8bb&swVersion=4&extensionId=Anthropic.claude-code&platform=electron&vscode-resource-base-authority=vscode-resource.vscode-cdn.net&parentOrigin=vscode-file%3A%2F%2Fvscode-app&session=42e9195a-ac20-4538-821a-a48e795b0880)**
-    * `insert(user)` 插入用户记录到 `users` 表
-    * 使用 `relationalStore.insert()` API
-13. **UserSessionService.login()**
-    * 自动登录刚注册的用户
-    * 创建 **SessionInfo** 对象：
-      * userId: 1
-      * username: "小李"
-      * loginTime: "2025-12-18T08:05:30Z"
-      * token: "1_1734512730123_abc123xyz"
-    * 会话有效期：**24 小时**
-14. **[CacheManager.ets](vscode-webview://021ekl1rju48t3a5n1tqk2u3695es05r2jkbo9kq9o1m0242mo0s/index.html?id=892cc21a-cb90-4d03-b26a-536bfca7cbef&parentId=1&origin=041e65f6-1542-43ef-a8c0-80e87583a8bb&swVersion=4&extensionId=Anthropic.claude-code&platform=electron&vscode-resource-base-authority=vscode-resource.vscode-cdn.net&parentOrigin=vscode-file%3A%2F%2Fvscode-app&session=42e9195a-ac20-4538-821a-a48e795b0880)**
-    * `set('user_1', userInfo, USER_TTL)`
-    * 作用：将用户信息缓存到内存，TTL = 30 分钟
+4. **安装到设备**
+   ```bash
+   hdc install entry/build/default/outputs/default/entry-default-signed.hap
+   ```
 
 ---
 
-## 场景三：查看首页账单列表
+## 使用说明手册
 
-小李登录后进入首页，查看本月账单。
+### 一、首次使用
 
-### 涉及的类/模块：
+#### 1.1 应用启动
+启动应用后，系统会自动初始化数据库并创建必要的数据表。首次使用时会自动创建一个默认用户用于测试。
 
-15. **[Index.ets](vscode-webview://021ekl1rju48t3a5n1tqk2u3695es05r2jkbo9kq9o1m0242mo0s/index.html?id=892cc21a-cb90-4d03-b26a-536bfca7cbef&parentId=1&origin=041e65f6-1542-43ef-a8c0-80e87583a8bb&swVersion=4&extensionId=Anthropic.claude-code&platform=electron&vscode-resource-base-authority=vscode-resource.vscode-cdn.net&parentOrigin=vscode-file%3A%2F%2Fvscode-app&session=42e9195a-ac20-4538-821a-a48e795b0880) 首页组件**
+#### 1.2 用户登录 (v1.2.0)
+```typescript
+import { UserSessionService } from '../service/UserSessionService';
 
-    * `onPageShow()` 生命周期函数触发
-    * 状态变量：
-      * `@State transactions: Bill[]`：账单列表
-      * `@State selectedDate: Date`：当前选择的月份（2025-12）
-      * `@State selectedCategoryId: number`：选择的分类ID（0 = 所有分类）
-      * `@StorageProp('currentBreakpoint')`：响应式断点（md）
-16. **Index.loadFilterData()**
+// 用户注册
+const registerResult = await UserSessionService.register(
+  '用户名',
+  'email@example.com',
+  '密码'
+);
 
-    * 调用 [CategoryDAO.ets](vscode-webview://021ekl1rju48t3a5n1tqk2u3695es05r2jkbo9kq9o1m0242mo0s/index.html?id=892cc21a-cb90-4d03-b26a-536bfca7cbef&parentId=1&origin=041e65f6-1542-43ef-a8c0-80e87583a8bb&swVersion=4&extensionId=Anthropic.claude-code&platform=electron&vscode-resource-base-authority=vscode-resource.vscode-cdn.net&parentOrigin=vscode-file%3A%2F%2Fvscode-app&session=42e9195a-ac20-4538-821a-a48e795b0880) 的 `getAll(userId)`
-    * 作用：加载所有分类，用于筛选器下拉框
-17. **CacheManager 缓存查询**
+// 用户登录
+const loginResult = await UserSessionService.login(
+  'email@example.com',
+  '密码'
+);
 
-    * `get('categories_1')` 检查缓存
-    * 缓存命中：< 1ms 返回结果
-    * 缓存未命中：查询数据库，然后缓存结果（TTL = 10分钟）
-18. **Index.loadBills()**
+// 检查登录状态
+if (UserSessionService.isLoggedIn()) {
+  const userId = UserSessionService.getCurrentUserId();
+}
 
-    * 调用 `getDateRange(this.selectedDate)` 计算日期范围
-    * 输出：`{ start: "2025-12-01", end: "2025-12-31" }`
-19. **[BillDAO.ets](vscode-webview://021ekl1rju48t3a5n1tqk2u3695es05r2jkbo9kq9o1m0242mo0s/index.html?id=892cc21a-cb90-4d03-b26a-536bfca7cbef&parentId=1&origin=041e65f6-1542-43ef-a8c0-80e87583a8bb&swVersion=4&extensionId=Anthropic.claude-code&platform=electron&vscode-resource-base-authority=vscode-resource.vscode-cdn.net&parentOrigin=vscode-file%3A%2F%2Fvscode-app&session=42e9195a-ac20-4538-821a-a48e795b0880)**
+// 用户登出
+UserSessionService.logout();
+```
 
-    * `getBillsByFilters(userId, dateRange, categoryId)` 查询账单
-    * SQL 查询示例：
+### 二、账单管理
 
-    ```sql
-    SELECT * FROM bills 
-    WHERE user_id = 1 
-      AND transaction_date >= '2025-12-01' 
-      AND transaction_date <= '2025-12-31'
-      AND is_deleted = 0
-    ORDER BY transaction_date DESC, bill_id DESC
-    ```
-20. **IndexManager 索引优化**
+#### 2.1 添加账单
+1. 在首页点击"记一笔"按钮
+2. 选择账单类型 (支出/收入)
+3. 输入金额
+4. 选择分类
+5. 选择账户
+6. 添加备注 (可选)
+7. 选择日期
+8. 点击保存
 
-    * 使用 `idx_bills_date` 覆盖索引
-    * 作用：查询直接从索引读取，无需回表，查询时间 < 10ms
-21. **[PerformanceMonitor.ets](vscode-webview://021ekl1rju48t3a5n1tqk2u3695es05r2jkbo9kq9o1m0242mo0s/index.html?id=892cc21a-cb90-4d03-b26a-536bfca7cbef&parentId=1&origin=041e65f6-1542-43ef-a8c0-80e87583a8bb&swVersion=4&extensionId=Anthropic.claude-code&platform=electron&vscode-resource-base-authority=vscode-resource.vscode-cdn.net&parentOrigin=vscode-file%3A%2F%2Fvscode-app&session=42e9195a-ac20-4538-821a-a48e795b0880) 性能监控**
+#### 2.2 查看账单列表
+- 首页默认显示当月账单
+- 点击月份选择器可切换月份
+- 使用分类筛选器可按分类过滤
 
-    * `@measurePerformance` 装饰器自动监控查询时间
-    * 如果 > 100ms，记录慢查询日志
-    * 如果 > 500ms，发出性能警告
-22. **Index.TransactionRow() UI 渲染**
+#### 2.3 编辑/删除账单
+- 点击账单项可查看详情
+- 在详情页可编辑或删除账单
 
-    * 使用 [Bill.ets](vscode-webview://021ekl1rju48t3a5n1tqk2u3695es05r2jkbo9kq9o1m0242mo0s/index.html?id=892cc21a-cb90-4d03-b26a-536bfca7cbef&parentId=1&origin=041e65f6-1542-43ef-a8c0-80e87583a8bb&swVersion=4&extensionId=Anthropic.claude-code&platform=electron&vscode-resource-base-authority=vscode-resource.vscode-cdn.net&parentOrigin=vscode-file%3A%2F%2Fvscode-app&session=42e9195a-ac20-4538-821a-a48e795b0880) 模型数据
-    * 显示：
-      * 图标：支出/收入图标
-      * 标题：支出/收入
-      * 备注：账单备注
-      * 金额：红色（支出）或绿色（收入）
-23. **BreakpointSystem 响应式布局**
+### 三、分类管理
 
-    * `listPadding.getValue(currentBreakpoint)`
-    * 根据屏幕尺寸动态调整布局：
-      * xs: 8px
-      * md: 12px
-      * xl: 20px
+#### 3.1 查看分类
+1. 在首页点击"管理分类"按钮
+2. 页面显示所有分类的树形结构
 
----
+#### 3.2 添加分类
+1. 点击添加按钮
+2. 输入分类名称
+3. 选择分类类型 (支出/收入)
+4. 选择父分类 (可选，用于创建子分类)
+5. 选择图标和颜色
+6. 保存
 
-## 场景四：添加早餐账单
+#### 3.3 编辑/删除分类
+- 长按分类项可编辑或删除
+- 删除分类为软删除，可恢复
 
-东晓南点击"记一笔"按钮，记录今天的早餐支出。
+### 四、预算管理
 
-### 涉及的类/模块：
+#### 4.1 创建预算
+```typescript
+import { BudgetDAO } from '../dao/BudgetDAO';
+import { Budget } from '../model/Budget';
 
-24. **路由导航**
-    * `router.push({ url: 'pages/AddBill' })`
-    * 导航到 [AddBill.ets](vscode-webview://021ekl1rju48t3a5n1tqk2u3695es05r2jkbo9kq9o1m0242mo0s/index.html?id=892cc21a-cb90-4d03-b26a-536bfca7cbef&parentId=1&origin=041e65f6-1542-43ef-a8c0-80e87583a8bb&swVersion=4&extensionId=Anthropic.claude-code&platform=electron&vscode-resource-base-authority=vscode-resource.vscode-cdn.net&parentOrigin=vscode-file%3A%2F%2Fvscode-app&session=42e9195a-ac20-4538-821a-a48e795b0880) 页面
-25. **AddBill 页面初始化**
-    * 加载账户列表：调用 [AccountDAO.ets](vscode-webview://021ekl1rju48t3a5n1tqk2u3695es05r2jkbo9kq9o1m0242mo0s/index.html?id=892cc21a-cb90-4d03-b26a-536bfca7cbef&parentId=1&origin=041e65f6-1542-43ef-a8c0-80e87583a8bb&swVersion=4&extensionId=Anthropic.claude-code&platform=electron&vscode-resource-base-authority=vscode-resource.vscode-cdn.net&parentOrigin=vscode-file%3A%2F%2Fvscode-app&session=42e9195a-ac20-4538-821a-a48e795b0880) 的 `getAll(userId)`
-    * 加载分类列表：调用 CategoryDAO 的 `getAll(userId)`
-    * 使用 CacheManager 缓存加速
-26. **小李填写表单**
-    * 金额：15.00 元
-    * 类型：支出（expense）
-    * 账户：现金账户（accountId: 1）
-    * 分类：餐饮（categoryId: 1）
-    * 备注："肯德基早餐"
-    * 日期：2025-12-18
-27. **[Bill.ets](vscode-webview://021ekl1rju48t3a5n1tqk2u3695es05r2jkbo9kq9o1m0242mo0s/index.html?id=892cc21a-cb90-4d03-b26a-536bfca7cbef&parentId=1&origin=041e65f6-1542-43ef-a8c0-80e87583a8bb&swVersion=4&extensionId=Anthropic.claude-code&platform=electron&vscode-resource-base-authority=vscode-resource.vscode-cdn.net&parentOrigin=vscode-file%3A%2F%2Fvscode-app&session=42e9195a-ac20-4538-821a-a48e795b0880) 模型创建**
-    ```typescript
-    new Bill(
-      billId: 0,
-      userId: 1,
-      accountId: 1,
-      categoryId: 1,
-      amount: 15.00,
-      type: 'expense',
-      note: '肯德基早餐',
-      transactionDate: '2025-12-18',
-      createdAt: '2025-12-18T08:15:00Z',
-      updatedAt: '2025-12-18T08:15:00Z',
-      isDeleted: 0
-    )
-    ```
-28. **BillDAO.validateForeignKeys()**
-    * 作用：验证外键约束
-    * 检查 accountId=1 是否存在
-    * 检查 categoryId=1 是否存在
-    * 防止数据不一致
-29. **BillDAO.insert(bill)**
-    * 使用 `DatabaseManager.transaction()` 事务执行
-    * 插入账单到 `bills` 表
-    * 生成 billId: 1
-30. **账户余额更新**
-    * AccountDAO.`updateBalance(accountId, -15.00)`
-    * 现金账户余额：10000 → 9985 元
-31. **CacheManager.invalidate()**
-    * 作用：清除相关缓存
-    * 清除 `bills_2025-12`、`account_1` 缓存
-    * 确保数据一致性
-32. **返回首页**
-    * `router.back()`
-    * Index 页面自动刷新（`onPageShow()` 再次触发）
+const budget = new Budget();
+budget.userId = userId;
+budget.categoryId = categoryId;
+budget.amount = 5000;
+budget.period = 'monthly';
+budget.startDate = '2025-01-01';
+budget.isActive = 1;
 
----
+await BudgetDAO.insert(budget);
+```
 
-## 场景五：为账单添加标签
+#### 4.2 查询预算
+```typescript
+// 获取所有活跃预算
+const activeBudgets = await BudgetDAO.getAllActive(userId);
 
-东晓南想为这笔早餐账单打上"工作日"和"快餐"标签。
+// 获取指定预算
+const budget = await BudgetDAO.getById(userId, budgetId);
+```
 
-### 涉及的类/模块：
+### 五、标签系统
 
-33. **[Tag.ets](vscode-webview://021ekl1rju48t3a5n1tqk2u3695es05r2jkbo9kq9o1m0242mo0s/index.html?id=892cc21a-cb90-4d03-b26a-536bfca7cbef&parentId=1&origin=041e65f6-1542-43ef-a8c0-80e87583a8bb&swVersion=4&extensionId=Anthropic.claude-code&platform=electron&vscode-resource-base-authority=vscode-resource.vscode-cdn.net&parentOrigin=vscode-file%3A%2F%2Fvscode-app&session=42e9195a-ac20-4538-821a-a48e795b0880) 标签模型**
+#### 5.1 创建标签
+```typescript
+import { TagDAO } from '../dao/TagDAO';
+import { Tag } from '../model/Tag';
 
-    * 创建标签："工作日"、"快餐"
-    * 字段：tagId, userId, name, color, usageCount
-34. **[TagDAO.ets](vscode-webview://021ekl1rju48t3a5n1tqk2u3695es05r2jkbo9kq9o1m0242mo0s/index.html?id=892cc21a-cb90-4d03-b26a-536bfca7cbef&parentId=1&origin=041e65f6-1542-43ef-a8c0-80e87583a8bb&swVersion=4&extensionId=Anthropic.claude-code&platform=electron&vscode-resource-base-authority=vscode-resource.vscode-cdn.net&parentOrigin=vscode-file%3A%2F%2Fvscode-app&session=42e9195a-ac20-4538-821a-a48e795b0880)**
+const tag = new Tag();
+tag.userId = userId;
+tag.name = '必要支出';
+tag.color = '#FF6B6B';
 
-    * `insert(tag)` 插入标签
-    * 标签 1：{ name: "工作日", color: "#52C41A" }
-    * 标签 2：{ name: "快餐", color: "#1890FF" }
-35. **[BillTag.ets](vscode-webview://021ekl1rju48t3a5n1tqk2u3695es05r2jkbo9kq9o1m0242mo0s/index.html?id=892cc21a-cb90-4d03-b26a-536bfca7cbef&parentId=1&origin=041e65f6-1542-43ef-a8c0-80e87583a8bb&swVersion=4&extensionId=Anthropic.claude-code&platform=electron&vscode-resource-base-authority=vscode-resource.vscode-cdn.net&parentOrigin=vscode-file%3A%2F%2Fvscode-app&session=42e9195a-ac20-4538-821a-a48e795b0880) 关联模型**
+await TagDAO.insert(tag);
+```
 
-    * 多对多关系：一个账单可以有多个标签
-36. **TagDAO.setTagsForBill()**
+#### 5.2 为账单添加标签
+```typescript
+// 为账单添加单个标签
+await TagDAO.addTagToBill(billId, tagId);
 
-    * 参数：`billId=1, tagIds=[1, 2]`
-    * 使用事务批量插入到 `bill_tags` 表
-    * SQL:
+// 批量设置账单标签
+await TagDAO.setTagsForBill(billId, [tagId1, tagId2, tagId3]);
 
-    ```sql
-    INSERT INTO bill_tags (bill_id, tag_id, created_at) VALUES
-    (1, 1, '2025-12-18T08:20:00Z'),
-    (1, 2, '2025-12-18T08:20:00Z')
-    ```
-37. **标签使用次数更新**
+// 获取账单的所有标签
+const tags = await TagDAO.getTagsByBillId(billId);
+```
 
-    * TagDAO.`incrementUsageCount(tagId)`
-    * "工作日" usageCount: 0 → 1
-    * "快餐" usageCount: 0 → 1
-38. **[BatchQueryHelper.ets](vscode-webview://021ekl1rju48t3a5n1tqk2u3695es05r2jkbo9kq9o1m0242mo0s/index.html?id=892cc21a-cb90-4d03-b26a-536bfca7cbef&parentId=1&origin=041e65f6-1542-43ef-a8c0-80e87583a8bb&swVersion=4&extensionId=Anthropic.claude-code&platform=electron&vscode-resource-base-authority=vscode-resource.vscode-cdn.net&parentOrigin=vscode-file%3A%2F%2Fvscode-app&session=42e9195a-ac20-4538-821a-a48e795b0880)**
+#### 5.3 标签统计
+```typescript
+// 获取热门标签
+const popularTags = await TagDAO.getPopularTags(userId, 10);
 
-    * `batchInsert()` 批量插入优化
-    * 作用：每批 100 条，处理 SQLite 999 参数限制
+// 按标签聚合统计
+const tagStats = await TagDAO.aggregateByTag(userId, startDate, endDate);
+```
 
----
+### 六、数据导出与备份
 
-## 场景六：查看月度统计
+#### 6.1 导出数据
+```typescript
+import { ExportService } from '../service/export/ExportService';
 
-东晓南午休时想查看本月的收支统计。
+// 导出配置
+const options = {
+  format: 'json',
+  encrypt: true,
+  password: '用户密码',
+  includeDeleted: false,
+  dateRange: {
+    startDate: '2025-01-01',
+    endDate: '2025-12-31'
+  }
+};
 
-### 涉及的类/模块：
+// 执行导出
+const filePath = await ExportService.exportUserData(userId, options);
+console.log('备份文件已保存:', filePath);
+```
 
-39. **[StatisticsDAO.ets](vscode-webview://021ekl1rju48t3a5n1tqk2u3695es05r2jkbo9kq9o1m0242mo0s/index.html?id=892cc21a-cb90-4d03-b26a-536bfca7cbef&parentId=1&origin=041e65f6-1542-43ef-a8c0-80e87583a8bb&swVersion=4&extensionId=Anthropic.claude-code&platform=electron&vscode-resource-base-authority=vscode-resource.vscode-cdn.net&parentOrigin=vscode-file%3A%2F%2Fvscode-app&session=42e9195a-ac20-4538-821a-a48e795b0880)**
+#### 6.2 导入数据
+```typescript
+import { ImportService } from '../service/export/ImportService';
 
-    * `getMonthlyStats(userId, month)` 查询月度统计
-    * SQL 聚合查询：
+// 导入备份文件
+const result = await ImportService.importUserData(
+  filePath,
+  '解密密码'
+);
 
-    ```sql
-    SELECT 
-      SUM(CASE WHEN type='income' THEN amount ELSE 0 END) as total_income,
-      SUM(CASE WHEN type='expense' THEN amount ELSE 0 END) as total_expense,
-      COUNT(*) as transaction_count
-    FROM bills
-    WHERE user_id = 1 AND transaction_date LIKE '2025-12%'
-    ```
-40. **[Statistics.ets](vscode-webview://021ekl1rju48t3a5n1tqk2u3695es05r2jkbo9kq9o1m0242mo0s/index.html?id=892cc21a-cb90-4d03-b26a-536bfca7cbef&parentId=1&origin=041e65f6-1542-43ef-a8c0-80e87583a8bb&swVersion=4&extensionId=Anthropic.claude-code&platform=electron&vscode-resource-base-authority=vscode-resource.vscode-cdn.net&parentOrigin=vscode-file%3A%2F%2Fvscode-app&session=42e9195a-ac20-4538-821a-a48e795b0880) 统计模型**
+if (result.success) {
+  console.log('导入成功:', result.imported);
+} else {
+  console.error('导入失败:', result.errors);
+}
+```
 
-    * **MonthlyStatistics** 类：
-      * totalIncome: 12000 元（工资）
-      * totalExpense: 3500 元
-      * transactionCount: 45 笔
-      * netIncome: 8500 元
-41. **CategoryDAO.aggregateByCategory()**
+### 七、云端同步 (v1.2.0)
 
-    * 作用：按分类聚合统计
-    * 使用 [AggregationTypes.ets](vscode-webview://021ekl1rju48t3a5n1tqk2u3695es05r2jkbo9kq9o1m0242mo0s/index.html?id=892cc21a-cb90-4d03-b26a-536bfca7cbef&parentId=1&origin=041e65f6-1542-43ef-a8c0-80e87583a8bb&swVersion=4&extensionId=Anthropic.claude-code&platform=electron&vscode-resource-base-authority=vscode-resource.vscode-cdn.net&parentOrigin=vscode-file%3A%2F%2Fvscode-app&session=42e9195a-ac20-4538-821a-a48e795b0880) 的 `CategoryAggregation`
-    * 输出：
-      * 餐饮：1200 元（34.3%）
-      * 交通：800 元（22.9%）
-      * 娱乐：600 元（17.1%）
-42. **TagDAO.aggregateByTag()**
+#### 7.1 执行同步
+```typescript
+import { CloudSyncService } from '../service/CloudSyncService';
 
-    * 作用：按标签聚合统计
-    * 使用 `TagAggregation` 类
-    * 输出：
-      * "工作日"：2500 元（71.4%）
-      * "快餐"：400 元（11.4%）
-43. **IndexManager 覆盖索引优化**
+// 双向同步
+const result = await CloudSyncService.sync({
+  userId: userId,
+  syncType: 'incremental',
+  syncDirection: 'bidirectional',
+  dataTypes: ['accounts', 'bills', 'categories', 'budgets']
+});
 
-    * 使用 `idx_bills_stat` 覆盖索引
-    * 包含字段：account_id, type, transaction_date, amount
-    * 作用：聚合查询无需回表，性能提升 3-5 倍
+if (result.success) {
+  console.log('同步成功，同步记录数:', result.recordCount);
+}
+```
 
----
+#### 7.2 同步类型说明
 
-## 场景七：设置月度预算
+| 同步类型 | 说明 |
+|---------|------|
+| full | 全量同步，同步所有数据 |
+| incremental | 增量同步，仅同步变更数据 |
 
-东晓南决定控制本月餐饮支出，设置预算。
+| 同步方向 | 说明 |
+|---------|------|
+| upload | 仅上传本地数据到云端 |
+| download | 仅从云端下载数据到本地 |
+| bidirectional | 双向同步 |
 
-### 涉及的类/模块：
+#### 7.3 查看同步历史
+```typescript
+// 获取同步历史
+const history = await CloudSyncService.getSyncHistory(userId, 20);
 
-44. **[Budget.ets](vscode-webview://021ekl1rju48t3a5n1tqk2u3695es05r2jkbo9kq9o1m0242mo0s/index.html?id=892cc21a-cb90-4d03-b26a-536bfca7cbef&parentId=1&origin=041e65f6-1542-43ef-a8c0-80e87583a8bb&swVersion=4&extensionId=Anthropic.claude-code&platform=electron&vscode-resource-base-authority=vscode-resource.vscode-cdn.net&parentOrigin=vscode-file%3A%2F%2Fvscode-app&session=42e9195a-ac20-4538-821a-a48e795b0880) 预算模型**
+// 获取最后同步时间
+const lastSyncTime = await CloudSyncService.getLastSyncTime(userId);
 
-    * 创建预算：
+// 获取同步统计
+const stats = await CloudSyncService.getSyncStatistics(userId);
+```
 
-    ```typescript
-    new Budget(
-      budgetId: 0,
-      userId: 1,
-      categoryId: 1, // 餐饮
-      amount: 1500,
-      period: 'monthly',
-      startDate: '2025-12-01',
-      endDate: '2025-12-31',
-      isActive: 1
-    )
-    ```
-45. **[BudgetDAO.ets](vscode-webview://021ekl1rju48t3a5n1tqk2u3695es05r2jkbo9kq9o1m0242mo0s/index.html?id=892cc21a-cb90-4d03-b26a-536bfca7cbef&parentId=1&origin=041e65f6-1542-43ef-a8c0-80e87583a8bb&swVersion=4&extensionId=Anthropic.claude-code&platform=electron&vscode-resource-base-authority=vscode-resource.vscode-cdn.net&parentOrigin=vscode-file%3A%2F%2Fvscode-app&session=42e9195a-ac20-4538-821a-a48e795b0880)**
+### 八、定期提醒 (v1.2.0)
 
-    * `insert(budget)` 插入预算
-    * `getActiveBudgets(userId, period)` 查询活跃预算
-46. **BillDAO.getMonthlyStats()**
+#### 8.1 创建提醒
+```typescript
+import { ReminderService } from '../service/ReminderService';
 
-    * 计算当前餐饮支出：1200 元
-    * 预算使用率：1200 / 1500 = 80%
-    * 状态：警告（warning）
+// 创建账单提醒
+const reminderId = await ReminderService.createReminder({
+  userId: userId,
+  type: 'bill',
+  title: '房租提醒',
+  description: '每月1号缴纳房租',
+  amount: 3000,
+  categoryId: categoryId,
+  frequency: 'monthly',
+  reminderDate: '2025-01-01T09:00:00.000Z'
+});
 
----
+// 创建预算提醒
+const budgetReminderId = await ReminderService.createBudgetReminder(
+  userId,
+  budgetId,
+  '2025-01-01T09:00:00.000Z',
+  'monthly'
+);
+```
 
-## 场景八：设置预算提醒
+#### 8.2 提醒频率
 
-东晓南希望在预算超支时收到通知。
+| 频率 | 说明 |
+|------|------|
+| once | 一次性提醒，触发后自动停用 |
+| daily | 每日提醒 |
+| weekly | 每周提醒 |
+| monthly | 每月提醒 |
+| yearly | 每年提醒 |
 
-### 涉及的类/模块：
+#### 8.3 管理提醒
+```typescript
+// 获取活跃提醒
+const activeReminders = await ReminderService.getActiveReminders(userId);
 
-47. **[Reminder.ets](vscode-webview://021ekl1rju48t3a5n1tqk2u3695es05r2jkbo9kq9o1m0242mo0s/index.html?id=892cc21a-cb90-4d03-b26a-536bfca7cbef&parentId=1&origin=041e65f6-1542-43ef-a8c0-80e87583a8bb&swVersion=4&extensionId=Anthropic.claude-code&platform=electron&vscode-resource-base-authority=vscode-resource.vscode-cdn.net&parentOrigin=vscode-file%3A%2F%2Fvscode-app&session=42e9195a-ac20-4538-821a-a48e795b0880) 提醒模型**
+// 获取即将到期的提醒 (未来7天)
+const upcomingReminders = await ReminderService.getUpcomingReminders(userId, 7);
 
-    * 创建提醒：
+// 激活/停用提醒
+await ReminderService.toggleReminder(reminderId, false); // 停用
+await ReminderService.toggleReminder(reminderId, true);  // 激活
 
-    ```typescript
-    new Reminder(
-      reminderId: 0,
-      userId: 1,
-      type: 'budget',
-      title: '餐饮预算提醒',
-      budgetId: 1,
-      frequency: 'daily',
-      reminderDate: '2025-12-18',
-      nextReminderDate: '2025-12-19',
-      isActive: 1
-    )
-    ```
-48. **[ReminderService.ets](vscode-webview://021ekl1rju48t3a5n1tqk2u3695es05r2jkbo9kq9o1m0242mo0s/index.html?id=892cc21a-cb90-4d03-b26a-536bfca7cbef&parentId=1&origin=041e65f6-1542-43ef-a8c0-80e87583a8bb&swVersion=4&extensionId=Anthropic.claude-code&platform=electron&vscode-resource-base-authority=vscode-resource.vscode-cdn.net&parentOrigin=vscode-file%3A%2F%2Fvscode-app&session=42e9195a-ac20-4538-821a-a48e795b0880) 提醒服务**
-
-    * `createBudgetReminder(budget, frequency)` 创建预算提醒
-    * 支持频率：once, daily, weekly, monthly, yearly
-49. **Reminder.calculateNextReminderDate()**
-
-    * 作用：根据频率计算下次提醒时间
-    * daily：明天同一时间
-    * weekly：下周同一天
-    * monthly：下月同一日
-50. **[ReminderDAO.ets](vscode-webview://021ekl1rju48t3a5n1tqk2u3695es05r2jkbo9kq9o1m0242mo0s/index.html?id=892cc21a-cb90-4d03-b26a-536bfca7cbef&parentId=1&origin=041e65f6-1542-43ef-a8c0-80e87583a8bb&swVersion=4&extensionId=Anthropic.claude-code&platform=electron&vscode-resource-base-authority=vscode-resource.vscode-cdn.net&parentOrigin=vscode-file%3A%2F%2Fvscode-app&session=42e9195a-ac20-4538-821a-a48e795b0880)**
-
-    * `insert(reminder)` 插入提醒
-    * `getDueReminders(userId, now)` 查询到期提醒
-51. **ReminderService.checkAndTriggerReminders()**
-
-    * 后台定时任务（每小时检查一次）
-    * 查询 `next_reminder_date <= now` 的提醒
-    * 调用 HarmonyOS `@ohos.notificationManager` 发送系统通知
+// 检查并触发到期提醒
+const results = await ReminderService.checkAndTriggerDueReminders(userId);
+```
 
 ---
 
-## 场景九：智能预算规划
+## 数据库设计
 
-东晓南想知道下个月应该设置多少预算。
+### 数据库表结构
 
-### 涉及的类/模块：
+#### 1. users表 - 用户信息
 
-52. **[SmartBudgetPlan.ets](vscode-webview://021ekl1rju48t3a5n1tqk2u3695es05r2jkbo9kq9o1m0242mo0s/index.html?id=892cc21a-cb90-4d03-b26a-536bfca7cbef&parentId=1&origin=041e65f6-1542-43ef-a8c0-80e87583a8bb&swVersion=4&extensionId=Anthropic.claude-code&platform=electron&vscode-resource-base-authority=vscode-resource.vscode-cdn.net&parentOrigin=vscode-file%3A%2F%2Fvscode-app&session=42e9195a-ac20-4538-821a-a48e795b0880) 智能预算规划**
-    * **BudgetPredictor** 类：提供 6 种预测算法
-53. **算法 1：简单移动平均（SMA）**
-    * `simpleMovingAverage(historicalData, windowSize=3)`
-    * 计算最近 3 个月餐饮支出平均值
-    * 10月: 1100, 11月: 1300, 12月: 1200
-    * 预测：(1100+1300+1200) / 3 = 1200 元
-54. **算法 2：加权移动平均（WMA）**
-    * `weightedMovingAverage(historicalData)`
-    * 权重：[0.5, 0.3, 0.2]（越近权重越高）
-    * 预测：1200×0.5 + 1300×0.3 + 1100×0.2 = 1210 元
-55. **算法 3：指数平滑（ETS）**
-    * `exponentialSmoothing(historicalData, alpha=0.3)`
-    * 递归公式：F(t) = α×Y(t-1) + (1-α)×F(t-1)
-    * 预测：1215 元
-56. **算法 4：Holt-Winters 双参数平滑**
-    * `holtWinters(historicalData, alpha, beta)`
-    * 同时考虑水平和趋势
-    * 预测：1230 元
-57. **算法 5：线性回归**
-    * `linearRegression(historicalData)`
-    * 最小二乘法拟合趋势线
-    * 预测：1250 元
-58. **算法 6：集成预测（Ensemble）**
-    * `ensemblePrediction(historicalData)`
-    * 5 种算法加权平均
-    * 权重：SMA(20%), WMA(20%), ETS(25%), Holt(20%), LR(15%)
-    * 最终预测：**1225 元** ⭐
-59. **SeasonalityDetector 季节性识别**
-    * `detectSeasonality(historicalData)`
-    * 识别模式：weekly, monthly, quarterly, yearly
-    * 餐饮支出：无明显季节性
-60. **ConfidenceInterval 置信区间**
-    * `calculateConfidenceInterval(prediction, historicalData, level=0.95)`
-    * 95% 置信区间：[1150, 1300]
-    * 含义：下月餐饮支出有 95% 概率在此区间内
+| 字段名 | 类型 | 约束 | 说明 |
+|-------|------|------|------|
+| user_id | INTEGER | PRIMARY KEY AUTOINCREMENT | 用户ID |
+| username | TEXT | NOT NULL | 用户名 |
+| email | TEXT | UNIQUE NOT NULL | 邮箱 |
+| password_hash | TEXT | NOT NULL | 密码哈希 |
+| created_at | TEXT | NOT NULL | 创建时间 |
+| updated_at | TEXT | NOT NULL | 更新时间 |
+| is_deleted | INTEGER | DEFAULT 0 | 删除标记 |
 
----
+#### 2. accounts表 - 账户信息
 
-## 场景十：财务健康评分
+| 字段名 | 类型 | 约束 | 说明 |
+|-------|------|------|------|
+| account_id | INTEGER | PRIMARY KEY AUTOINCREMENT | 账户ID |
+| user_id | INTEGER | NOT NULL, FK | 用户ID |
+| name | TEXT | NOT NULL | 账户名称 |
+| type | TEXT | NOT NULL | 账户类型 |
+| balance | REAL | NOT NULL DEFAULT 0 | 余额 |
+| color | TEXT | NOT NULL DEFAULT '#1890FF' | 颜色 |
+| created_at | TEXT | NOT NULL | 创建时间 |
+| updated_at | TEXT | NOT NULL | 更新时间 |
+| is_deleted | INTEGER | DEFAULT 0 | 删除标记 |
 
-东晓南晚上想了解自己的整体财务状况。
+#### 3. categories表 - 分类信息
 
-### 涉及的类/模块：
+| 字段名 | 类型 | 约束 | 说明 |
+|-------|------|------|------|
+| category_id | INTEGER | PRIMARY KEY AUTOINCREMENT | 分类ID |
+| user_id | INTEGER | NOT NULL, FK | 用户ID |
+| name | TEXT | NOT NULL | 分类名称 |
+| type | TEXT | NOT NULL, CHECK IN ('expense','income') | 类型 |
+| icon | TEXT | NOT NULL DEFAULT '...' | 图标 |
+| color | TEXT | NOT NULL DEFAULT '#1890FF' | 颜色 |
+| parent_category_id | INTEGER | DEFAULT 0 | 父分类ID |
+| sort_order | INTEGER | DEFAULT 0 | 排序顺序 |
+| created_at | TEXT | NOT NULL | 创建时间 |
+| updated_at | TEXT | NOT NULL | 更新时间 |
+| is_deleted | INTEGER | DEFAULT 0 | 删除标记 |
 
-61. **[FinancialHealth.ets](vscode-webview://021ekl1rju48t3a5n1tqk2u3695es05r2jkbo9kq9o1m0242mo0s/index.html?id=892cc21a-cb90-4d03-b26a-536bfca7cbef&parentId=1&origin=041e65f6-1542-43ef-a8c0-80e87583a8bb&swVersion=4&extensionId=Anthropic.claude-code&platform=electron&vscode-resource-base-authority=vscode-resource.vscode-cdn.net&parentOrigin=vscode-file%3A%2F%2Fvscode-app&session=42e9195a-ac20-4538-821a-a48e795b0880) 财务健康评分系统**
+#### 4. bills表 - 账单记录
 
-    * **HealthScoreUtils** 工具类
-62. **维度 1：储蓄率（权重 20%）**
+| 字段名 | 类型 | 约束 | 说明 |
+|-------|------|------|------|
+| bill_id | INTEGER | PRIMARY KEY AUTOINCREMENT | 账单ID |
+| user_id | INTEGER | NOT NULL, FK | 用户ID |
+| account_id | INTEGER | NOT NULL, FK | 账户ID |
+| category_id | INTEGER | NOT NULL, FK | 分类ID |
+| amount | REAL | NOT NULL | 金额 |
+| type | TEXT | NOT NULL | 类型 (expense/income) |
+| note | TEXT | | 备注 |
+| transaction_date | TEXT | NOT NULL | 交易日期 |
+| created_at | TEXT | NOT NULL | 创建时间 |
+| updated_at | TEXT | NOT NULL | 更新时间 |
+| is_deleted | INTEGER | DEFAULT 0 | 删除标记 |
 
-    * `calculateSavingsRateScore(income, expense)`
-    * 小李本月：收入 12000，支出 3500
-    * 储蓄率：(12000-3500) / 12000 = 70.8%
-    * 评分：100 分（优秀）
-    * 加权得分：100 × 0.20 = 20 分
-63. **维度 2：预算执行（权重 15%）**
+#### 5. budgets表 - 预算信息
 
-    * `calculateBudgetAdherenceScore(budgeted, actual)`
-    * 餐饮预算：1500，实际：1200
-    * 执行率：1200 / 1500 = 80%
-    * 评分：70 分（良好）
-    * 加权得分：70 × 0.15 = 10.5 分
-64. **维度 3：支出稳定性（权重 10%）**
+| 字段名 | 类型 | 约束 | 说明 |
+|-------|------|------|------|
+| budget_id | INTEGER | PRIMARY KEY AUTOINCREMENT | 预算ID |
+| user_id | INTEGER | NOT NULL, FK | 用户ID |
+| category_id | INTEGER | NOT NULL, FK | 分类ID |
+| amount | REAL | NOT NULL | 预算金额 |
+| period | TEXT | NOT NULL | 周期 (monthly/yearly) |
+| start_date | TEXT | NOT NULL | 开始日期 |
+| end_date | TEXT | | 结束日期 |
+| is_active | INTEGER | DEFAULT 1 | 是否启用 |
+| is_deleted | INTEGER | DEFAULT 0 | 删除标记 |
+| created_at | TEXT | NOT NULL | 创建时间 |
 
-    * `calculateExpenseStabilityScore(monthlyExpenses)`
-    * 最近 6 个月支出：[3200, 3500, 3400, 3600, 3300, 3500]
-    * 标准差：133.33
-    * 变异系数 CV = 133.33 / 3417 = 3.9%
-    * 评分：100 分（非常稳定）
-    * 加权得分：100 × 0.10 = 10 分
-65. **维度 4：负债比率（权重 15%）**
+#### 6. tags表 - 标签信息
 
-    * 小李无负债
-    * 评分：100 分
-    * 加权得分：100 × 0.15 = 15 分
-66. **维度 5：应急资金（权重 15%）**
+| 字段名 | 类型 | 约束 | 说明 |
+|-------|------|------|------|
+| tag_id | INTEGER | PRIMARY KEY AUTOINCREMENT | 标签ID |
+| user_id | INTEGER | NOT NULL, FK | 用户ID |
+| name | TEXT | NOT NULL, UNIQUE(user_id,name) | 标签名称 |
+| color | TEXT | DEFAULT '#52C41A' | 颜色 |
+| usage_count | INTEGER | DEFAULT 0 | 使用次数 |
+| created_at | TEXT | NOT NULL | 创建时间 |
+| updated_at | TEXT | NOT NULL | 更新时间 |
+| is_deleted | INTEGER | DEFAULT 0 | 删除标记 |
 
-    * 账户余额：9985 元
-    * 月支出：3500 元
-    * 应急资金可支撑：9985 / 3500 = 2.85 个月
-    * 评分：60 分（建议至少 3-6 个月）
-    * 加权得分：60 × 0.15 = 9 分
-67. **维度 6：消费结构（权重 10%）**
+#### 7. bill_tags表 - 账单标签关联
 
-    * `calculateSpendingStructureScore(essentialExpense, totalExpense)`
-    * 必要支出（餐饮+交通）：2000 元
-    * 必要支出占比：2000 / 3500 = 57.1%
-    * 评分：90 分（结构合理）
-    * 加权得分：90 × 0.10 = 9 分
-68. **维度 7：收入增长（权重 10%）**
+| 字段名 | 类型 | 约束 | 说明 |
+|-------|------|------|------|
+| bill_id | INTEGER | NOT NULL, PK, FK | 账单ID |
+| tag_id | INTEGER | NOT NULL, PK, FK | 标签ID |
+| created_at | TEXT | NOT NULL | 创建时间 |
 
-    * 最近 3 个月收入：[12000, 12000, 12000]
-    * 增长率：0%
-    * 评分：70 分（稳定但无增长）
-    * 加权得分：70 × 0.10 = 7 分
-69. **维度 8：目标达成（权重 5%）**
+#### 8. reminders表 - 提醒信息 (v1.2.0)
 
-    * 小李暂无设置财务目标
-    * 评分：50 分
-    * 加权得分：50 × 0.05 = 2.5 分
-70. **综合评分计算**
+| 字段名 | 类型 | 约束 | 说明 |
+|-------|------|------|------|
+| reminder_id | INTEGER | PRIMARY KEY AUTOINCREMENT | 提醒ID |
+| user_id | INTEGER | NOT NULL, FK | 用户ID |
+| type | TEXT | NOT NULL, CHECK IN ('bill','budget') | 类型 |
+| title | TEXT | NOT NULL | 标题 |
+| description | TEXT | | 描述 |
+| amount | REAL | | 金额 |
+| category_id | INTEGER | FK | 分类ID |
+| account_id | INTEGER | FK | 账户ID |
+| budget_id | INTEGER | FK | 预算ID |
+| frequency | TEXT | NOT NULL | 频率 |
+| reminder_date | TEXT | NOT NULL | 提醒日期 |
+| next_reminder_date | TEXT | NOT NULL | 下次提醒日期 |
+| is_active | INTEGER | DEFAULT 1 | 是否启用 |
+| created_at | TEXT | NOT NULL | 创建时间 |
+| updated_at | TEXT | NOT NULL | 更新时间 |
+| is_deleted | INTEGER | DEFAULT 0 | 删除标记 |
 
-    * `calculateOverallScore(dimensions)`
-    * 总分：20 + 10.5 + 10 + 15 + 9 + 9 + 7 + 2.5 = **83 分**
-    * 等级：**Good（良好）**
-71. **[FinancialHealthScore.ets](vscode-webview://021ekl1rju48t3a5n1tqk2u3695es05r2jkbo9kq9o1m0242mo0s/index.html?id=892cc21a-cb90-4d03-b26a-536bfca7cbef&parentId=1&origin=041e65f6-1542-43ef-a8c0-80e87583a8bb&swVersion=4&extensionId=Anthropic.claude-code&platform=electron&vscode-resource-base-authority=vscode-resource.vscode-cdn.net&parentOrigin=vscode-file%3A%2F%2Fvscode-app&session=42e9195a-ac20-4538-821a-a48e795b0880) 健康评分类**
+#### 9. cloud_sync_records表 - 云同步记录 (v1.2.0)
 
-    * `getGrade(83)` → "good"
-    * `getGradeColor()` → "#8BC34A"（绿色）
-    * `getGradeDescription()` → "您的财务状况良好，还有提升空间。"
-72. **理财建议生成**
+| 字段名 | 类型 | 约束 | 说明 |
+|-------|------|------|------|
+| sync_id | INTEGER | PRIMARY KEY AUTOINCREMENT | 同步ID |
+| user_id | INTEGER | NOT NULL, FK | 用户ID |
+| sync_type | TEXT | NOT NULL | 同步类型 |
+| sync_direction | TEXT | NOT NULL | 同步方向 |
+| status | TEXT | NOT NULL | 状态 |
+| data_types | TEXT | NOT NULL | 数据类型 |
+| record_count | INTEGER | DEFAULT 0 | 记录数 |
+| start_time | TEXT | NOT NULL | 开始时间 |
+| end_time | TEXT | | 结束时间 |
+| error_message | TEXT | | 错误信息 |
+| cloud_provider | TEXT | NOT NULL | 云服务商 |
+| last_sync_hash | TEXT | | 同步哈希 |
+| created_at | TEXT | NOT NULL | 创建时间 |
+| updated_at | TEXT | NOT NULL | 更新时间 |
 
-    * `generateAdvicesFromDimensions(dimensions)`
-    * 生成 3 条建议：
+### ER图
 
-    **建议 1：增加应急资金**
-
-    * 类别：emergency
-    * 优先级：high
-    * 描述：建议将应急资金提升至 3-6 个月支出（10500-21000 元）
-    * 行动步骤：
-      1. 每月额外储蓄 500 元
-      2. 将年终奖的 50% 存入应急账户
-      3. 考虑开设专门的应急资金账户
-    * 预期影响：应急资金维度 +20 分
-
-    **建议 2：设置财务目标**
-
-    * 类别：investment
-    * 优先级：medium
-    * 描述：建议设置明确的理财目标
-    * 行动步骤：
-      1. 设定 1 年期目标（如购买手机）
-      2. 设定 3-5 年期目标（如首付储蓄）
-      3. 每月自动转账到目标账户
-    * 预期影响：目标达成维度 +10 分
-
-    **建议 3：寻求收入增长机会**
-
-    * 类别：income
-    * 优先级：medium
-    * 描述：建议探索副业或提升技能
-    * 行动步骤：
-      1. 学习新技能提升竞争力
-      2. 考虑兼职或副业
-      3. 投资理财获取被动收入
-    * 预期影响：收入增长维度 +15 分
-73. **基准对比**
-
-    * `Benchmarks` 接口
-    * 年龄组基准（25-30岁）：平均分 75，小李排名前 72%
-    * 收入水平基准（10k-15k）：平均分 78，小李排名前 65%
-    * 城市等级基准（二线城市）：平均分 80，小李排名前 55%
+详细的ER图请参考: [README说明/UML图/er.puml](UML图/er.puml)
 
 ---
 
-## 场景十一：数据导出与备份
+## API接口文档
 
-小李想备份自己的账单数据。
+### DAO层接口规范
 
-### 涉及的类/模块：
+所有DAO类遵循统一的接口规范:
 
-74. **[ExportService.ets](vscode-webview://021ekl1rju48t3a5n1tqk2u3695es05r2jkbo9kq9o1m0242mo0s/index.html?id=892cc21a-cb90-4d03-b26a-536bfca7cbef&parentId=1&origin=041e65f6-1542-43ef-a8c0-80e87583a8bb&swVersion=4&extensionId=Anthropic.claude-code&platform=electron&vscode-resource-base-authority=vscode-resource.vscode-cdn.net&parentOrigin=vscode-file%3A%2F%2Fvscode-app&session=42e9195a-ac20-4538-821a-a48e795b0880) 导出服务**
-    * `exportData(userId, options)` 导出数据
-    * 选项：
-      * dataTypes: ['bills', 'accounts', 'categories', 'budgets']
-      * format: 'json'
-      * encrypt: true
-      * password: "MyBackupPassword123"
-75. **ExportService 数据提取**
-    * 查询所有相关数据
-    * BillDAO.`getAll(userId)` → 123 条账单
-    * AccountDAO.`getAll(userId)` → 3 个账户
-    * CategoryDAO.`getAll(userId)` → 15 个分类
-    * BudgetDAO.`getAll(userId)` → 5 个预算
-76. **[ExportTypes.ets](vscode-webview://021ekl1rju48t3a5n1tqk2u3695es05r2jkbo9kq9o1m0242mo0s/index.html?id=892cc21a-cb90-4d03-b26a-536bfca7cbef&parentId=1&origin=041e65f6-1542-43ef-a8c0-80e87583a8bb&swVersion=4&extensionId=Anthropic.claude-code&platform=electron&vscode-resource-base-authority=vscode-resource.vscode-cdn.net&parentOrigin=vscode-file%3A%2F%2Fvscode-app&session=42e9195a-ac20-4538-821a-a48e795b0880) 导出数据结构**
-    ```json
-    {
-      "version": "1.0",
-      "exportDate": "2025-12-18T21:00:00Z",
-      "userId": 1,
-      "data": {
-        "bills": [...],
-        "accounts": [...],
-        "categories": [...],
-        "budgets": [...]
-      },
-      "metadata": {
-        "totalRecords": 146,
-        "dataTypes": ["bills", "accounts", "categories", "budgets"]
+```typescript
+class ExampleDAO {
+  // 基础CRUD
+  static async insert(entity: Entity): Promise<void>
+  static async getById(userId: number, entityId: number): Promise<Entity | null>
+  static async getAll(userId: number): Promise<Entity[]>
+  static async update(entity: Entity): Promise<void>
+  static async softDelete(userId: number, entityId: number): Promise<void>
+
+  // 批量操作
+  static async bulkInsert(entities: Entity[]): Promise<void>
+
+  // 辅助方法
+  static async exists(entityId: number): Promise<boolean>
+}
+```
+
+### Service层接口
+
+#### UserSessionService
+
+```typescript
+class UserSessionService {
+  // 用户登录
+  static async login(email: string, password: string): Promise<LoginResult>
+
+  // 用户注册
+  static async register(username: string, email: string, password: string): Promise<RegisterResult>
+
+  // 获取当前用户ID
+  static getCurrentUserId(): number | null
+
+  // 获取当前会话
+  static getCurrentSession(): UserSession | null
+
+  // 检查登录状态
+  static isLoggedIn(): boolean
+
+  // 用户登出
+  static logout(): void
+}
+```
+
+#### ExportService
+
+```typescript
+class ExportService {
+  // 导出用户数据
+  static async exportUserData(userId: number, options: ExportOptions): Promise<string>
+}
+
+interface ExportOptions {
+  format: 'json' | 'csv';
+  encrypt: boolean;
+  password?: string;
+  includeDeleted: boolean;
+  dateRange?: {
+    startDate: string;
+    endDate: string;
+  };
+}
+```
+
+#### ImportService
+
+```typescript
+class ImportService {
+  // 导入用户数据
+  static async importUserData(filePath: string, password?: string): Promise<ImportResult>
+}
+
+interface ImportResult {
+  success: boolean;
+  imported: {
+    users: number;
+    accounts: number;
+    categories: number;
+    bills: number;
+    budgets: number;
+    tags: number;
+  };
+  errors: string[];
+}
+```
+
+#### CloudSyncService
+
+```typescript
+class CloudSyncService {
+  // 执行同步
+  static async sync(options: SyncOptions): Promise<SyncResult>
+
+  // 获取同步历史
+  static async getSyncHistory(userId: number, limit?: number): Promise<CloudSyncRecord[]>
+
+  // 获取最后同步时间
+  static async getLastSyncTime(userId: number): Promise<string | null>
+
+  // 取消同步
+  static async cancelSync(userId: number): Promise<boolean>
+}
+```
+
+#### ReminderService
+
+```typescript
+class ReminderService {
+  // 创建提醒
+  static async createReminder(options: ReminderOptions): Promise<number>
+
+  // 创建预算提醒
+  static async createBudgetReminder(userId: number, budgetId: number, reminderDate: string, frequency: string): Promise<number>
+
+  // 获取活跃提醒
+  static async getActiveReminders(userId: number): Promise<Reminder[]>
+
+  // 获取即将到期提醒
+  static async getUpcomingReminders(userId: number, days: number): Promise<Reminder[]>
+
+  // 检查并触发提醒
+  static async checkAndTriggerDueReminders(userId: number): Promise<TriggerResult[]>
+
+  // 切换提醒状态
+  static async toggleReminder(reminderId: number, isActive: boolean): Promise<void>
+}
+```
+
+---
+
+## 测试指南
+
+### 测试架构
+
+```
+entry/ohosTest/ets/test/
+|-- model/             # 模型层测试 (6个)
+|   |-- User.test.ets
+|   |-- Account.test.ets
+|   |-- Category.test.ets
+|   |-- Bill.test.ets
+|   |-- Budget.test.ets
+|   +-- Statistics.test.ets
+|
+|-- dao/               # DAO层测试 (6个)
+|   |-- UserDAO.test.ets
+|   |-- AccountDAO.test.ets
+|   |-- CategoryDAO.test.ets
+|   |-- BillDAO.test.ets
+|   |-- BudgetDAO.test.ets
+|   +-- StatisticsDAO.test.ets
+|
+|-- pages/             # UI层测试 (3个)
+|   |-- IndexPage.test.ets
+|   |-- AddBillPage.test.ets
+|   +-- CategoryManagementPage.test.ets
+|
++-- services/          # 服务层测试 (1个)
+    +-- Transaction.test.ets
+```
+
+### 运行测试
+
+#### 方法1: 通过DevEco Studio
+
+1. 在项目结构中找到 `entry/ohosTest` 目录
+2. 右键点击目录，选择 **Run 'All Tests'**
+
+#### 方法2: 运行特定测试
+
+1. 展开 `entry/ohosTest/ets/test` 目录
+2. 选择要运行的测试文件
+3. 右键点击，选择 **Run**
+
+### 测试用例示例
+
+```typescript
+import { describe, it, expect, beforeAll } from '@ohos/hypium';
+import { DatabaseManager } from '../../main/ets/database/DatabaseManager';
+import { UserDAO } from '../../main/ets/dao/UserDAO';
+import { User } from '../../main/ets/model/User';
+import common from '@ohos.app.ability.common';
+
+export default function UserDAOTest() {
+  describe('UserDAO', () => {
+    beforeAll(async () => {
+      const ctx = getContext() as common.Context;
+      await DatabaseManager.initDatabase(ctx);
+    });
+
+    it('should insert user successfully', 0, async () => {
+      const user = new User();
+      user.username = 'testuser';
+      user.email = 'test@example.com';
+      user.passwordHash = 'hash123';
+
+      await UserDAO.insert(user);
+
+      const result = await UserDAO.getByEmail('test@example.com');
+      expect(result).not.toBeNull();
+      expect(result?.username).assertEqual('testuser');
+    });
+
+    it('should validate email uniqueness', 0, async () => {
+      const user1 = new User();
+      user1.email = 'unique@example.com';
+      await UserDAO.insert(user1);
+
+      const user2 = new User();
+      user2.email = 'unique@example.com';
+
+      try {
+        await UserDAO.insert(user2);
+        expect().assertFail();
+      } catch (error) {
+        expect(error).not.toBeNull();
       }
-    }
-    ```
-77. **[ChecksumHelper.ets](vscode-webview://021ekl1rju48t3a5n1tqk2u3695es05r2jkbo9kq9o1m0242mo0s/index.html?id=892cc21a-cb90-4d03-b26a-536bfca7cbef&parentId=1&origin=041e65f6-1542-43ef-a8c0-80e87583a8bb&swVersion=4&extensionId=Anthropic.claude-code&platform=electron&vscode-resource-base-authority=vscode-resource.vscode-cdn.net&parentOrigin=vscode-file%3A%2F%2Fvscode-app&session=42e9195a-ac20-4538-821a-a48e795b0880) 校验和计算**
-    * `calculateChecksum(jsonData)` 计算 SHA-256 校验和
-    * 输出：`a1b2c3d4...` (64位十六进制)
-    * 作用：验证数据完整性，防止篡改
-78. **[EncryptionModule.ets](vscode-webview://021ekl1rju48t3a5n1tqk2u3695es05r2jkbo9kq9o1m0242mo0s/index.html?id=892cc21a-cb90-4d03-b26a-536bfca7cbef&parentId=1&origin=041e65f6-1542-43ef-a8c0-80e87583a8bb&swVersion=4&extensionId=Anthropic.claude-code&platform=electron&vscode-resource-base-authority=vscode-resource.vscode-cdn.net&parentOrigin=vscode-file%3A%2F%2Fvscode-app&session=42e9195a-ac20-4538-821a-a48e795b0880) 加密模块**
-    * 使用 **AES-256-GCM** 加密算法
-79. **密钥派生（PBKDF2）**
-    * `deriveKey(password, salt)`
-    * 算法：PBKDF2-HMAC-SHA256
-    * 迭代次数：**100,000 次**
-    * 盐值（Salt）：随机生成 16 字节
-    * 输出：256 位密钥
-80. **数据加密**
-    * `encrypt(plaintext, key)`
-    * 算法：AES-256-GCM
-    * 初始化向量（IV）：随机生成 12 字节
-    * 认证标签（Tag）：16 字节
-    * 输出：`iv + ciphertext + tag`
-81. **[FileHelper.ets](vscode-webview://021ekl1rju48t3a5n1tqk2u3695es05r2jkbo9kq9o1m0242mo0s/index.html?id=892cc21a-cb90-4d03-b26a-536bfca7cbef&parentId=1&origin=041e65f6-1542-43ef-a8c0-80e87583a8bb&swVersion=4&extensionId=Anthropic.claude-code&platform=electron&vscode-resource-base-authority=vscode-resource.vscode-cdn.net&parentOrigin=vscode-file%3A%2F%2Fvscode-app&session=42e9195a-ac20-4538-821a-a48e795b0880) 文件助手**
-    * `generateFileName('backup')` 生成文件名
-    * 格式：`backup_2025-12-18_21-00-00.enc`
-    * `writeFile(filePath, encryptedData)` 写入文件
-    * 路径：`/data/storage/el2/base/files/exports/`
-82. **导出元数据**
-    ```json
-    {
-      "fileName": "backup_2025-12-18_21-00-00.enc",
-      "fileSize": "45.3 KB",
-      "recordCount": 146,
-      "checksum": "a1b2c3d4...",
-      "encrypted": true,
-      "compressionRatio": 0.72
-    }
-    ```
+    });
+  });
+}
+```
+
+### 测试最佳实践
+
+1. **测试独立性**: 每个测试用例应独立运行，不依赖其他测试的结果
+2. **测试数据清理**: 使用 `beforeEach` 或 `afterEach` 清理测试数据
+3. **命名规范**: 测试名称应清晰描述测试目的
+4. **覆盖全面**: 测试应覆盖正常情况、边界情况和异常情况
 
 ---
 
-## 场景十二：云端同步
+## 安全机制
 
-东晓南想将数据同步到云端，以便在其他设备访问。
+### 数据加密
 
-### 涉及的类/模块：
+#### AES-256-GCM加密算法
 
-83. **[CloudSyncService.ets](vscode-webview://021ekl1rju48t3a5n1tqk2u3695es05r2jkbo9kq9o1m0242mo0s/index.html?id=892cc21a-cb90-4d03-b26a-536bfca7cbef&parentId=1&origin=041e65f6-1542-43ef-a8c0-80e87583a8bb&swVersion=4&extensionId=Anthropic.claude-code&platform=electron&vscode-resource-base-authority=vscode-resource.vscode-cdn.net&parentOrigin=vscode-file%3A%2F%2Fvscode-app&session=42e9195a-ac20-4538-821a-a48e795b0880) 云同步服务**
+应用采用AES-256-GCM认证加密模式，具有以下特点:
 
-    * `syncData(userId, options)` 同步数据
-    * 选项：
-      * syncType: 'incremental'（增量同步）
-      * syncDirection: 'bidirectional'（双向同步）
-      * cloudProvider: 'huawei'
-84. **[CloudSyncRecord.ets](vscode-webview://021ekl1rju48t3a5n1tqk2u3695es05r2jkbo9kq9o1m0242mo0s/index.html?id=892cc21a-cb90-4d03-b26a-536bfca7cbef&parentId=1&origin=041e65f6-1542-43ef-a8c0-80e87583a8bb&swVersion=4&extensionId=Anthropic.claude-code&platform=electron&vscode-resource-base-authority=vscode-resource.vscode-cdn.net&parentOrigin=vscode-file%3A%2F%2Fvscode-app&session=42e9195a-ac20-4538-821a-a48e795b0880) 同步记录模型**
+- **机密性**: AES-256对称加密保护数据内容
+- **完整性**: GCM模式提供认证标签，防止数据篡改
+- **不可预测性**: 随机IV和盐值确保相同明文产生不同密文
 
-    * 创建同步记录：
+#### PBKDF2密钥派生
 
-    ```typescript
-    new CloudSyncRecord(
-      syncId: 0,
-      userId: 1,
-      syncType: 'incremental',
-      syncDirection: 'bidirectional',
-      status: 'in_progress',
-      dataTypes: 'bills,accounts',
-      recordCount: 0,
-      startTime: '2025-12-18T21:10:00Z',
-      cloudProvider: 'huawei'
-    )
-    ```
-85. **增量同步逻辑**
+```typescript
+// 密钥派生参数
+const spec = {
+  algName: 'PBKDF2',
+  password: passwordBytes,
+  salt: randomSalt,        // 随机16字节盐值
+  iterations: 100000,      // 100000次迭代
+  keySize: 32              // 256位密钥
+};
+```
 
-    * 查询上次同步时间：`lastSyncTime = '2025-12-17T20:00:00Z'`
-    * 查询变更数据：`updatedAt > lastSyncTime OR createdAt > lastSyncTime`
-    * 找到 5 条新增/修改的账单
-86. **冲突检测**
+### SQL注入防护
 
-    * 本地版本：billId=10, updatedAt='2025-12-18T15:00:00Z'
-    * 云端版本：billId=10, updatedAt='2025-12-18T14:00:00Z'
-    * 冲突解决策略：**最后写入获胜（Last-Write-Wins）**
-    * 选择：本地版本（时间戳更新）
-87. **数据加密上传**
+- 所有数据库操作使用参数化查询
+- 严格的输入类型检查
+- 输入数据验证
 
-    * 使用 EncryptionModule 加密数据
-    * 上传到华为云存储（HarmonyOS Cloud）
-    * 使用 `@ohos.cloud.storage` API
-88. **同步完成**
+### 数据完整性
 
-    * 更新同步记录：
+- 外键约束确保数据关联正确性
+- CHECK约束验证数据有效性
+- UNIQUE约束防止重复数据
+- 事务保证操作原子性
 
-    ```typescript
-    syncRecord.status = 'completed'
-    syncRecord.endTime = '2025-12-18T21:12:30Z'
-    syncRecord.recordCount = 5
-    syncRecord.lastSyncHash = 'sha256_hash_of_data'
-    ```
-89. **[CloudSyncRecordDAO.ets](vscode-webview://021ekl1rju48t3a5n1tqk2u3695es05r2jkbo9kq9o1m0242mo0s/index.html?id=892cc21a-cb90-4d03-b26a-536bfca7cbef&parentId=1&origin=041e65f6-1542-43ef-a8c0-80e87583a8bb&swVersion=4&extensionId=Anthropic.claude-code&platform=electron&vscode-resource-base-authority=vscode-resource.vscode-cdn.net&parentOrigin=vscode-file%3A%2F%2Fvscode-app&session=42e9195a-ac20-4538-821a-a48e795b0880)**
+### 密码存储
 
-    * `insert(syncRecord)` 保存同步记录
-    * `getLastSyncTime(userId)` 获取上次同步时间
+- 密码使用SHA-256哈希存储
+- 不存储明文密码
+- 支持密码强度验证
 
 ---
 
-## 场景十三：数据恢复
+## 性能优化
 
-东晓南换了新手机，需要恢复数据。
+### 数据库层优化
 
-### 涉及的类/模块：
+#### 1. WAL模式
 
-90. **[ImportService.ets](vscode-webview://021ekl1rju48t3a5n1tqk2u3695es05r2jkbo9kq9o1m0242mo0s/index.html?id=892cc21a-cb90-4d03-b26a-536bfca7cbef&parentId=1&origin=041e65f6-1542-43ef-a8c0-80e87583a8bb&swVersion=4&extensionId=Anthropic.claude-code&platform=electron&vscode-resource-base-authority=vscode-resource.vscode-cdn.net&parentOrigin=vscode-file%3A%2F%2Fvscode-app&session=42e9195a-ac20-4538-821a-a48e795b0880) 导入服务**
-    * `importData(filePath, password)` 导入数据
-91. **FileHelper.readFile()**
-    * 读取备份文件：`backup_2025-12-18_21-00-00.enc`
-    * 文件大小：45.3 KB
-92. **EncryptionModule.decrypt()**
-    * 使用密码派生密钥（PBKDF2）
-    * 解密数据（AES-256-GCM）
-    * 验证认证标签（防篡改）
-93. **ChecksumHelper.verifyChecksum()**
-    * 计算解密后数据的 SHA-256 校验和
-    * 对比原始校验和：一致
-    * 确保数据完整性
-94. **ImportService 数据验证**
-    * 验证 JSON 格式
-    * 验证必填字段
-    * 验证外键依赖关系
-    * 验证数据类型
-95. **事务化导入**
-    * `DatabaseManager.transaction()` 开启事务
-    * 按顺序导入：
-      1. Users（用户）
-      2. Accounts（账户）
-      3. Categories（分类）
-      4. Bills（账单）
-      5. Budgets（预算）
-      6. Tags（标签）
-      7. BillTags（账单标签关联）
-96. **冲突处理**
-    * 策略：`skipExisting`（跳过已存在的记录）
-    * 或：`replaceExisting`（替换已存在的记录）
-97. **导入完成**
-    * 总记录数：146
-    * 成功导入：146
-    * 跳过：0
-    * 失败：0
-    * 耗时：1.2 秒
-98. **CacheManager.clear()**
-    * 清除所有缓存
-    * 确保页面显示最新数据
+```sql
+PRAGMA journal_mode=WAL;
+```
+- 提高并发读写性能
+- 减少锁竞争
 
----
+#### 2. 索引策略
 
-## 场景十四：分类管理
+**复合索引**
+```sql
+CREATE INDEX idx_bills_date
+ON bills (transaction_date DESC, bill_id DESC)
+WHERE is_deleted = 0;
+```
 
-东晓南想自定义分类，创建"健身"分类。
+**覆盖索引**
+```sql
+CREATE INDEX idx_bills_stat
+ON bills (account_id, type, transaction_date, amount)
+WHERE is_deleted = 0;
+```
 
-### 涉及的类/模块：
+**部分索引**
+```sql
+CREATE INDEX idx_categories_user_type
+ON categories (user_id, type)
+WHERE is_deleted = 0;
+```
 
-99. **[CategoryManagement.ets](vscode-webview://021ekl1rju48t3a5n1tqk2u3695es05r2jkbo9kq9o1m0242mo0s/index.html?id=892cc21a-cb90-4d03-b26a-536bfca7cbef&parentId=1&origin=041e65f6-1542-43ef-a8c0-80e87583a8bb&swVersion=4&extensionId=Anthropic.claude-code&platform=electron&vscode-resource-base-authority=vscode-resource.vscode-cdn.net&parentOrigin=vscode-file%3A%2F%2Fvscode-app&session=42e9195a-ac20-4538-821a-a48e795b0880) 分类管理页面**
+#### 3. 数据库配置优化
 
-    * 显示分类树形结构
-    * 使用 `CategoryTreeNode` 展示层级关系
-100. **Category 分类模型**
+```sql
+PRAGMA synchronous=NORMAL;      -- 同步模式
+PRAGMA cache_size=10000;        -- 缓存大小约40MB
+PRAGMA temp_store=MEMORY;       -- 临时表存储在内存
+PRAGMA foreign_keys=ON;         -- 启用外键约束
+```
 
-     * 创建新分类：
+### 应用层优化
 
-     ```typescript
-     new Category(
-       categoryId: 0,
-       userId: 1,
-       name: '健身',
-       type: 'expense',
-       icon: '💪',
-       color: '#FF6B6B',
-       parentCategoryId: 0, // 顶级分类
-       sortOrder: 10
-     )
-     ```
-101. **CategoryDAO.insert()**
+#### 1. 缓存机制
 
-     * 插入分类到 `categories` 表
-     * 唯一约束：(userId, name, type)
-102. **分类树形结构查询**
+```typescript
+// CacheManager使用示例
+const categories = CacheManager.get<Category[]>(`categories:${userId}`);
+if (!categories) {
+  categories = await CategoryDAO.getAll(userId);
+  CacheManager.set(`categories:${userId}`, categories, 5 * 60 * 1000);
+}
+```
 
-     * `CategoryDAO.getCategoryTree(userId, type)`
-     * SQL 递归查询：
+#### 2. 批量操作
 
-     ```sql
-     WITH RECURSIVE category_tree AS (
-       SELECT * FROM categories WHERE parent_category_id = 0
-       UNION ALL
-       SELECT c.* FROM categories c
-       INNER JOIN category_tree ct ON c.parent_category_id = ct.category_id
-     )
-     SELECT * FROM category_tree ORDER BY sort_order
-     ```
-103. **创建子分类**
+```typescript
+// 批量插入优化
+await BatchQueryHelper.bulkInsert(bills, async (bill) => {
+  await BillDAO.insert(bill);
+});
+```
 
-     * "健身" 下创建子分类：
-       * "健身房会员"（parentCategoryId: 16）
-       * "健身器材"（parentCategoryId: 16）
-       * "运动服饰"（parentCategoryId: 16）
-104. **分类排序**
+#### 3. 分页查询
 
-     * `CategoryDAO.updateSortOrder(categoryId, newOrder)`
-     * 拖拽排序功能
+```typescript
+// 游标分页
+const bills = await BillDAO.getByPage(userId, {
+  pageSize: 20,
+  cursor: lastBillId
+});
+```
+
+### 性能监控
+
+```typescript
+// 使用性能监控
+const result = await PerformanceMonitor.measure('queryBills', async () => {
+  return await BillDAO.getAll(userId);
+});
+
+// 获取性能报告
+const report = PerformanceMonitor.getReport();
+```
 
 ---
 
-## 场景十五：响应式布局适配
+## 版本历史
 
-东晓南在平板电脑上打开应用。
+### v1.2.0 (2025-12-08)
 
-### 涉及的类/模块：
+**新增功能**
+- 用户会话管理服务 (UserSessionService)
+- 定期账单/预算提醒功能 (ReminderService)
+- 数据云端同步功能 (CloudSyncService)
 
-105. **[BreakpointSystem.ets](vscode-webview://021ekl1rju48t3a5n1tqk2u3695es05r2jkbo9kq9o1m0242mo0s/index.html?id=892cc21a-cb90-4d03-b26a-536bfca7cbef&parentId=1&origin=041e65f6-1542-43ef-a8c0-80e87583a8bb&swVersion=4&extensionId=Anthropic.claude-code&platform=electron&vscode-resource-base-authority=vscode-resource.vscode-cdn.net&parentOrigin=vscode-file%3A%2F%2Fvscode-app&session=42e9195a-ac20-4538-821a-a48e795b0880) 响应式断点系统**
-     * 检测屏幕宽度：960px
-     * 命中断点：**lg（large）**
-106. **BreakPointType 类**
-     ```typescript
-     new BreakPointType({ 
-       xs: 8,    // 手机竖屏 (<320px)
-       sm: 10,   // 手机横屏 (320-520px)
-       md: 12,   // 小平板 (520-840px)
-       lg: 16,   // 大平板 (840-1024px) ⭐ 当前
-       xl: 20,   // 小桌面 (1024-1440px)
-       xxl: 24   // 大桌面 (>1440px)
-     })
-     ```
-107. **动态布局调整**
-     * 列表内边距：16px（lg 断点）
-     * 按钮宽度：70%（lg 断点）
-     * 标题字号：18px（lg 断点）
-     * 金额字号：20px（lg 断点）
-108. **Grid 布局**
-     * 手机（md）：1 列
-     * 平板（lg）：2 列 ⭐
-     * 桌面（xl）：3 列
-109. **Navigation 导航栏**
-     * 手机：底部导航栏
-     * 平板：左侧抽屉式导航 ⭐
-     * 桌面：顶部横向导航
+**新增数据表**
+- reminders表 - 提醒记录
+- cloud_sync_records表 - 云同步记录
 
----
+**优化改进**
+- 新增提醒相关索引
+- 新增云同步相关索引
+- 代码架构优化
 
-## 场景十六：性能监控与优化
+### v1.1.0 (2025-11-12)
 
-应用在后台自动进行性能监控。
+**新增功能**
+- 数据导出与备份功能
+- AES-256-GCM数据加密
+- 数据导入恢复
+- 校验和验证
 
-### 涉及的类/模块：
+**优化改进**
+- 数据库索引优化
+- 批量查询性能优化
+- 缓存机制引入
+- 性能监控
 
-110. **[PerformanceMonitor.ets](vscode-webview://021ekl1rju48t3a5n1tqk2u3695es05r2jkbo9kq9o1m0242mo0s/index.html?id=892cc21a-cb90-4d03-b26a-536bfca7cbef&parentId=1&origin=041e65f6-1542-43ef-a8c0-80e87583a8bb&swVersion=4&extensionId=Anthropic.claude-code&platform=electron&vscode-resource-base-authority=vscode-resource.vscode-cdn.net&parentOrigin=vscode-file%3A%2F%2Fvscode-app&session=42e9195a-ac20-4538-821a-a48e795b0880) 性能监控**
+### v1.0.0 (2025-11-01)
 
-     * 使用 **AOP（面向切面编程）** 装饰器模式
-     * `@measurePerformance` 装饰器
-111. **慢查询检测**
-
-     * 监控到一个查询：120ms
-     * 超过阈值（100ms）
-     * 记录慢查询日志：
-
-     ```log
-     [SLOW QUERY] BillDAO.getBillsByFilters took 120ms
-     SQL: SELECT * FROM bills WHERE user_id = 1 AND transaction_date >= '2025-01-01'
-     ```
-112. **性能统计**
-
-     * 过去 1 小时查询统计：
-       * 总查询数：1250
-       * 平均时间：8.5ms
-       * 慢查询（>100ms）：3 次（0.24%）
-       * 超慢查询（>500ms）：0 次
-113. **[CacheManager.ets](vscode-webview://021ekl1rju48t3a5n1tqk2u3695es05r2jkbo9kq9o1m0242mo0s/index.html?id=892cc21a-cb90-4d03-b26a-536bfca7cbef&parentId=1&origin=041e65f6-1542-43ef-a8c0-80e87583a8bb&swVersion=4&extensionId=Anthropic.claude-code&platform=electron&vscode-resource-base-authority=vscode-resource.vscode-cdn.net&parentOrigin=vscode-file%3A%2F%2Fvscode-app&session=42e9195a-ac20-4538-821a-a48e795b0880) 缓存统计**
-
-     * 缓存命中率：78.3%
-     * 缓存条目数：245
-     * 过期清理：自动清理 TTL 超时的 12 个条目
-114. **IndexManager 索引分析**
-
-     * 覆盖索引使用率：91.5%
-     * 减少回表次数：2300 次
-     * 性能提升：平均查询时间从 25ms → 7ms
-115. **[DAOHelper.ets](vscode-webview://021ekl1rju48t3a5n1tqk2u3695es05r2jkbo9kq9o1m0242mo0s/index.html?id=892cc21a-cb90-4d03-b26a-536bfca7cbef&parentId=1&origin=041e65f6-1542-43ef-a8c0-80e87583a8bb&swVersion=4&extensionId=Anthropic.claude-code&platform=electron&vscode-resource-base-authority=vscode-resource.vscode-cdn.net&parentOrigin=vscode-file%3A%2F%2Fvscode-app&session=42e9195a-ac20-4538-821a-a48e795b0880) 通用工具**
-
-     * `closeResultSet(resultSet)` 自动资源清理
-     * 防止内存泄漏
-
-## 场景十七：个人中心增强功能
-
-东晓南想要完善个人资料并调整应用设置。
-
-### 涉及的类/模块：
-
-116. **[ProfileEditPage.ets](entry/src/main/ets/pages/ProfileEditPage.ets) 个人信息编辑**
-    *   **头像更换**：
-        *   使用 `@ohos.file.picker` 选择图片
-        *   支持从相册选择头像
-    *   **昵称编辑**：
-        *   实时更新 User 模型的 `nickname` 字段
-    *   **邮箱修改**：
-        *   调用 `UserSessionService.updateEmail()` 验证并更新
-    *   **密码修改**：
-        *   弹窗输入旧密码和新密码
-        *   SHA-256 哈希后存储
-
-117. **[AppSettingsPage.ets](entry/src/main/ets/pages/AppSettingsPage.ets) 应用设置**
-    *   **主题切换**：浅色模式 / 深色模式 / 跟随系统
-    *   **语言选择**：简体中文 / English（预留）
-    *   **货币符号**：¥ / $ / € / £
-
-118. **[NotificationCenterPage.ets](entry/src/main/ets/pages/NotificationCenterPage.ets) 通知中心**
-    *   **通知类型筛选**：
-        *   全部 / 系统通知 / 预算提醒 / 同步状态 / 定时提醒
-    *   **未读管理**：
-        *   未读角标显示
-        *   一键全部已读
-    *   **时间格式化**：
-        *   "刚刚"、"5分钟前"、"昨天" 等友好显示
-
-119. **[AppSettingsService.ets](entry/src/main/ets/service/AppSettingsService.ets) 设置服务**
-    *   使用 `@ohos.data.preferences` 持久化存储
-    *   `getTheme()` / `setTheme()` 主题管理
-    *   `getLanguage()` / `setLanguage()` 语言管理
-    *   `getCurrency()` / `setCurrency()` 货币管理
-
-120. **[NotificationService.ets](entry/src/main/ets/service/NotificationService.ets) 通知服务**
-    *   `push(type, title, content)` 推送通知
-    *   `getNotifications(limit)` 获取通知列表
-    *   `markAsRead(notificationId)` 标记已读
-    *   `markAllAsRead()` 全部已读
-    *   `getUnreadCount()` 未读数量
-
-121. **User 模型扩展**
-    *   新增 `nickname: string` 昵称字段
-    *   新增 `avatarPath: string` 头像路径字段
-    *   更新 `toJSON()` / `fromJSON()` / `clone()` 方法
-
-122. **[Notification.ets](entry/src/main/ets/model/Notification.ets) 通知模型**
-    ```typescript
-    enum NotificationType {
-      SYSTEM = 'SYSTEM',
-      BUDGET_ALERT = 'BUDGET_ALERT',
-      SYNC_STATUS = 'SYNC_STATUS',
-      REMINDER = 'REMINDER'
-    }
-    
-    class Notification {
-      notificationId: number
-      userId: number
-      type: NotificationType
-      title: string
-      content: string
-      isRead: number  // 0=未读, 1=已读
-      createdAt: string
-    }
-    ```
+**初始版本**
+- 用户管理基础功能
+- 账户管理
+- 分类管理 (树形结构)
+- 账单管理
+- 预算管理
+- 标签系统
+- 统计功能
 
 ---
 
+## 常见问题
 
-## 场景十八：共享账本（多人协作）
+### Q1: 应用启动时提示数据库初始化失败
 
-东晓南邀请妻子一起记账，管理家庭开支。
+**解决方案**:
+1. 检查应用是否有存储权限
+2. 确认设备存储空间充足
+3. 尝试清除应用数据后重新启动
 
-### 涉及的类/模块：
+### Q2: 数据同步失败
 
-118. **[SharedLedgerListPage.ets](entry/src/main/ets/pages/SharedLedgerListPage.ets) 共享账本列表**
-    *   **创建账本**：
-        *   设置名称（"温馨小家"）和类型（家庭、情侣、室友、旅行等）。
-        *   初始化成员列表（创建者自动成为 Owner）。
-    *   **邀请处理**：
-        *   `getUserInvitations()`：实时获取未处理的邀请。
-        *   **卡片式交互**：直接在列表中点击 "接受" 或 "拒绝"。
-        *   `handleAccept()` / `handleDecline()`：原子化操作状态流转。
+**解决方案**:
+1. 检查网络连接状态
+2. 确认云端服务是否正常
+3. 查看同步记录中的错误信息
+4. 当前版本云端同步为模拟实现，需要替换为真实API
 
-119. **[SharedLedgerService.ets](entry/src/main/ets/service/SharedLedgerService.ets) 共享服务**
-    *   `createLedger(params)`：创建账本实体。
-    *   `inviteMember(ledgerId, email)`：发送邀请。
-    *   `syncLedgerData()`：处理多端数据同步。
+### Q3: 提醒通知不显示
 
-120. **[SharedLedger.ets](entry/src/main/ets/model/SharedLedger.ets) 模型**
-    *   **权限控制**：
-        *   `Owner`：最高权限（修改设置、移除成员、删除账本）
-        *   `Editor`：可记账、编辑自己和与他人的账本
-        *   `Viewer`：仅查看
-    *   **数据隔离**：共享账本的数据与个人账本逻辑分离，确保隐私安全。
+**解决方案**:
+1. 检查应用是否有通知权限
+2. 确认提醒处于活跃状态
+3. 确认 `checkAndTriggerDueReminders` 方法被定期调用
+4. 检查下次提醒时间是否设置正确
 
----
+### Q4: 导入备份文件失败
 
-## 场景十九：高级功能展示（扩展功能）
+**解决方案**:
+1. 确认文件格式正确 (JSON)
+2. 如果文件已加密，确保输入正确的密码
+3. 检查文件是否损坏 (校验和验证)
+4. 确认备份文件版本与应用版本兼容
 
-除了上述核心功能，系统还集成了多项前沿技术。
+### Q5: 测试运行失败
 
-### 涉及的类/模块：
-
-121. **[SmartCategory.ets](entry/src/main/ets/model/SmartCategory.ets) 智能分类**
-     * 基于机器学习的自动分类
-     * 训练数据：历史账单记录
-     * 特征：金额、时间、备注关键词
-     * 算法：朴素贝叶斯分类器
-
-122. **[OCRRecognition.ets](entry/src/main/ets/model/OCRRecognition.ets) OCR 识别**
-     * 拍照识别小票
-     * 提取：商家名称、金额、日期
-     * 自动创建账单
-
-123. **[AnomalyDetectionService.ets](entry/src/main/ets/service/AnomalyDetectionService.ets) 异常检测**
-     * **核心算法**：孤立森林（Isolation Forest）
-     * **监测维度**：
-         *   单笔大额支出
-         *   高频小额交易
-         *   异地/非习惯时间交易
-     * **交互**：检测到异常时，通过 `NotificationManager` 发送系统通知提醒用户确认。
-
-124. **[EventSourcing.ets](entry/src/main/ets/model/EventSourcing.ets) 事件溯源**
-     * 记录所有数据变更事件
-     * 支持回溯到任意历史时刻
-     * 用于审计和数据恢复
+**解决方案**:
+1. 确保在 `beforeAll` 中正确初始化数据库
+2. 检查测试设备是否正确连接
+3. 使用 `beforeEach` 清理测试数据，避免测试间干扰
 
 ---
 
-## 场景二十：单元测试保障（开发阶段）
+## 参考资料
 
-开发团队运行单元测试确保代码质量。
+### 官方文档
 
-### 涉及的类/模块：
+- [HarmonyOS开发者文档](https://developer.harmonyos.com/cn/docs/documentation/doc-guides-V3/arkts-basic-overview-0000001513958650-V3)
+- [ArkTS语言基础](https://developer.harmonyos.com/cn/docs/documentation/doc-guides-V3/arkts-basic-overview-0000001513958650-V3)
+- [ArkUI框架](https://developer.harmonyos.com/cn/docs/documentation/doc-guides-V3/arkui-overview-0000001474539994-V3)
+- [RelationalStore API](https://developer.harmonyos.com/cn/docs/documentation/doc-references-V3/js-apis-data-relationalstore-0000001478261929-V3)
+- [Hypium测试框架](https://gitee.com/openharmony/testfwk_arkxtest)
 
-125. **测试框架：Hypium**
-     * HarmonyOS 官方测试框架
-     * 位置：`ohosTest/ets/test/`
-126. **模型测试**
-     * `User.test.ets`：测试用户模型验证
-     * `Bill.test.ets`：测试账单模型
-     * `Category.test.ets`：测试分类树形结构
-     * `Budget.test.ets`：测试预算计算
-     * `FinancialHealth.test.ets`：测试评分算法
-     * `SmartBudgetPlan.test.ets`：测试预测算法
-127. **DAO 测试**
-     * `UserDAO.test.ets`：测试用户 CRUD
-     * `BillDAO.test.ets`：测试复杂查询
-     * `CategoryDAO.test.ets`：测试树形查询
-     * `TagDAO.test.ets`：测试标签聚合
-     * `BudgetDAO.test.ets`：测试预算查询
-     * `StatisticsDAO.test.ets`：测试统计查询
-128. **页面测试**
-     * `Index.test.ets`：测试首页渲染
-     * `AddBill.test.ets`：测试表单验证
-     * `CategoryManagement.test.ets`：测试分类操作
-129. **服务测试**
-     * `UserSessionService.test.ets`：测试登录/注册
-130. **测试覆盖率**
-     * 模型层：95%
-     * DAO 层：92%
-     * 服务层：88%
-     * 页面层：75%
-     * 总体覆盖率：**87.5%** 
+### 项目内部文档
+
+- [项目架构说明文档](项目架构说明文档.md)
+- [高级功能实现文档](高级功能实现文档.md)
+- [高级功能快速开始](高级功能快速开始.md)
+- [测试运行指南](测试说明/测试运行指南.md)
+- [导出备份与加密技术文档](导出备份与加密/导出备份接口与加密逻辑技术文档.md)
+- [索引优化技术文档](索引优化与批量查询/索引优化与批量查询技术文档.md)
+- [分类标签技术文档](categories-tag/Categories-Tags表及查询聚合技术文档.md)
+
+### UML设计图
+
+- [类图](UML图/class.puml)
+- [用例图](UML图/usecase.puml)
+- [ER图](UML图/er.puml)
+- [架构图](UML图/architecture.puml)
 
 ---
 
-## 场景总结：所有类/模块的作用
+## 许可证
 
-### **模型层（22 个类）**
+本项目基于 Apache License 2.0 许可证开源。
 
-* **User** ：用户身份信息（含 nickname, avatarPath）
-* **Account** ：资金账户管理
-* **Bill** ：核心账单记录
-* **Category** ：树形分类体系
-* **Budget** ：预算控制
-* **Tag** ：灵活标签系统
-* **BillTag** ：账单-标签多对多关联
-* **Statistics** ：月度/分类统计
-* **Reminder** ：定期提醒
-* **Notification** ：应用内通知（系统/预算/同步/提醒）
-* **CloudSyncRecord** ：云同步记录
-* **FinancialHealthScore** ：财务健康评分
-* **FinancialGoal** ：理财目标
-* **SmartBudgetPlan** ：智能预算规划（6种算法）
-* **Transaction** ：简化交易模型
-* **AggregationTypes** ：聚合查询辅助类型
-* **SmartCategory** ：智能分类（ML）
-* **SharedLedger** ：共享账本
-* **OCRRecognition** ：OCR识别
-* **AnomalyDetection** ：异常检测
-* **EventSourcing** ：事件溯源
-* **DataModels** ：数据模型集合
+```
+Copyright (c) 2025 SEU-SE Team
 
-### **数据访问层（10 个 DAO）**
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
 
-* **UserDAO** ：用户数据访问
-* **AccountDAO** ：账户余额管理
-* **BillDAO** ：账单 CRUD + 复杂查询
-* **CategoryDAO** ：分类树形查询
-* **BudgetDAO** ：预算状态管理
-* **TagDAO** ：标签聚合统计
-* **StatisticsDAO** ：统计数据访问
-* **ReminderDAO** ：提醒查询
-* **CloudSyncRecordDAO** ：同步记录管理
-* **SharedLedgerDAO** ：(隐含) 共享账本数据访问
+    http://www.apache.org/licenses/LICENSE-2.0
 
-### **业务服务层（12 个服务）**
-
-* **UserSessionService** ：用户会话管理（含资料编辑、密码修改）
-* **SharedLedgerService** ：共享账本服务
-* **NotificationService** ：通知推送与管理
-* **AppSettingsService** ：应用设置管理（主题/语言/货币）
-* **AnomalyDetectionService** ：异常检测服务
-* **SmartCategoryService** ：智能分类服务
-* **OCRRecognitionService** ：OCR 识别服务
-* **ReminderService** ：定期提醒服务
-* **CloudSyncService** ：云端同步服务
-* **EventSourcingService** ：事件溯源服务
-* **DemoDataService** ：演示数据生成
-* **ExportService/ImportService** ：数据导入导出
-
-### **表示层（25+ 个页面）**
-
-* **核心业务**：Index, AddBill, StatisticsPage, BudgetManagement
-* **智能功能**：SmartBudgetPage, OCRScanPage, SmartCategoryRulesPage
-* **共享账本**：SharedLedgerListPage, SharedLedgerDetailPage, AddSharedBill
-* **个人中心**：MinePage, ProfileEditPage, AppSettingsPage, NotificationCenterPage
-* **账户管理**：AccountManagementPage, CategoryManagement, SettingsPage
-* **其他**：LoginPage, RegisterPage, BackupPage, AnomalyHistoryPage, ExportImportPage
-
-### **公共工具与基础设施**
-
-* **EncryptionModule** ：AES-256-GCM 加密
-* **FileHelper** ：文件读写
-* **ChecksumHelper** ：SHA-256 校验
-* **ContextBuilder** ：AI 上下文构建
-* **AppConfig** ：应用配置常量
-* **Constants** ：全局常量
-* **BreakpointSystem** ：响应式断点系统
-* **DAOHelper** ：DAO通用工具
-
-### **应用入口（1 个）**
-
-* **EntryAbility** ：应用生命周期管理
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+```
 
 ---
 
-## 核心价值总结
-
-通过这个完整的使用场景，我们看到：
-
-1. **分层架构** ：清晰的职责划分，每个类各司其职
-2. **性能优化** ：覆盖索引（3-5倍提升）、缓存（60-80%减少负载）、批量操作
-3. **安全保障** ：SHA-256密码哈希、AES-256-GCM加密、外键约束、事务保护
-4. **智能功能** ：6种预测算法、8维度财务健康评分、个性化建议
-5. **用户体验** ：响应式布局、软删除恢复、树形分类、标签系统
-6. **企业级特性** ：事件溯源、异常检测、云同步、数据备份
-
-这是一个**设计精良、功能完整、性能优秀**的企业级 HarmonyOS 记账应用！
+**文档版本**: v1.2.0
+**最后更新**: 2025-12-17
+**维护团队**: SEU-SE开发团队

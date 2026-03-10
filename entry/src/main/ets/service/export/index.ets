@@ -9,13 +9,13 @@
  */
 
 // 导出核心服务
-export { ExportService } from './ExportService';
-export { ImportService } from './ImportService';
-export { EncryptionModule } from './EncryptionModule';
+export { ExportService } from './services/ExportService';
+export { ImportService } from './services/ImportService';
 
 // 导出工具类
-export { FileHelper } from './FileHelper';
-export { ChecksumHelper } from './ChecksumHelper';
+export { EncryptionModule } from './utils/EncryptionModule';
+export { FileHelper } from './utils/FileHelper';
+export { ChecksumHelper } from './utils/ChecksumHelper';
 
 // 导出所有类型定义
 export {
