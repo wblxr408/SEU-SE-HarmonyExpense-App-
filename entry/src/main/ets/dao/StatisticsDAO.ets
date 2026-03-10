@@ -1,7 +1,7 @@
 import relationalStore from '@ohos.data.relationalStore';
 import { DatabaseManager } from '../database/DatabaseManager';
 import { MonthlyStatistics, CategoryStatistics } from '../model/Statistics';
-import { DAOHelper } from '../common/DAOHelper';
+import { DAOHelper } from '../common/utils/DAOHelper';
 
 export class StatisticsDAO {
 

@@ -8,7 +8,7 @@
  */
 
 import fs from '@ohos.file.fs';
-import { ExportError, ExportErrorCode } from './types/ExportTypes';
+import { ExportError, ExportErrorCode } from '../types/ExportTypes';
 import hilog from '@ohos.hilog';
 
 /**

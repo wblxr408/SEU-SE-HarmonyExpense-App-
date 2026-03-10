@@ -13,7 +13,7 @@
 import relationalStore from '@ohos.data.relationalStore';
 import { DatabaseManager } from '../database/DatabaseManager';
 import { OCRRecognitionRecord } from '../model/OCRRecognition';
-import { DAOHelper } from '../common/DAOHelper';
+import { DAOHelper } from '../common/utils/DAOHelper';
 
 /**
  * OCR识别统计接口

@@ -4,7 +4,7 @@ import { Tag } from '../model/Tag';
 import { BillTag } from '../model/BillTag';
 import { TagAggregation } from '../model/AggregationTypes';
 import { Bill } from '../model/Bill';
-import { DAOHelper } from '../common/DAOHelper';
+import { DAOHelper } from '../common/utils/DAOHelper';
 
 /**
  * 标签数据访问对象 - TagDAO

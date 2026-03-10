@@ -8,11 +8,11 @@ import { CURRENT_USER_ID } from '../common/Constants';
 import { BusinessError } from '@ohos.base';
 import { Category } from '../model';
 import { CategoryDAO } from '../dao/CategoryDAO';
-import { BreakPointType } from '../common/BreakpointSystem';
+import { BreakPointType } from '../common/config/BreakpointSystem';
 import { MinePage } from './MinePage';
 import { StatisticsPage } from './StatisticsPage';
 import { UserSessionService } from '../service/UserSessionService';
-import { AppTheme } from '../common/AppTheme';
+import { AppTheme } from '../common/config/AppTheme';
 import { SharedLedgerService } from '../service/SharedLedgerService';
 import { LedgerInvitation } from '../model/SharedLedger';
 

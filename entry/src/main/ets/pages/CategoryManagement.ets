@@ -5,7 +5,7 @@ import { CategoryTreeNode } from '../model/AggregationTypes'
 import promptAction from '@ohos.promptAction'
 import hilog from '@ohos.hilog'
 import type { BusinessError } from '@ohos.base'
-import { BreakPointType } from '../common/BreakpointSystem';
+import { BreakPointType } from '../common/config/BreakpointSystem';
 import { UserSessionService } from '../service/UserSessionService';
 
 // HILOG 定义

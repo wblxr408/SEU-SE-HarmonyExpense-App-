@@ -24,8 +24,8 @@ import { Account } from '../model/Account'
 import { Category } from '../model/Category'
 import { AbilityConstant } from '@kit.AbilityKit';
 import { BusinessError} from '@kit.BasicServicesKit';
-import { LogConfig } from '../common/AppConfig';
-import { BreakpointSystem } from '../common/BreakpointSystem';
+import { LogConfig } from '../common/config/AppConfig';
+import { BreakpointSystem } from '../common/config/BreakpointSystem';
 import { AppSettingsService } from '../service/AppSettingsService';
 
 export default class EntryAbility extends UIAbility {

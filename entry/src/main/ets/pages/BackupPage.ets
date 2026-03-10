@@ -1,6 +1,6 @@
 import router from '@ohos.router';
-import { ExportService } from '../service/export/ExportService';
-import { ImportService } from '../service/export/ImportService';
+import { ExportService } from '../service/export/services/ExportService';
+import { ImportService } from '../service/export/services/ImportService';
 import { ExportOptions } from '../service/export/types/ExportTypes';
 import { UserSessionService } from '../service/UserSessionService';
 import promptAction from '@ohos.promptAction';

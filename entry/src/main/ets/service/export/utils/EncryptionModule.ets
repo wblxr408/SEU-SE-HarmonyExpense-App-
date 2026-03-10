@@ -11,7 +11,7 @@
 
 import cryptoFramework from '@ohos.security.cryptoFramework';
 import hilog from '@ohos.hilog';
-import { ExportError, ExportErrorCode, DEFAULT_ENCRYPTION_PARAMS } from './types/ExportTypes';
+import { ExportError, ExportErrorCode, DEFAULT_ENCRYPTION_PARAMS } from '../types/ExportTypes';
 
 /**
  * 加密模块类

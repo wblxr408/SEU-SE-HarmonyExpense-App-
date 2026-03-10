@@ -8,7 +8,7 @@
  */
 
 import cryptoFramework from '@ohos.security.cryptoFramework';
-import { ExportError, ExportErrorCode } from './types/ExportTypes';
+import { ExportError, ExportErrorCode } from '../types/ExportTypes';
 import hilog from '@ohos.hilog';
 
 /**

@@ -2,7 +2,7 @@
 import relationalStore from '@ohos.data.relationalStore';
 import { DatabaseManager } from '../database/DatabaseManager';
 import { User } from '../model/User';
-import { DAOHelper } from '../common/DAOHelper';
+import { DAOHelper } from '../common/utils/DAOHelper';
 
 export class UserDAO {
 

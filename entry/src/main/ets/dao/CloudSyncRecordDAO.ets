@@ -5,7 +5,7 @@
 import relationalStore from '@ohos.data.relationalStore';
 import { DatabaseManager } from '../database/DatabaseManager';
 import { CloudSyncRecord, CloudSyncRecordJSON } from '../model/CloudSyncRecord';
-import { DAOHelper } from '../common/DAOHelper';
+import { DAOHelper } from '../common/utils/DAOHelper';
 
 /**
  * 同步统计结果

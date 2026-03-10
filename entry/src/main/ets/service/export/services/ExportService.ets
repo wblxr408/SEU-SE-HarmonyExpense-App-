@@ -7,16 +7,16 @@
  * @date 2025-11-11
  */
 
-import { UserDAO } from '../../dao/UserDAO';
-import { AccountDAO } from '../../dao/AccountDAO';
-import { CategoryDAO } from '../../dao/CategoryDAO';
-import { BillDAO } from '../../dao/BillDAO';
-import { BudgetDAO } from '../../dao/BudgetDAO';
-import { TagDAO } from '../../dao/TagDAO';
-import { ExportData, ExportOptions, ExportDataContent, ExportError, ExportErrorCode, EXPORT_VERSION } from './types/ExportTypes';
-import { EncryptionModule } from './EncryptionModule';
-import { FileHelper } from './FileHelper';
-import { ChecksumHelper } from './ChecksumHelper';
+import { UserDAO } from '../../../dao/UserDAO';
+import { AccountDAO } from '../../../dao/AccountDAO';
+import { CategoryDAO } from '../../../dao/CategoryDAO';
+import { BillDAO } from '../../../dao/BillDAO';
+import { BudgetDAO } from '../../../dao/BudgetDAO';
+import { TagDAO } from '../../../dao/TagDAO';
+import { ExportData, ExportOptions, ExportDataContent, ExportError, ExportErrorCode, EXPORT_VERSION } from '../types/ExportTypes';
+import { EncryptionModule } from '../utils/EncryptionModule';
+import { FileHelper } from '../utils/FileHelper';
+import { ChecksumHelper } from '../utils/ChecksumHelper';
 import hilog from '@ohos.hilog';
 
 /**

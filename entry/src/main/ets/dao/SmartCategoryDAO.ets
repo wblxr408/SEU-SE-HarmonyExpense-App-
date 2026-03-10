@@ -13,7 +13,7 @@
 import relationalStore from '@ohos.data.relationalStore';
 import { DatabaseManager } from '../database/DatabaseManager';
 import { SmartCategoryTraining, SmartCategoryRule } from '../model/SmartCategory';
-import { DAOHelper } from '../common/DAOHelper';
+import { DAOHelper } from '../common/utils/DAOHelper';
 
 interface ColumnSpec {
   name: string;

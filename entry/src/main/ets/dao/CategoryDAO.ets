@@ -3,7 +3,7 @@ import { DatabaseManager } from '../database/DatabaseManager';
 import { Category } from '../model/Category';
 import { CategoryTreeNode, CategoryAggregation } from '../model/AggregationTypes';
 import { CacheManager } from '../database/CacheManager';
-import { DAOHelper } from '../common/DAOHelper';
+import { DAOHelper } from '../common/utils/DAOHelper';
 
 /**
  * 分类数据访问对象 - CategoryDAO

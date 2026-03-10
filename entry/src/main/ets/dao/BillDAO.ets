@@ -5,7 +5,7 @@ import { Bill } from '../model/Bill';
 import { AccountDAO } from './AccountDAO';
 import { CategoryDAO } from './CategoryDAO';
 import { BatchQueryHelper } from '../database/BatchQueryHelper';
-import { DAOHelper } from '../common/DAOHelper';
+import { DAOHelper } from '../common/utils/DAOHelper';
 
 export interface DateRangeFilter {
   start: string;

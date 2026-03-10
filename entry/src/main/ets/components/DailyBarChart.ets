@@ -1,5 +1,5 @@
 import { DailyChartData } from '../model/ChartData';
-import { AppTheme } from '../common/AppTheme';
+import { AppTheme } from '../common/config/AppTheme';
 
 @Component
 export struct DailyBarChart {

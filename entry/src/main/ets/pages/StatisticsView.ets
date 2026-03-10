@@ -4,7 +4,7 @@ import { BillDAO, DateRangeFilter } from '../dao/BillDAO';
 import { CategoryDAO } from '../dao/CategoryDAO';
 import { Category } from '../model/Category';
 import { DailyChartData, MonthSummary, CategoryStat } from '../model/ChartData';
-import { AppTheme } from '../common/AppTheme';
+import { AppTheme } from '../common/config/AppTheme';
 import { DailyBarChart } from '../components/DailyBarChart';
 import hilog from '@ohos.hilog';
 import { UserSessionService } from '../service/UserSessionService';

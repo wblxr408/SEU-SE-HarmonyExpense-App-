@@ -2,7 +2,7 @@ import router from '@ohos.router';
 import { UserSessionService, SessionInfo } from '../service/UserSessionService';
 import { NotificationService } from '../service/NotificationService';
 import promptAction from '@ohos.promptAction';
-import { AppTheme } from '../common/AppTheme';
+import { AppTheme } from '../common/config/AppTheme';
 
 @Component
 export struct MinePage {

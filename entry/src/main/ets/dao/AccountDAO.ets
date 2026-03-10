@@ -1,7 +1,7 @@
 import relationalStore from '@ohos.data.relationalStore';
 import { DatabaseManager } from '../database/DatabaseManager';
 import { Account, AccountJSON } from '../model/Account';
-import { DAOHelper } from '../common/DAOHelper';
+import { DAOHelper } from '../common/utils/DAOHelper';
 
 /**
  * 账户数据访问对象（DAO）

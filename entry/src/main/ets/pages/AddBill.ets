@@ -9,7 +9,7 @@ import { AccountDAO } from '../dao/AccountDAO' //
 import { Category } from '../model/Category' //
 import { CategoryDAO } from '../dao/CategoryDAO' //
 import { hilog } from '@kit.PerformanceAnalysisKit';
-import { BreakPointType } from '../common/BreakpointSystem';
+import { BreakPointType } from '../common/config/BreakpointSystem';
 import { UserSessionService } from '../service/UserSessionService';
 import { AnomalyDetectionService, AnomalyDetectionResult } from '../service/AnomalyDetectionService';
 import { AnomalyRecord } from '../model/AnomalyDetection';

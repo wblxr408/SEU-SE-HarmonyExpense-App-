@@ -3,10 +3,10 @@
  * 提供所有DAO共用的工具方法，减少代码重复
  */
 import relationalStore from '@ohos.data.relationalStore';
-import { DatabaseManager } from '../database/DatabaseManager';
-import { Bill } from '../model/Bill';
-import { AnomalyRecord, UserSpendingBaseline } from '../model/AnomalyDetection';
-import { DomainEvent, Command, AggregateSnapshot, ReadModel } from '../model/EventSourcing';
+import { DatabaseManager } from '../../database/DatabaseManager';
+import { Bill } from '../../model/Bill';
+import { AnomalyRecord, UserSpendingBaseline } from '../../model/AnomalyDetection';
+import { DomainEvent, Command, AggregateSnapshot, ReadModel } from '../../model/EventSourcing';
 import {
   SharedLedger,
   LedgerMember,
@@ -14,9 +14,9 @@ import {
   SharedBill,
   ApprovalRecord,
   MemberActivity
-} from '../model/SharedLedger';
-import { SmartCategoryTraining, SmartCategoryRule } from '../model/SmartCategory';
-import { OCRRecognitionRecord } from '../model/OCRRecognition';
+} from '../../model/SharedLedger';
+import { SmartCategoryTraining, SmartCategoryRule } from '../../model/SmartCategory';
+import { OCRRecognitionRecord } from '../../model/OCRRecognition';
 
 export class DAOHelper {
   /**
