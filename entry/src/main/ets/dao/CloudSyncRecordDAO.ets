@@ -144,14 +144,18 @@ export class CloudSyncRecordDAO {
   static async getByUserId(userId: number, limit: number | undefined = undefined): Promise<CloudSyncRecord[]> {
     const store: relationalStore.RdbStore = DatabaseManager.getDatabase();
     let sql: string = `SELECT * FROM ${CloudSyncRecord.tableName} WHERE user_id = ? ORDER BY created_at DESC`;
+    let params: (number | string)[] = [userId];
+
+    // 修复：使用参数化查询防止SQL注入
     if (limit !== undefined && limit > 0) {
-      sql += ` LIMIT ${limit}`;
+      sql += ` LIMIT ?`;
+      params.push(limit);
     }
     let rs: relationalStore.ResultSet | null = null;
     const list: CloudSyncRecord[] = [];
 
     try {
-      rs = await store.querySql(sql, [userId]);
+      rs = await store.querySql(sql, params);
       while (rs.goToNextRow()) {
         list.push(CloudSyncRecordDAO.mapRowToCloudSyncRecord(rs));
       }

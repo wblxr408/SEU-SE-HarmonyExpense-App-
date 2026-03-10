@@ -1,7 +1,7 @@
 /**
  * 提醒服务
  * 提供定期账单和预算提醒功能
- * 
+ *
  * 功能：
  * - 创建和管理提醒
  * - 计算下次提醒时间
@@ -13,6 +13,7 @@ import { BudgetDAO } from '../dao/BudgetDAO';
 import { Reminder } from '../model/Reminder';
 import { Budget } from '../model/Budget';
 import notificationManager from '@ohos.notificationManager';
+import bundleManager from '@ohos.bundle.bundleManager';
 
 /**
  * 提醒创建选项
@@ -98,6 +99,39 @@ class ReminderStatistics {
  * 提醒服务
  */
 export class ReminderService {
+  private static processedReminders: Set<number> = new Set();
+  private static readonly PROCESSING_TIMEOUT: number = 60000;
+
+  /**
+   * 检查通知权限
+   */
+  static async checkNotificationPermission(): Promise<boolean> {
+    try {
+      const bundleInfo = await bundleManager.getBundleInfoForSelf(bundleManager.BundleFlag.GET_BUNDLE_INFO_WITH_APPLICATION);
+      const appInfo = bundleInfo.appInfo;
+      return appInfo.allowNotification;
+    } catch (error) {
+      console.error('[ReminderService] 检查通知权限失败:', error);
+      return false;
+    }
+  }
+
+  /**
+   * 请求通知权限
+   */
+  static async requestNotificationPermission(): Promise<boolean> {
+    try {
+      const isEnabled = await notificationManager.isNotificationEnabled();
+      if (!isEnabled) {
+        console.warn('[ReminderService] 通知权限未开启');
+        return false;
+      }
+      return true;
+    } catch (error) {
+      console.error('[ReminderService] 请求通知权限失败:', error);
+      return false;
+    }
+  }
 
   /**
    * 创建提醒
@@ -119,10 +153,10 @@ export class ReminderService {
         options.frequency,
         options.reminderDate,
         nextReminderDate,
-        1, // 激活状态
+        1,
         '',
         '',
-        0, // 删除状态
+        0,
         options.amount,
         options.categoryId,
         options.accountId,
@@ -149,7 +183,6 @@ export class ReminderService {
     frequency: 'once' | 'monthly' = 'monthly'
   ): Promise<number> {
     try {
-      // 查找预算
       const budget: Budget | null = await BudgetDAO.getById(budgetId);
       if (!budget || budget.userId !== userId) {
         const error: Error = new Error('预算不存在');
@@ -191,9 +224,22 @@ export class ReminderService {
       const results: ReminderNotificationResult[] = [];
 
       for (const reminder of dueReminders) {
+        // 防重复触发检查
+        if (ReminderService.isRecentlyProcessed(reminder.reminderId)) {
+          console.warn(`[ReminderService] 提醒 ${reminder.reminderId} 正在处理中，跳过`);
+          continue;
+        }
+
+        ReminderService.markAsProcessed(reminder.reminderId);
+
         try {
-          // 发送通知
-          await ReminderService.sendNotification(reminder);
+          // 检查通知权限
+          const hasPermission = await ReminderService.checkNotificationPermission();
+          if (hasPermission) {
+            await ReminderService.sendNotification(reminder);
+          } else {
+            console.warn('[ReminderService] 无通知权限，跳过通知发送');
+          }
 
           // 更新下次提醒时间
           if (reminder.frequency !== 'once') {
@@ -203,7 +249,6 @@ export class ReminderService {
             );
             await ReminderDAO.updateNextReminderDate(reminder.reminderId, nextDate);
           } else {
-            // 一次性提醒，停用
             await ReminderDAO.setActive(reminder.reminderId, false);
           }
 
@@ -212,6 +257,8 @@ export class ReminderService {
           const errorMsg: string = error instanceof Error ? error.message : String(error);
           console.error(`[ReminderService] 触发提醒失败 (ID: ${reminder.reminderId}):`, error);
           results.push(new ReminderNotificationResult(reminder.reminderId, false, `触发失败: ${errorMsg}`));
+        } finally {
+          ReminderService.clearProcessedFlag(reminder.reminderId);
         }
       }
 
@@ -224,10 +271,40 @@ export class ReminderService {
   }
 
   /**
+   * 检查提醒是否最近已处理
+   */
+  private static isRecentlyProcessed(reminderId: number): boolean {
+    const record = ReminderService.processedReminders.get(reminderId);
+    if (!record) return false;
+    return (Date.now() - record) < ReminderService.PROCESSING_TIMEOUT;
+  }
+
+  /**
+   * 标记提醒为已处理
+   */
+  private static markAsProcessed(reminderId: number): void {
+    ReminderService.processedReminders.set(reminderId, Date.now());
+  }
+
+  /**
+   * 清除处理标记
+   */
+  private static clearProcessedFlag(reminderId: number): void {
+    ReminderService.processedReminders.delete(reminderId);
+  }
+
+  /**
    * 发送通知
    */
   private static async sendNotification(reminder: Reminder): Promise<void> {
     try {
+      // 检查通知是否启用
+      const isEnabled = await notificationManager.isNotificationEnabled();
+      if (!isEnabled) {
+        console.warn('[ReminderService] 通知已禁用');
+        return;
+      }
+
       const notificationRequest: notificationManager.NotificationRequest = {
         id: reminder.reminderId,
         content: {
@@ -244,15 +321,15 @@ export class ReminderService {
       console.log(`[ReminderService] 通知已发送: ${reminder.title}`);
     } catch (error) {
       console.error('[ReminderService] 发送通知失败:', error);
-      // 通知失败不抛出异常，记录日志即可
     }
   }
 
   /**
-   * 计算下次提醒时间
+   * 计算下次提醒时间（修复月度日期溢出问题）
    */
   static calculateNextReminderDate(currentDate: string, frequency: string): string {
     const date: Date = new Date(currentDate);
+    const originalDay: number = date.getDate();
 
     switch (frequency) {
       case 'once':
@@ -265,9 +342,19 @@ export class ReminderService {
         break;
       case 'monthly':
         date.setMonth(date.getMonth() + 1);
+        // 修复：如果目标月份天数少于原日期，自动调整到月末
+        const targetMonthDays: number = new Date(date.getFullYear(), date.getMonth() + 1, 0).getDate();
+        if (originalDay > targetMonthDays) {
+          date.setDate(targetMonthDays);
+        }
         break;
       case 'yearly':
         date.setFullYear(date.getFullYear() + 1);
+        // 处理闰年2月29日的情况
+        const targetYearDays: number = new Date(date.getFullYear(), date.getMonth() + 1, 0).getDate();
+        if (originalDay > targetYearDays && date.getMonth() === 1) {
+          date.setDate(targetYearDays);
+        }
         break;
       default:
         return currentDate;

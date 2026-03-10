@@ -121,15 +121,28 @@ export class Reminder {
   }
 
   validate(): boolean {
-    return (
+    // 基础验证
+    const baseValid = (
       this.userId > 0 &&
       this.title !== '' &&
       ['bill', 'budget'].includes(this.type) &&
       ['once', 'daily', 'weekly', 'monthly', 'yearly'].includes(this.frequency) &&
       this.reminderDate !== '' &&
+      this.nextReminderDate !== '' &&
       (this.isActive === 0 || this.isActive === 1) &&
       (this.isDeleted === 0 || this.isDeleted === 1)
     );
+
+    if (!baseValid) {
+      return false;
+    }
+
+    // 类型特定验证
+    if (this.type === 'budget' && !this.budgetId) {
+      return false;
+    }
+
+    return true;
   }
 
   clone(): Reminder {

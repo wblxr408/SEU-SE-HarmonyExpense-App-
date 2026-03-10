@@ -111,6 +111,10 @@ export class CloudSyncRecord {
   validate(): boolean {
     return (
       this.userId > 0 &&
+      this.startTime !== '' &&
+      this.createdAt !== '' &&
+      Array.isArray(this.dataTypes) &&
+      this.dataTypes.length > 0 &&
       ['full', 'incremental'].includes(this.syncType) &&
       ['upload', 'download', 'bidirectional'].includes(this.syncDirection) &&
       ['pending', 'in_progress', 'completed', 'failed'].includes(this.status) &&

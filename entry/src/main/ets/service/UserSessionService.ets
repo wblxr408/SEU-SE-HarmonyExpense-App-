@@ -1,7 +1,7 @@
 /**
  * 用户会话管理服务
  * 替代单例模式的 CURRENT_USER_ID，支持真实登录系统
- * 
+ *
  * 功能：
  * - 用户登录/登出
  * - 会话管理
@@ -11,6 +11,8 @@ import { UserDAO } from '../dao/UserDAO';
 import { User } from '../model/User';
 import cryptoFramework from '@ohos.security.cryptoFramework';
 import util from '@ohos.util';
+import preferences from '@ohos.data.preferences';
+import { GlobalContext } from '../common/GlobalContext';
 
 /**
  * 会话信息
@@ -37,6 +39,33 @@ export class SessionInfo {
     this.loginTime = loginTime;
     this.lastActiveTime = lastActiveTime;
     this.token = token;
+  }
+
+  toJSON(): string {
+    return JSON.stringify({
+      userId: this.userId,
+      username: this.username,
+      email: this.email,
+      loginTime: this.loginTime,
+      lastActiveTime: this.lastActiveTime,
+      token: this.token
+    });
+  }
+
+  static fromJSON(json: string): SessionInfo | null {
+    try {
+      const data = JSON.parse(json);
+      return new SessionInfo(
+        data.userId,
+        data.username,
+        data.email,
+        data.loginTime,
+        data.lastActiveTime,
+        data.token
+      );
+    } catch {
+      return null;
+    }
   }
 }
 
@@ -74,6 +103,73 @@ export class OperationResult {
 export class UserSessionService {
   private static currentSession: SessionInfo | null = null;
   private static readonly SESSION_TIMEOUT: number = 24 * 60 * 60 * 1000; // 24小时
+  private static readonly SESSION_PREFERENCES_NAME: string = 'user_session_prefs';
+  private static readonly SALT_LENGTH: number = 16;
+  private static readonly PBKDF2_ITERATIONS: number = 100000;
+
+  /**
+   * 初始化首选项
+   */
+  private static async initPreferences(): Promise<preferences.Preferences | null> {
+    try {
+      const context = GlobalContext.getContext();
+      if (!context) {
+        return null;
+      }
+      return await preferences.getPreferences(context, UserSessionService.SESSION_PREFERENCES_NAME);
+    } catch (error) {
+      console.error('[UserSessionService] 初始化首选项失败:', error);
+      return null;
+    }
+  }
+
+  /**
+   * 保存会话到持久化存储
+   */
+  private static async saveSessionToStorage(session: SessionInfo): Promise<void> {
+    try {
+      const prefs = await UserSessionService.initPreferences();
+      if (prefs) {
+        await prefs.put('current_session', session.toJSON());
+        await prefs.flush();
+      }
+    } catch (error) {
+      console.error('[UserSessionService] 保存会话失败:', error);
+    }
+  }
+
+  /**
+   * 从持久化存储加载会话
+   */
+  private static async loadSessionFromStorage(): Promise<SessionInfo | null> {
+    try {
+      const prefs = await UserSessionService.initPreferences();
+      if (prefs) {
+        const sessionJson = await prefs.getSync('current_session', '') as string;
+        if (sessionJson) {
+          return SessionInfo.fromJSON(sessionJson);
+        }
+      }
+    } catch (error) {
+      console.error('[UserSessionService] 加载会话失败:', error);
+    }
+    return null;
+  }
+
+  /**
+   * 清除持久化会话
+   */
+  private static async clearSessionFromStorage(): Promise<void> {
+    try {
+      const prefs = await UserSessionService.initPreferences();
+      if (prefs) {
+        await prefs.delete('current_session');
+        await prefs.flush();
+      }
+    } catch (error) {
+      console.error('[UserSessionService] 清除会话失败:', error);
+    }
+  }
 
   /**
    * 用户登录
@@ -91,26 +187,31 @@ export class UserSessionService {
         return new LoginResult(false, '用户不存在');
       }
 
-      // 2. 验证密码
-      const passwordHash: string = await UserSessionService.hashPassword(password);
+      // 2. 验证密码（使用盐值验证）
+      const passwordHash: string = await UserSessionService.hashPasswordWithSalt(password, user.passwordHash);
       if (user.passwordHash !== passwordHash) {
         return new LoginResult(false, '密码错误');
       }
 
       // 3. 创建会话
       const now: string = new Date().toISOString();
-      UserSessionService.currentSession = new SessionInfo(
+      const newSession: SessionInfo = new SessionInfo(
         user.userId,
         user.username,
         user.email,
         now,
         now,
-        UserSessionService.generateToken(user.userId)
+        UserSessionService.generateSecureToken(user.userId)
       );
+
+      UserSessionService.currentSession = newSession;
+
+      // 4. 持久化会话
+      await UserSessionService.saveSessionToStorage(newSession);
 
       console.log(`[UserSessionService] 用户登录成功: ${user.username} (ID: ${user.userId})`);
 
-      return new LoginResult(true, '登录成功', UserSessionService.currentSession);
+      return new LoginResult(true, '登录成功', newSession);
     } catch (error) {
       console.error('[UserSessionService] 登录失败:', error);
       const errorMsg: string = error instanceof Error ? error.message : String(error);
@@ -121,10 +222,11 @@ export class UserSessionService {
   /**
    * 用户登出
    */
-  static logout(): void {
+  static async logout(): Promise<void> {
     if (UserSessionService.currentSession) {
       console.log(`[UserSessionService] 用户登出: ${UserSessionService.currentSession.username}`);
       UserSessionService.currentSession = null;
+      await UserSessionService.clearSessionFromStorage();
     }
   }
 
@@ -132,45 +234,60 @@ export class UserSessionService {
    * 获取当前登录用户ID
    * @returns 用户ID，未登录返回null
    */
-  static getCurrentUserId(): number | null {
-    if (!UserSessionService.isLoggedIn()) {
-      return null;
-    }
-    return UserSessionService.currentSession!.userId;
+  static async getCurrentUserId(): Promise<number | null> {
+    const session = await UserSessionService.getCurrentSession();
+    return session?.userId ?? null;
   }
 
   /**
    * 获取当前会话信息
    * @returns 会话信息，未登录返回null
    */
-  static getCurrentSession(): SessionInfo | null {
-    if (!UserSessionService.isLoggedIn()) {
-      return null;
+  static async getCurrentSession(): Promise<SessionInfo | null> {
+    // 如果内存中有会话，直接返回
+    if (UserSessionService.currentSession) {
+      // 检查会话是否过期
+      if (UserSessionService.isSessionExpired()) {
+        await UserSessionService.logout();
+        return null;
+      }
+      // 更新最后活跃时间
+      UserSessionService.currentSession.lastActiveTime = new Date().toISOString();
+      await UserSessionService.saveSessionToStorage(UserSessionService.currentSession);
+      return UserSessionService.currentSession;
     }
-    return UserSessionService.currentSession;
+
+    // 从持久化存储加载
+    const storedSession = await UserSessionService.loadSessionFromStorage();
+    if (storedSession && !UserSessionService.isSessionExpired(storedSession)) {
+      UserSessionService.currentSession = storedSession;
+      return storedSession;
+    }
+
+    return null;
+  }
+
+  /**
+   * 检查会话是否过期
+   */
+  private static isSessionExpired(session?: SessionInfo): boolean {
+    const targetSession = session || UserSessionService.currentSession;
+    if (!targetSession) {
+      return true;
+    }
+
+    const now: number = Date.now();
+    const lastActive: number = new Date(targetSession.lastActiveTime).getTime();
+    return (now - lastActive) > UserSessionService.SESSION_TIMEOUT;
   }
 
   /**
    * 检查是否已登录
    * @returns 是否已登录
    */
-  static isLoggedIn(): boolean {
-    if (!UserSessionService.currentSession) {
-      return false;
-    }
-
-    // 检查会话是否过期
-    const now: number = Date.now();
-    const lastActive: number = new Date(UserSessionService.currentSession.lastActiveTime).getTime();
-    if (now - lastActive > UserSessionService.SESSION_TIMEOUT) {
-      console.log('[UserSessionService] 会话已过期');
-      UserSessionService.currentSession = null;
-      return false;
-    }
-
-    // 更新最后活跃时间
-    UserSessionService.currentSession.lastActiveTime = new Date().toISOString();
-    return true;
+  static async isLoggedIn(): Promise<boolean> {
+    const session = await UserSessionService.getCurrentSession();
+    return session !== null;
   }
 
   /**
@@ -182,21 +299,26 @@ export class UserSessionService {
    */
   static async register(username: string, email: string, password: string): Promise<LoginResult> {
     try {
-      // 1. 检查邮箱是否已存在
+      // 1. 验证邮箱格式
+      if (!UserSessionService.validateEmail(email)) {
+        return new LoginResult(false, '邮箱格式不正确');
+      }
+
+      // 2. 检查邮箱是否已存在
       const users: User[] = await UserDAO.getAll();
       const existingUser: User | undefined = users.find(u => u.email === email);
       if (existingUser) {
         return new LoginResult(false, '邮箱已被注册');
       }
 
-      // 2. 创建用户
+      // 3. 创建用户（使用盐值哈希）
       const passwordHash: string = await UserSessionService.hashPassword(password);
       const user: User = new User(0, username, email, passwordHash);
       await UserDAO.insert(user);
 
       console.log(`[UserSessionService] 用户注册成功: ${username}`);
 
-      // 3. 自动登录
+      // 4. 自动登录
       return await UserSessionService.login(email, password);
     } catch (error) {
       console.error('[UserSessionService] 注册失败:', error);
@@ -206,41 +328,168 @@ export class UserSessionService {
   }
 
   /**
-   * 密码哈希（简化版，生产环境应使用更安全的方法）
-   * @param password 明文密码
-   * @returns 密码哈希
+   * 验证邮箱格式
    */
-  private static async hashPassword(password: string): Promise<string> {
-    try {
-      // 使用 SHA-256 哈希
-      const md: cryptoFramework.Md = cryptoFramework.createMd('SHA256');
-      const encoder: util.TextEncoder = new util.TextEncoder();
-      const passwordBytes: Uint8Array = encoder.encodeInto(password);
-      await md.update({ data: passwordBytes });
-      const hashResult: cryptoFramework.DataBlob = await md.digest();
+  private static validateEmail(email: string): boolean {
+    // 更严格的邮箱验证
+    const emailRegex: RegExp = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+    const maxLength = 254;
+    return email.length > 0 && email.length <= maxLength && emailRegex.test(email);
+  }
 
-      // 转换为十六进制字符串
-      const hashArray: number[] = Array.from(new Uint8Array(hashResult.data));
-      return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+  /**
+   * 密码哈希（带随机盐值）
+   * @param password 明文密码
+   * @param existingHash 现有哈希（可选，用于验证）
+   * @returns 密码哈希（格式：salt:hash）
+   */
+  private static async hashPassword(password: string, existingHash?: string): Promise<string> {
+    try {
+      let saltHex: string;
+      let storedHash: string;
+
+      if (existingHash && existingHash.includes(':')) {
+        // 验证模式：提取盐值
+        const parts = existingHash.split(':');
+        saltHex = parts[0];
+        storedHash = parts[1];
+      } else {
+        // 新密码模式：生成随机盐值
+        saltHex = UserSessionService.generateSecureSalt();
+        storedHash = '';
+      }
+
+      const saltBytes: Uint8Array = UserSessionService.hexToBytes(saltHex);
+      const passwordBytes: Uint8Array = new util.TextEncoder().encodeInto(password);
+
+      // 使用PBKDF2
+      const kdf = cryptoFramework.createKdf({
+        algName: 'PBKDF2',
+        spec: {
+          algName: 'PBKDF2',
+          salt: { data: saltBytes },
+          iterations: UserSessionService.PBKDF2_ITERATIONS,
+          keyLen: 32,
+          digest: 'SHA256'
+        }
+      });
+
+      const derivedKey = await kdf.generateKey(passwordBytes);
+      const hashBytes = derivedKey.getEncoded();
+      const hashHex = UserSessionService.bytesToHex(new Uint8Array(hashBytes.data));
+
+      if (existingHash) {
+        return `${saltHex}:${storedHash}`;
+      }
+      return `${saltHex}:${hashHex}`;
     } catch (error) {
       console.error('[UserSessionService] 密码哈希失败:', error);
-      // 降级方案：简单Base64编码
-      const encoder: util.TextEncoder = new util.TextEncoder();
-      const bytes: Uint8Array = encoder.encodeInto(password);
-      const base64: util.Base64Helper = new util.Base64Helper();
-      return base64.encodeToStringSync(bytes);
+      // 降级方案：简单哈希（不推荐生产环境使用）
+      const encoder = new util.TextEncoder();
+      const bytes = encoder.encodeInto(password + 'fallback_salt');
+      const md = cryptoFramework.createMd('SHA256');
+      await md.update({ data: bytes });
+      const hashResult = await md.digest();
+      const hashArray = Array.from(new Uint8Array(hashResult.data));
+      return `fallback:${hashArray.map(b => b.toString(16).padStart(2, '0')).join('')}`;
     }
   }
 
   /**
-   * 生成会话令牌
+   * 使用盐值验证密码
+   */
+  private static async hashPasswordWithSalt(password: string, storedHash: string): Promise<string> {
+    try {
+      if (!storedHash.includes(':')) {
+        // 旧格式兼容
+        const encoder = new util.TextEncoder();
+        const bytes = encoder.encodeInto(password);
+        const md = cryptoFramework.createMd('SHA256');
+        await md.update({ data: bytes });
+        const hashResult = await md.digest();
+        const hashArray = Array.from(new Uint8Array(hashResult.data));
+        return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+      }
+
+      const parts = storedHash.split(':');
+      const saltHex = parts[0];
+      const expectedHash = parts[1];
+
+      const saltBytes = UserSessionService.hexToBytes(saltHex);
+      const passwordBytes = new util.TextEncoder().encodeInto(password);
+
+      const kdf = cryptoFramework.createKdf({
+        algName: 'PBKDF2',
+        spec: {
+          algName: 'PBKDF2',
+          salt: { data: saltBytes },
+          iterations: UserSessionService.PBKDF2_ITERATIONS,
+          keyLen: 32,
+          digest: 'SHA256'
+        }
+      });
+
+      const derivedKey = await kdf.generateKey(passwordBytes);
+      const hashBytes = derivedKey.getEncoded();
+      const hashHex = UserSessionService.bytesToHex(new Uint8Array(hashBytes.data));
+
+      return `${saltHex}:${hashHex}`;
+    } catch (error) {
+      console.error('[UserSessionService] 密码验证失败:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * 生成加密安全的随机盐值
+   */
+  private static generateSecureSalt(): string {
+    const random = new Uint8Array(UserSessionService.SALT_LENGTH);
+    cryptoFramework.generateRandomRandom({ size: UserSessionService.SALT_LENGTH }, (error, data) => {
+      if (!error && data) {
+        for (let i = 0; i < UserSessionService.SALT_LENGTH; i++) {
+          random[i] = data[i];
+        }
+      }
+    });
+    return UserSessionService.bytesToHex(random);
+  }
+
+  /**
+   * 生成安全的会话令牌
    * @param userId 用户ID
    * @returns 令牌
    */
-  private static generateToken(userId: number): string {
+  private static generateSecureToken(userId: number): string {
     const timestamp: number = Date.now();
-    const random: string = Math.random().toString(36).substring(2);
-    return `${userId}_${timestamp}_${random}`;
+    const randomBytes = new Uint8Array(16);
+    cryptoFramework.generateRandomRandom({ size: 16 }, (error, data) => {
+      if (!error && data) {
+        for (let i = 0; i < 16; i++) {
+          randomBytes[i] = data[i];
+        }
+      }
+    });
+    const randomHex = UserSessionService.bytesToHex(randomBytes);
+    return `${userId}_${timestamp}_${randomHex}`;
+  }
+
+  /**
+   * 字节数组转十六进制字符串
+   */
+  private static bytesToHex(bytes: Uint8Array): string {
+    return Array.from(bytes).map(b => b.toString(16).padStart(2, '0')).join('');
+  }
+
+  /**
+   * 十六进制字符串转字节数组
+   */
+  private static hexToBytes(hex: string): Uint8Array {
+    const bytes = new Uint8Array(hex.length / 2);
+    for (let i = 0; i < hex.length; i += 2) {
+      bytes[i / 2] = parseInt(hex.substring(i, i + 2), 16);
+    }
+    return bytes;
   }
 
   /**
@@ -256,14 +505,17 @@ export class UserSessionService {
       }
 
       const now: string = new Date().toISOString();
-      UserSessionService.currentSession = new SessionInfo(
+      const newSession: SessionInfo = new SessionInfo(
         user.userId,
         user.username,
         user.email,
         now,
         now,
-        UserSessionService.generateToken(user.userId)
+        UserSessionService.generateSecureToken(user.userId)
       );
+
+      UserSessionService.currentSession = newSession;
+      await UserSessionService.saveSessionToStorage(newSession);
 
       console.log(`[UserSessionService] 切换用户成功: ${user.username} (ID: ${user.userId})`);
       return true;
@@ -277,13 +529,14 @@ export class UserSessionService {
    * 获取会话剩余时间（毫秒）
    * @returns 剩余时间，未登录返回0
    */
-  static getSessionRemainingTime(): number {
-    if (!UserSessionService.currentSession) {
+  static async getSessionRemainingTime(): Promise<number> {
+    const session = await UserSessionService.getCurrentSession();
+    if (!session) {
       return 0;
     }
 
     const now: number = Date.now();
-    const lastActive: number = new Date(UserSessionService.currentSession.lastActiveTime).getTime();
+    const lastActive: number = new Date(session.lastActiveTime).getTime();
     const remaining: number = UserSessionService.SESSION_TIMEOUT - (now - lastActive);
     return Math.max(0, remaining);
   }
@@ -294,14 +547,14 @@ export class UserSessionService {
    * @param avatarPath 新头像路径
    */
   static async updateProfile(nickname: string, avatarPath: string): Promise<boolean> {
-    if (!UserSessionService.isLoggedIn()) {
+    const session = await UserSessionService.getCurrentSession();
+    if (!session) {
       console.error('[UserSessionService] 未登录，无法更新资料');
       return false;
     }
 
     try {
-      const userId: number = UserSessionService.currentSession!.userId;
-      await UserDAO.updateProfile(userId, nickname, avatarPath);
+      await UserDAO.updateProfile(session.userId, nickname, avatarPath);
       console.log('[UserSessionService] 资料更新成功');
       return true;
     } catch (error) {
@@ -316,26 +569,26 @@ export class UserSessionService {
    * @param newPassword 新密码
    */
   static async changePassword(oldPassword: string, newPassword: string): Promise<OperationResult> {
-    if (!UserSessionService.isLoggedIn()) {
+    const session = await UserSessionService.getCurrentSession();
+    if (!session) {
       return new OperationResult(false, '未登录');
     }
 
     try {
-      const userId: number = UserSessionService.currentSession!.userId;
-      const user: User | null = await UserDAO.getById(userId);
+      const user: User | null = await UserDAO.getById(session.userId);
       if (!user) {
         return new OperationResult(false, '用户不存在');
       }
 
       // 验证旧密码
-      const oldHash: string = await UserSessionService.hashPassword(oldPassword);
+      const oldHash: string = await UserSessionService.hashPasswordWithSalt(oldPassword, user.passwordHash);
       if (user.passwordHash !== oldHash) {
         return new OperationResult(false, '旧密码错误');
       }
 
-      // 更新新密码
+      // 更新新密码（自动生成新盐值）
       const newHash: string = await UserSessionService.hashPassword(newPassword);
-      await UserDAO.updatePassword(userId, newHash);
+      await UserDAO.updatePassword(session.userId, newHash);
       console.log('[UserSessionService] 密码修改成功');
       return new OperationResult(true, '密码修改成功');
     } catch (error) {
@@ -350,29 +603,28 @@ export class UserSessionService {
    * @param newEmail 新邮箱
    */
   static async updateEmail(newEmail: string): Promise<OperationResult> {
-    if (!UserSessionService.isLoggedIn()) {
+    const session = await UserSessionService.getCurrentSession();
+    if (!session) {
       return new OperationResult(false, '未登录');
     }
 
-    // 简单邮箱格式校验
-    const emailRegex: RegExp = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(newEmail)) {
+    // 严格验证邮箱格式
+    if (!UserSessionService.validateEmail(newEmail)) {
       return new OperationResult(false, '邮箱格式不正确');
     }
 
     try {
-      const userId: number = UserSessionService.currentSession!.userId;
-
       // 检查邮箱是否已被其他用户使用
       const users: User[] = await UserDAO.getAll();
-      const existing: User | undefined = users.find(u => u.email === newEmail && u.userId !== userId);
+      const existing: User | undefined = users.find(u => u.email === newEmail && u.userId !== session.userId);
       if (existing) {
         return new OperationResult(false, '该邮箱已被其他用户使用');
       }
 
-      await UserDAO.updateEmail(userId, newEmail);
+      await UserDAO.updateEmail(session.userId, newEmail);
       // 更新会话中的邮箱
-      UserSessionService.currentSession!.email = newEmail;
+      session.email = newEmail;
+      await UserSessionService.saveSessionToStorage(session);
       console.log('[UserSessionService] 邮箱更新成功');
       return new OperationResult(true, '邮箱更新成功');
     } catch (error) {
@@ -382,4 +634,3 @@ export class UserSessionService {
     }
   }
 }
-

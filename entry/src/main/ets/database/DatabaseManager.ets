@@ -21,7 +21,8 @@ export class DatabaseManager {
    * @param context 应用上下文
    */
   static async initDatabase(context: common.Context): Promise<void> {
-    if (DatabaseManager.isInitialized && DatabaseManager.db) {
+    // 修复：检查db是否为null而不是只检查isInitialized
+    if (DatabaseManager.db) {
       console.log('[DatabaseManager] 数据库已初始化，跳过重复初始化');
       return;
     }
@@ -31,27 +32,45 @@ export class DatabaseManager {
         name: DatabaseManager.DB_NAME,
         securityLevel: DatabaseManager.SECURITY_LEVEL
       };
-      
+
       DatabaseManager.db = await relationalStore.getRdbStore(context, storeConfig);
       console.log('[DatabaseManager] 数据库连接成功');
-      
+
+      // 启用外键约束
+      await DatabaseManager.enableForeignKeys();
+
       // 应用数据库配置优化
       await DatabaseConfigOptimizer.applyOptimizations();
-      
+
       // 按顺序创建所有表
       await DatabaseManager.createAllTables();
-      
+
       // 创建优化索引
       await IndexManager.createAllIndexes();
-      
+
       DatabaseManager.isInitialized = true;
       console.log('[DatabaseManager] 数据库初始化完成');
-      
+
       // 打印数据库配置信息
       await DatabaseConfigOptimizer.printConfig();
     } catch (error) {
+      // 修复：确保初始化失败时重置状态
+      DatabaseManager.db = null;
       DatabaseManager.isInitialized = false;
       throw DatabaseManager.toError('[DatabaseManager] 数据库初始化失败', error);
+    }
+  }
+
+  /**
+   * 启用外键约束
+   */
+  private static async enableForeignKeys(): Promise<void> {
+    try {
+      const store = DatabaseManager.getDatabase();
+      await store.executeSql('PRAGMA foreign_keys = ON');
+      console.log('[DatabaseManager] 外键约束已启用');
+    } catch (error) {
+      console.warn('[DatabaseManager] 启用外键约束失败:', error);
     }
   }
 
