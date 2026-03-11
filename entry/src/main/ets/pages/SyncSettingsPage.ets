@@ -11,7 +11,7 @@ struct SyncSettingsPage {
   @State autoSync: boolean = false; // 模拟设置，实际应持久化
 
   async onPageShow() {
-    const userId = UserSessionService.getCurrentUserId();
+    const userId = await UserSessionService.getCurrentUserId();
     if (userId) {
       this.lastSyncTime = await CloudSyncService.getLastSyncTime(userId);
     }
@@ -93,7 +93,7 @@ struct SyncSettingsPage {
 
   async startSync() {
     this.isSyncing = true;
-    const userId = UserSessionService.getCurrentUserId();
+    const userId = await UserSessionService.getCurrentUserId();
     if (!userId) {
       promptAction.showToast({ message: '请先登录' });
       this.isSyncing = false;

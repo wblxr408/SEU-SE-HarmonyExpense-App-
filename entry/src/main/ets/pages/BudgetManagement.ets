@@ -119,13 +119,13 @@ struct BudgetManagement {
     autoCancel: true
   });
 
-  onPageShow(): void {
-    this.initUser();
-    this.loadData();
+  async onPageShow(): Promise<void> {
+    await this.initUser();
+    await this.loadData();
   }
 
-  initUser(): void {
-    const uid = UserSessionService.getCurrentUserId();
+  async initUser(): Promise<void> {
+    const uid = await UserSessionService.getCurrentUserId();
     if (uid) {
       this.currentUserId = uid;
     } else {

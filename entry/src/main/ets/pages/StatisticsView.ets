@@ -37,7 +37,7 @@ export struct StatisticsView {
   }
 
   async loadData() {
-    const userId = UserSessionService.getCurrentUserId();
+    const userId = await UserSessionService.getCurrentUserId();
     if (!userId) return;
 
     if (this.allCategories.length === 0) {

@@ -21,8 +21,8 @@ struct SmartBudgetPage {
   // -----------------------------------
   // Lifecycle
   // -----------------------------------
-  aboutToAppear() {
-    this.loadData();
+  async aboutToAppear() {
+    await this.loadData();
   }
 
   // -----------------------------------
@@ -30,7 +30,7 @@ struct SmartBudgetPage {
   // -----------------------------------
   async applyAdvice(advice: BudgetAdvice) {
     try {
-      const userId = UserSessionService.getCurrentUserId();
+      const userId = await UserSessionService.getCurrentUserId();
       if (!userId) return;
 
       // 查找该分类的现有预算
@@ -65,7 +65,7 @@ struct SmartBudgetPage {
     try {
       if (!this.smartPlan) return;
 
-      const userId = UserSessionService.getCurrentUserId();
+      const userId = await UserSessionService.getCurrentUserId();
       if (!userId) return;
 
       const advices = this.smartPlan.getAdvices();
@@ -105,7 +105,7 @@ struct SmartBudgetPage {
   async loadData() {
     this.isLoading = true;
     try {
-      const userId = UserSessionService.getCurrentUserId();
+      const userId = await UserSessionService.getCurrentUserId();
       if (!userId) {
         this.isLoading = false;
         return;

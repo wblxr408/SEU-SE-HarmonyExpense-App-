@@ -12,14 +12,14 @@ struct AnomalyHistoryPage {
   @State totalCount: number = 0;
   @State highRiskCount: number = 0;
 
-  aboutToAppear() {
-    this.loadData();
+  async aboutToAppear(): Promise<void> {
+    await this.loadData();
   }
 
   async loadData() {
     this.isLoading = true;
     try {
-      const userId = UserSessionService.getCurrentUserId();
+      const userId = await UserSessionService.getCurrentUserId();
       if (!userId) {
         promptAction.showToast({ message: '请先登录' });
         return;

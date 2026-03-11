@@ -86,7 +86,7 @@ struct Index {
   }
 
   async checkInvitations(): Promise<void> {
-    const userId = UserSessionService.getCurrentUserId();
+    const userId = await UserSessionService.getCurrentUserId();
     if (userId) {
        const invites = await SharedLedgerService.getUserInvitations(userId);
        if (invites.length > 0) {
@@ -122,7 +122,7 @@ struct Index {
       const dateRange = dateRangeObj as DateRangeFilter;
       hilog.info(HILOG_DOMAIN, LOG_TAG, `加载账单: DateRange=${JSON.stringify(dateRange)}, CategoryID=${this.selectedCategoryId}`);
 
-      const userId = UserSessionService.getCurrentUserId();
+      const userId = await UserSessionService.getCurrentUserId();
       if (!userId) { 
         hilog.warn(HILOG_DOMAIN, LOG_TAG, 'loadBills skipped: No user logged in');
         return; 
@@ -143,7 +143,7 @@ struct Index {
 
   async loadFilterData(): Promise<void> {
     try {
-      const userId = UserSessionService.getCurrentUserId();
+      const userId = await UserSessionService.getCurrentUserId();
       if (!userId) return;
       const categories: Category[]= await CategoryDAO.getAll(userId);
       const allOption = new Category();
@@ -178,7 +178,7 @@ struct Index {
 
   async deleteBill(bill: Bill): Promise<void> {
     try {
-      const userId = UserSessionService.getCurrentUserId();
+      const userId = await UserSessionService.getCurrentUserId();
       if (!userId) return;
 
       const account = await AccountDAO.getById(bill.accountId);
@@ -240,138 +240,227 @@ struct Index {
   private controller: TabsController = new TabsController();
 
   build() {
-    Tabs({ barPosition: BarPosition.End, controller: this.controller }) {
-      TabContent() {
-        this.BillListContent()
+    Stack({ alignContent: Alignment.Bottom }) {
+      // 1. 业务内容区
+      Tabs({ barPosition: BarPosition.End, controller: this.controller }) {
+        TabContent() {
+          this.BillListContent()
+        }
+        TabContent() {
+          StatisticsPage({ refreshTrigger: this.statRefreshTrigger })
+        }
+        TabContent() {
+          MinePage()
+        }
       }
-      .tabBar(this.TabBuilder('账本', 0, $r('app.media.ic_bottom_home')))
+      .barHeight(0) // 完全隐藏系统自带的底部 Tab 栏
+      .layoutWeight(1)
+      .onChange((index: number) => {
+        this.currentIndex = index;
+        if (index === 1) {
+           this.statRefreshTrigger++;
+        }
+      })
 
-      TabContent() {
-        StatisticsPage({ refreshTrigger: this.statRefreshTrigger })
-      }
-      .tabBar(this.TabBuilder('统计', 1, $r('app.media.ic_bottom_home')))
+      // 2. 自定义绿色底部栏
+      Row() {
+        Column() {
+          Image($r('app.media.ic_bottom_home'))
+            .size({ width: 24, height: 24 })
+            .fillColor(Color.White)
+            .objectFit(ImageFit.Contain)
+            .opacity(this.currentIndex === 1 ? 1 : 0.6)
+          Text('统计')
+            .fontColor(Color.White)
+            .fontSize(10)
+            .margin({ top: 4 })
+            .opacity(this.currentIndex === 1 ? 1 : 0.6)
+        }
+        .width(60)
+        .justifyContent(FlexAlign.Center)
+        .onClick(() => {
+          this.currentIndex = 1;
+          this.controller.changeIndex(1);
+        })
 
-      TabContent() {
-        MinePage()
-      }
-      .tabBar(this.TabBuilder('我的', 2, $r('app.media.ic_bottom_home')))
-    }
-    .onChange((index: number) => {
-      this.currentIndex = index;
-      if (index === 1) {
-         this.statRefreshTrigger++;
-      }
-    })
-    .backgroundColor(AppTheme.Background)
-  }
+        Blank()
 
-  @Builder
-  TabBuilder(title: string, targetIndex: number, selectedImg: Resource) {
-    Column() {
-      Image(selectedImg)
-        .size({ width: 24, height: 24 })
-        .fillColor(this.currentIndex === targetIndex ? '#007DFF' : '#999999')
-        .objectFit(ImageFit.Contain)
-      Text(title)
-        .fontColor(this.currentIndex === targetIndex ? '#007DFF' : '#999999')
-        .fontSize(10)
-        .margin({ top: 4 })
+        Column() {
+          Image($r('app.media.ic_bottom_home'))
+            .size({ width: 24, height: 24 })
+            .fillColor(Color.White)
+            .objectFit(ImageFit.Contain)
+            .opacity(this.currentIndex === 2 ? 1 : 0.6)
+          Text('我的')
+            .fontColor(Color.White)
+            .fontSize(10)
+            .margin({ top: 4 })
+            .opacity(this.currentIndex === 2 ? 1 : 0.6)
+        }
+        .width(60)
+        .justifyContent(FlexAlign.Center)
+        .onClick(() => {
+          this.currentIndex = 2;
+          this.controller.changeIndex(2);
+        })
+      }
+      .width('100%')
+      .height(60)
+      .backgroundColor('#7FB069')
+      .justifyContent(FlexAlign.SpaceBetween)
+      .padding({ left: 30, right: 30 })
+
+      // 3. 居中巨型 FAB
+      Button() {
+        Text('+')
+          .fontSize('40fp')
+          .fontColor(Color.White)
+      }
+      .type(ButtonType.Circle)
+      .width('64vp')
+      .height('64vp')
+      .backgroundColor('#FF7F50')
+      .margin({ bottom: 20 })
+      .zIndex(10)
+      .shadow({ radius: 12, color: 'rgba(255, 127, 80, 0.4)', offsetY: 4 })
+      .onClick(() => {
+        router.pushUrl({ url: 'pages/AddBill' })
+      })
     }
     .width('100%')
-    .height(50)
-    .justifyContent(FlexAlign.Center)
-    .onClick(() => {
-      this.currentIndex = targetIndex;
-      this.controller.changeIndex(targetIndex);
-    })
+    .height('100%')
   }
 
   @Builder
   BillListContent() {
     Navigation() {
       Column() {
-        Row({ space: 10 }) {
-          Text(this.formatDateToYearMonth(this.selectedDate) + ' ▽')
-            .fontSize(16)
-            .padding(10)
-            .backgroundColor(Color.White)
-            .borderRadius(8)
-            .onClick(() => {
-              this.showMonthPicker();
-            })
-            .layoutWeight(1)
+        // 沉浸式首页结构背景直接铺满
+        Scroll() {
+          Column() {
+            // 1. 顶部自定义导航与日期 (Top Header)
+            Column() {
+              // 第一行：猪猪头像、默认账本、搜索
+              Row() {
+                Text('🐷').fontSize(28) // 模拟头像
+                Text('默认账本 ▼')
+                  .fontSize('20fp')
+                  .fontWeight(FontWeight.Bold)
+                  .fontColor('#388E3C')
+                Text('🔍').fontSize(24)
+              }
+              .width('100%')
+              .justifyContent(FlexAlign.SpaceBetween)
+              .padding(16)
 
-          Select(this.allCategories.map((c) => new CategoryOption(c.name)))
-            .value(this.allCategories.find(c => c.categoryId === this.selectedCategoryId)?.name ?? '所有分类')
-            .onSelect((index: number) => {
-              this.selectedCategoryId = this.allCategories[index].categoryId;
-              this.loadBills();
-            })
-            .layoutWeight(1)
-        }
-        .padding(10)
-        .width('100%')
-        .backgroundColor(AppTheme.Background)
+              // 第二行：带箭头的日期选择、隐显图标
+              Row({ space: 8 }) {
+                Text('<').fontSize(16).fontColor('#388E3C').fontWeight(FontWeight.Bold)
+                Text(this.formatDateToYearMonth(this.selectedDate).replace('-', '年') + '月明细')
+                  .fontSize(16)
+                  .fontColor('#388E3C')
+                  .fontWeight(FontWeight.Medium)
+                  .onClick(() => {
+                    this.showMonthPicker();
+                  })
+                Text('>').fontSize(16).fontColor('#388E3C').fontWeight(FontWeight.Bold)
+                Text(' 👁️').fontSize(16) // 隐显图标
+              }
+              .margin({ top: 10, bottom: 20 })
+              .justifyContent(FlexAlign.Center)
 
-        List() {
-          ForEach(this.transactions, (item: Bill) => {
-            ListItem() {
-              this.TransactionRow(item)
+              // 第三行：核心财务数据
+              Row() {
+                Column() {
+                  Text('收入').fontSize('14fp').fontColor('#666666').margin({ bottom: 8 })
+                  Text(this.transactions.reduce((acc, item) => item.type === 'income' ? acc + item.amount : acc, 0).toFixed(2))
+                    .fontSize('24fp').fontWeight(FontWeight.Bold).fontColor('#388E3C')
+                }.layoutWeight(1).alignItems(HorizontalAlign.Center)
+
+                Column() {
+                  Text('支出').fontSize('14fp').fontColor('#666666').margin({ bottom: 8 })
+                  Text(this.transactions.reduce((acc, item) => item.type === 'expense' ? acc + item.amount : acc, 0).toFixed(2))
+                    .fontSize('24fp').fontWeight(FontWeight.Bold).fontColor('#388E3C')
+                }.layoutWeight(1).alignItems(HorizontalAlign.Center)
+
+                Column() {
+                  Text('结余').fontSize('14fp').fontColor('#666666').margin({ bottom: 8 })
+                  Text(this.transactions.reduce((acc, item) => item.type === 'income' ? acc + item.amount : acc - item.amount, 0).toFixed(2))
+                    .fontSize('24fp').fontWeight(FontWeight.Bold).fontColor('#388E3C')
+                }.layoutWeight(1).alignItems(HorizontalAlign.Center)
+              }
+              .width('100%')
+              .justifyContent(FlexAlign.SpaceAround)
+              .margin({ bottom: 40 })
             }
-            .swipeAction({ end: this.DeleteButton(item) })
-          }, (item: Bill, index: number) => index + JSON.stringify(item))
-        }
-        .layoutWeight(1)
-        .padding({ 
-          left: this.listPadding.getValue(this.currentBreakpoint) as number, 
-          right: this.listPadding.getValue(this.currentBreakpoint) as number 
-        })
+            .width('100%')
 
-        Row({ space: 10 }) {
-           Button('管理分类')
-            .type(ButtonType.Capsule)
-            .fontSize(this.titleFontSize.getValue(this.currentBreakpoint) as number)
-            .height(40)
-            .backgroundColor(Color.Gray)
-            .onClick(() => {
-              router.pushUrl({ url: 'pages/CategoryManagement' })
-            })
-           
-           Button('📷 扫码')
-            .type(ButtonType.Capsule)
-            .fontSize(this.titleFontSize.getValue(this.currentBreakpoint) as number)
-            .height(40)
-            .backgroundColor('#4A90E2')
-            .onClick(() => {
-              router.pushUrl({ url: 'pages/OCRScanPage' })
-            })
-            
-            Button('预算')
-            .type(ButtonType.Capsule)
-            .fontSize(this.titleFontSize.getValue(this.currentBreakpoint) as number)
-            .height(40)
-            .backgroundColor('#FFA000') // Orange for budget
-            .onClick(() => {
-              router.pushUrl({ url: 'pages/BudgetManagement' })
-            })
+            // 2. 悬浮胶囊工具栏 (Floating Pill Bar)
+            Row() {
+              Column() { Text('✏️').fontSize(24).margin({bottom: 4}); Text('记账').fontSize('12fp').fontColor('#333') }.onClick(() => router.pushUrl({ url: 'pages/AddBill' }))
+              Column() { Text('🤖').fontSize(24).margin({bottom: 4}); Text('AI记账').fontSize('12fp').fontColor('#333') }
+              Column() { Text('📅').fontSize(24).margin({bottom: 4}); Text('日历').fontSize('12fp').fontColor('#333') }
+              Column() { Text('💼').fontSize(24).margin({bottom: 4}); Text('资产').fontSize('12fp').fontColor('#333') }
+              Column() { Text('📊').fontSize(24).margin({bottom: 4}); Text('预算').fontSize('12fp').fontColor('#333') }.onClick(() => router.pushUrl({ url: 'pages/BudgetManagement' }))
+            }
+            .width('calc(100% - 32vp)')
+            .margin({ top: -20, left: 16, right: 16 })
+            .backgroundColor('#FFFFFF')
+            .borderRadius(24)
+            .padding({ left: 16, right: 16, top: 12, bottom: 12 })
+            .shadow({ radius: 12, color: 'rgba(0,0,0,0.05)', offsetY: 4 })
+            .justifyContent(FlexAlign.SpaceBetween)
 
-           Button('记一笔')
-            .type(ButtonType.Capsule)
-            .fontSize(this.titleFontSize.getValue(this.currentBreakpoint) as number)
-            .height(40)
-            .onClick(() => {
-              router.pushUrl({ url: 'pages/AddBill' })
-            })
+            // 3. 马克笔高亮标题与筛选按钮
+            Row() {
+              Stack({ alignContent: Alignment.Bottom }) {
+                Row().width('100%').height(10).backgroundColor('#FFF68F').margin({ bottom: 2 })
+                Text('收支记录').fontSize('18fp').fontWeight(FontWeight.Bold)
+              }.width(76)
+
+              Row() {
+                Text('筛选 ▼').fontSize('12fp').fontColor('#388E3C')
+              }
+              .backgroundColor('#E8F5E9')
+              .borderRadius(16)
+              .padding({ left: 12, right: 12, top: 4, bottom: 4 })
+            }
+            .width('100%')
+            .padding(16)
+            .justifyContent(FlexAlign.SpaceBetween)
+
+            // 4. 账单明细列表
+            if (this.transactions.length === 0) {
+              Column() {
+                Text('🐷').fontSize(64).margin({ bottom: 10, top: 40 })
+                Text('哎呀，当前时间没有记录呢~').fontColor('#999999').fontSize(14)
+              }.width('100%').alignItems(HorizontalAlign.Center)
+            } else {
+              List({ space: 10 }) {
+                ForEach(this.transactions, (item: Bill) => {
+                  ListItem() {
+                    this.TransactionRow(item)
+                  }
+                  .swipeAction({ end: this.DeleteButton(item) })
+                  .backgroundColor('#FFFFFF')
+                  .borderRadius(12)
+                }, (item: Bill, index: number) => index + JSON.stringify(item))
+              }
+              .padding({ left: 16, right: 16, bottom: 120 }) // 避让底部空间
+            }
+          }
         }
-        .margin(20)
+        .width('100%')
+        .height('100%')
       }
+      .width('100%')
       .height('100%')
+      .linearGradient({ direction: GradientDirection.Bottom, colors: [['#E0F2E9', 0.0], ['#F4F6F9', 0.4], ['#F4F6F9', 1.0]] })
     }
     .width('100%')
     .height('100%')
-    .backgroundColor(AppTheme.Background)
-    .title('记账APP')
     .titleMode(NavigationTitleMode.Mini)
+    .hideTitleBar(true)
     .hideBackButton(true)
   }
 

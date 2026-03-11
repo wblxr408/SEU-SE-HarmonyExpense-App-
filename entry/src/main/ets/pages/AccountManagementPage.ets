@@ -83,8 +83,8 @@ struct AccountManagementPage {
     alignment: DialogAlignment.Center
   });
 
-  onPageShow() {
-    if (!UserSessionService.getCurrentUserId()) {
+  async onPageShow() {
+    if (!await UserSessionService.getCurrentUserId()) {
       promptAction.showToast({ message: '登录已过期' });
       router.replaceUrl({ url: 'pages/LoginPage' });
       return;
@@ -94,15 +94,15 @@ struct AccountManagementPage {
 
   async loadAccounts() {
     try {
-      const userId = UserSessionService.getCurrentUserId()!;
+      const userId = (await UserSessionService.getCurrentUserId())!;
       this.accounts = await AccountDAO.getByUserId(userId);
     } catch (e) {
       promptAction.showToast({ message: '加载账户失败' });
     }
   }
 
-  handleCreate() {
-    const userId = UserSessionService.getCurrentUserId();
+  async handleCreate() {
+    const userId = await UserSessionService.getCurrentUserId();
     if (!userId) return;
     this.editingAccount = new Account(0, userId); // 检查 Account 构造函数签名
     this.dialogController.open();

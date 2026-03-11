@@ -9,8 +9,8 @@ export struct MinePage {
   @State currentUser: SessionInfo | null = null;
   @State unreadCount: number = 0;
 
-  aboutToAppear() {
-    this.currentUser = UserSessionService.getCurrentSession();
+  async aboutToAppear() {
+    this.currentUser = await UserSessionService.getCurrentSession();
     this.loadUnreadCount();
   }
 

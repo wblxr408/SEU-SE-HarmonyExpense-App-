@@ -142,10 +142,10 @@ struct AddBill{
   anomalyDialogController: CustomDialogController = new CustomDialogController({
     builder: AnomalyAlertDialog({
       anomalies: this.detectionAnomalies,
-      onConfirm: () => {
+      onConfirm: async () => {
         const selectedCategory = this.allCategories.find(c => c.categoryId === this.selectedCategoryId);
         if (selectedCategory) {
-          const userId = UserSessionService.getCurrentUserId();
+          const userId = await UserSessionService.getCurrentUserId();
           if (userId) {
             SmartCategoryService.learnFromUserAction(
               userId,
@@ -166,7 +166,7 @@ struct AddBill{
   });
 
   async updateRecommendations() {
-    const userId = UserSessionService.getCurrentUserId();
+    const userId = await UserSessionService.getCurrentUserId();
     if (!userId) return;
 
     if (!this.notes && !this.amount) {
@@ -184,7 +184,7 @@ struct AddBill{
 
   async loadData() {
     try {
-      const userId = UserSessionService.getCurrentUserId();
+      const userId = await UserSessionService.getCurrentUserId();
       if (!userId) {
         promptAction.showToast({ message: '请先登录' });
         return;
@@ -218,7 +218,7 @@ struct AddBill{
     }
   }
 
-  aboutToAppear() {
+  async aboutToAppear() {
     // 检查是否有预填参数（来自OCR扫描）
     const params = router.getParams() as Record<string, string | number>;
     if (params) {
@@ -240,7 +240,7 @@ struct AddBill{
       }
     }
     
-    this.loadData();
+    await this.loadData();
   }
   //创建一个辅助函数:将Date对象转换成相应的格式
   private formatDate(date: Date): string {
@@ -393,7 +393,7 @@ struct AddBill{
           .type(ButtonType.Capsule)
           .margin(15)
           .onClick(async () => {
-            const userId = UserSessionService.getCurrentUserId();
+            const userId = await UserSessionService.getCurrentUserId();
             if (!userId) {
               promptAction.showToast({ message: '登录失效' });
               return;

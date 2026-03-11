@@ -40,18 +40,18 @@ struct SharedLedgerListPage {
     customStyle: true
   });
 
-  aboutToAppear() {
-    this.loadData();
+  async aboutToAppear() {
+    await this.loadData();
   }
 
-  onPageShow() {
-    this.loadData();
+  async onPageShow() {
+    await this.loadData();
   }
 
   async loadData() {
     this.isLoading = true;
     try {
-      const userId = UserSessionService.getCurrentUserId();
+      const userId = await UserSessionService.getCurrentUserId();
       if (!userId) {
         promptAction.showToast({ message: '请先登录' });
         return;
@@ -84,9 +84,9 @@ struct SharedLedgerListPage {
     }
 
     try {
-      const userId = UserSessionService.getCurrentUserId();
+      const userId = await UserSessionService.getCurrentUserId();
       if (!userId) return;
-      const user = UserSessionService.getCurrentSession(); // 获取用户名
+      const user = await UserSessionService.getCurrentSession(); // 获取用户名
 
       const params: CreateLedgerParams = {
         name: this.newLedgerName,

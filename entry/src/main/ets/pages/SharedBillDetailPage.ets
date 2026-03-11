@@ -25,22 +25,22 @@ struct SharedBillDetailPage {
     alignment: DialogAlignment.Center
   });
 
-  aboutToAppear(): void {
+  async aboutToAppear(): Promise<void> {
     const params = router.getParams() as Record<string, number>;
     if (params && params.billId) {
       this.billId = params.billId;
-      const userId: number | null = UserSessionService.getCurrentUserId();
+      const userId: number | null = await UserSessionService.getCurrentUserId();
       this.currentUserId = userId ?? 0;
-      this.loadData();
+      await this.loadData();
     } else {
       promptAction.showToast({ message: '参数错误' });
       router.back();
     }
   }
 
-  onPageShow(): void {
+  async onPageShow(): Promise<void> {
     if (this.billId) {
-      this.loadData();
+      await this.loadData();
     }
   }
 

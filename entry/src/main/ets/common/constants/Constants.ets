@@ -37,10 +37,10 @@ export let CIRCLE_RADIUS: number = 80;
  * 
  * // 新代码
  * import { UserSessionService } from '../service/UserSessionService';
- * const userId = UserSessionService.getCurrentUserId();
+ * const userId = await UserSessionService.getCurrentUserId();
  * 
  * // 兼容处理（如果未登录，使用默认值1）
- * const userId = UserSessionService.getCurrentUserId() || 1;
+ * const userId = await UserSessionService.getCurrentUserId() || 1;
  * ```
  * 
  * 相关文档：

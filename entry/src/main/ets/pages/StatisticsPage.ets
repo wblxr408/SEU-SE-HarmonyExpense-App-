@@ -70,7 +70,7 @@ export struct StatisticsPage {
   async loadData() {
     this.isLoading = true;
     try {
-      const userId = UserSessionService.getCurrentUserId();
+      const userId = await UserSessionService.getCurrentUserId();
       if (!userId) return;
 
       // 1. 计算当前月份的日期范围
@@ -150,7 +150,7 @@ export struct StatisticsPage {
   }
 
   async loadCategories(catMap: Map<number, number>, totalExpense: number) {
-    const userId = UserSessionService.getCurrentUserId();
+    const userId = await UserSessionService.getCurrentUserId();
     if (!userId) return;
     
     const categories = await CategoryDAO.getAll(userId);

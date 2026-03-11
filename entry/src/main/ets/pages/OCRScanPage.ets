@@ -56,7 +56,7 @@ struct OCRScanPage {
 
   // 执行OCR识别
   async processOCR() {
-    const userId = UserSessionService.getCurrentUserId();
+    const userId = await UserSessionService.getCurrentUserId();
     if (!userId) {
       promptAction.showToast({ message: '请先登录' });
       return;

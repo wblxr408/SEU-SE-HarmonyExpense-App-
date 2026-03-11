@@ -24,12 +24,12 @@ struct AddSharedBill {
 
   @State isLoading: boolean = false;
 
-  aboutToAppear() {
+  async aboutToAppear() {
     const params = router.getParams() as Record<string, number>;
     if (params) {
       if (params.ledgerId) this.ledgerId = params.ledgerId;
       if (params.billId) this.billId = params.billId;
-      this.loadData();
+      await this.loadData();
     } else {
       promptAction.showToast({ message: '参数错误' });
       router.back();
@@ -39,7 +39,7 @@ struct AddSharedBill {
   async loadData() {
     this.isLoading = true;
     try {
-      const userId = UserSessionService.getCurrentUserId();
+      const userId = await UserSessionService.getCurrentUserId();
       if (!userId) return;
 
       // 1. 获取成员
@@ -111,7 +111,7 @@ struct AddSharedBill {
 
     this.isLoading = true;
     try {
-      const currentUser = UserSessionService.getCurrentSession();
+      const currentUser = await UserSessionService.getCurrentSession();
       if (!currentUser) {
         promptAction.showToast({ message: '请先登录' });
         return;

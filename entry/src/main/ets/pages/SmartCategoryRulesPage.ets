@@ -111,7 +111,7 @@ struct SmartCategoryRulesPage {
   async loadData(): Promise<void> {
     this.isLoading = true;
     try {
-      const userId: number | null = UserSessionService.getCurrentUserId();
+      const userId: number | null = await UserSessionService.getCurrentUserId();
       if (userId === null) {
         router.replaceUrl({ url: 'pages/LoginPage' });
         return;
@@ -131,7 +131,7 @@ struct SmartCategoryRulesPage {
   }
 
   async addRule(ruleName: string, categoryId: number, categoryName: string, keywords: string): Promise<void> {
-    const userId: number | null = UserSessionService.getCurrentUserId();
+    const userId: number | null = await UserSessionService.getCurrentUserId();
     if (userId === null) {
       promptAction.showToast({ message: '请先登录' });
       router.replaceUrl({ url: 'pages/LoginPage' });

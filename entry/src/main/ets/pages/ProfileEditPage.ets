@@ -22,8 +22,8 @@ struct ProfileEditPage {
   @State newPassword: string = '';
   @State confirmPassword: string = '';
 
-  aboutToAppear() {
-    this.currentUser = UserSessionService.getCurrentSession();
+  async aboutToAppear() {
+    this.currentUser = await UserSessionService.getCurrentSession();
     if (this.currentUser) {
       this.nickname = this.currentUser.username;
       this.email = this.currentUser.email;
