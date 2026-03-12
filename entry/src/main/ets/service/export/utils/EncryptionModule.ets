@@ -223,8 +223,7 @@ export class EncryptionModule {
       EncryptionModule.logInfo(`开始密钥派生，迭代次数: ${EncryptionModule.PBKDF2_ITERATIONS}`);
 
       // 创建 PBKDF2 密钥派生器
-      // 格式: 'PBKDF2|SHA256|迭代次数|密钥长度'
-      const kdfAlg = `PBKDF2|SHA256|${EncryptionModule.PBKDF2_ITERATIONS}|${EncryptionModule.KEY_SIZE}`;
+      const kdfAlg = 'PBKDF2|SHA256';
       const kdf = cryptoFramework.createKdf(kdfAlg);
 
       // 将密码转换为字节数组

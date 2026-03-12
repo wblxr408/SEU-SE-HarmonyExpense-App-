@@ -221,7 +221,7 @@ struct CategoryManagement {
   // 自定义弹窗控制器
   dialogController: CustomDialogController | null = null
 
-  onPageShow() {
+  async onPageShow(): Promise<void> {
     if (!await UserSessionService.getCurrentUserId()) {
        promptAction.showToast({ message: '登录已过期，请重新登录' });
        setTimeout(() => {

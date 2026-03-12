@@ -270,8 +270,8 @@ export class IndexManager {
 
       // 读模型表 - 聚合查询索引
       await store.executeSql(`
-        CREATE INDEX IF NOT EXISTS idx_read_models_aggregate
-        ON read_models(model_type, aggregate_id);
+        CREATE INDEX IF NOT EXISTS idx_read_models_user_type
+        ON read_models(model_type, user_id);
       `);
 
       console.log('[IndexManager] ✓ 事件溯源表索引创建成功');
@@ -306,20 +306,20 @@ export class IndexManager {
       // 账本邀请表 - 被邀请人索引
       await store.executeSql(`
         CREATE INDEX IF NOT EXISTS idx_ledger_invitations_invitee
-        ON ledger_invitations(invitee_id, status, created_at DESC);
+        ON ledger_invitations(invitee_user_id, status, created_at DESC);
       `);
 
       // 共享账单表 - 账本账单索引
       await store.executeSql(`
         CREATE INDEX IF NOT EXISTS idx_shared_bills_ledger
-        ON shared_bills(ledger_id, status, created_at DESC)
+        ON shared_bills(ledger_id, approval_status, created_at DESC)
         WHERE is_deleted = 0;
       `);
 
       // 成员活动表 - 账本活动索引
       await store.executeSql(`
         CREATE INDEX IF NOT EXISTS idx_member_activities_ledger
-        ON member_activities(ledger_id, occurred_at DESC);
+        ON member_activities(ledger_id, created_at DESC);
       `);
 
       console.log('[IndexManager] ✓ 共享账本表索引创建成功');
@@ -340,8 +340,7 @@ export class IndexManager {
       // 训练记录表 - 用户训练查询索引
       await store.executeSql(`
         CREATE INDEX IF NOT EXISTS idx_training_records_user
-        ON smart_category_training(user_id, training_type, created_at DESC)
-        WHERE is_deleted = 0;
+        ON smart_category_training(user_id, is_correct, created_at DESC);
       `);
 
       // 分类规则表 - 用户激活规则索引
@@ -383,7 +382,7 @@ export class IndexManager {
       // OCR识别记录表 - 未使用记录索引
       await store.executeSql(`
         CREATE INDEX IF NOT EXISTS idx_ocr_records_unused
-        ON ocr_recognition_records(user_id, is_used, recognition_status, confidence_score DESC)
+        ON ocr_recognition_records(user_id, recognition_status, confidence DESC)
         WHERE is_deleted = 0;
       `);
 

@@ -143,59 +143,195 @@ struct AccountManagementPage {
     }
   }
 
+  // 计算总资产（余额 > 0 的部分）
+  get totalAssets(): number {
+    return this.accounts.filter(acc => acc.balance > 0).reduce((sum, acc) => sum + acc.balance, 0);
+  }
+
+  // 计算总负债（余额 < 0 的部分，取绝对值）
+  get totalLiabilities(): number {
+    return this.accounts.filter(acc => acc.balance < 0).reduce((sum, acc) => sum + Math.abs(acc.balance), 0);
+  }
+
+  // 计算净资产
+  get netAssets(): number {
+    return this.totalAssets - this.totalLiabilities;
+  }
+
   build() {
     Column() {
-      // 头部
+      // 1. 顶部导航栏
       Row() {
         Image($r('app.media.back'))
-          .width(24).height(24)
+          .width(24)
+          .height(24)
+          .fillColor('#388E3C')
           .onClick(() => router.back())
-        Text('账户管理')
+        Text('资产')
           .fontSize(20)
           .fontWeight(FontWeight.Bold)
+          .fontColor('#388E3C')
           .margin({ left: 16 })
       }
-      .width('100%').padding(16).backgroundColor(Color.White)
-
-      // 列表
-      List({ space: 10 }) {
-        ForEach(this.accounts, (item: Account) => {
-          ListItem() {
-            Row() {
-              Column() {
-                Text(item.name).fontSize(18).fontWeight(FontWeight.Bold)
-                Text(this.formatType(item.type)).fontSize(14).fontColor(Color.Gray).margin({ top: 4 })
-              }.alignItems(HorizontalAlign.Start)
-              
-              Blank()
-              
-              Text(`¥${item.balance.toFixed(2)}`)
-                .fontSize(18)
-                .fontColor(item.balance < 0 ? Color.Red : Color.Black)
-            }
-            .width('100%')
-            .padding(15)
-            .backgroundColor(Color.White)
-            .borderRadius(8)
-            .onClick(() => this.handleEdit(item))
-          }
-          .swipeAction({ end: this.DeleteButton(item.accountId) })
-        })
-      }
-      .layoutWeight(1)
       .width('100%')
-      .padding(15)
+      .padding({ left: 16, right: 16, top: 16, bottom: 8 })
+      .backgroundColor(Color.Transparent)
 
-      Button('添加账户')
-        .width('90%')
-        .height(50)
-        .type(ButtonType.Capsule)
-        .margin(20)
-        .onClick(() => this.handleCreate())
+      // 2. 顶部总览卡片 (Summary Card) - 玻璃拟态
+      Column() {
+        // 上半部分：净资产
+        Column() {
+          Text('净资产')
+            .fontSize(14)
+            .fontColor('#666666')
+          Text(`¥${(this.netAssets ?? 0).toFixed(2)}`)
+            .fontSize(36)
+            .fontWeight(FontWeight.Bold)
+            .fontColor('#333333')
+            .margin({ top: 8 })
+        }
+        .alignItems(HorizontalAlign.Center)
+        .width('100%')
+
+        // 分割线
+        Divider()
+          .color('rgba(255, 255, 255, 0.6)')
+          .strokeWidth(1)
+          .margin({ top: 16, bottom: 16 })
+
+        // 下半部分：资产与负债
+        Row() {
+          Column() {
+            Text('总资产')
+              .fontSize(12)
+              .fontColor('#666666')
+            Text(`¥${(this.totalAssets ?? 0).toFixed(2)}`)
+              .fontSize(16)
+              .fontWeight(FontWeight.Bold)
+              .fontColor('#333333')
+              .margin({ top: 4 })
+          }
+          .alignItems(HorizontalAlign.Start)
+
+          Column() {
+            Text('总负债')
+              .fontSize(12)
+              .fontColor('#666666')
+            Text(`¥${(this.totalLiabilities ?? 0).toFixed(2)}`)
+              .fontSize(16)
+              .fontWeight(FontWeight.Bold)
+              .fontColor('#333333')
+              .margin({ top: 4 })
+          }
+          .alignItems(HorizontalAlign.End)
+        }
+        .width('100%')
+        .justifyContent(FlexAlign.SpaceBetween)
+      }
+      .width('calc(100% - 32vp)')
+      .margin({ left: 16, right: 16, top: 16 })
+      .padding(24)
+      .borderRadius(24)
+      .backgroundColor('rgba(255, 255, 255, 0.4)')
+      .backdropBlur(25)
+      .border({ width: 1.5, color: 'rgba(255, 255, 255, 0.8)', style: BorderStyle.Solid })
+      .shadow({ radius: 16, color: 'rgba(0, 0, 0, 0.04)', offsetY: 6 })
+
+      // 3. 标题与操作区 (Title & Action Area)
+      Row() {
+        // 左侧标题 - 马克笔高亮效果
+        Stack({ alignContent: Alignment.BottomStart }) {
+          Row()
+            .width('100%')
+            .height(8)
+            .backgroundColor('#FFF68F')
+            .margin({ bottom: 2 })
+          Text('资产账户')
+            .fontSize(18)
+            .fontWeight(FontWeight.Bold)
+            .fontColor('#333333')
+            // 为了让高亮跨越文字宽度的设置
+            .padding({ left: 4, right: 4 })
+        }
+        // 由于Stack的width如果设为100%会占满，这里让内部自己撑开
+        .align(Alignment.Start)
+
+        // 右侧操作按钮
+        Button('+ 添加账户')
+          .height(32)
+          .fontSize(14)
+          .fontColor(Color.White)
+          .backgroundColor('#FFB347')
+          .borderRadius(16)
+          .shadow({ radius: 8, color: 'rgba(255, 179, 71, 0.4)', offsetY: 2 })
+          .onClick(() => this.handleCreate())
+      }
+      .width('100%')
+      .padding({ left: 16, right: 16, top: 24, bottom: 12 })
+      .justifyContent(FlexAlign.SpaceBetween)
+
+      // 4. 账户列表区与空状态
+      if (this.accounts.length === 0) {
+        Column() {
+          Text('💳')
+            .fontSize(64)
+          Text('哎呀，还没有资产账户呢~')
+            .fontSize(14)
+            .fontColor('#999999')
+            .margin({ top: 16 })
+        }
+        .layoutWeight(1)
+        .width('100%')
+        .justifyContent(FlexAlign.Center)
+        .alignItems(HorizontalAlign.Center)
+      } else {
+        List({ space: 12 }) {
+          ForEach(this.accounts, (item: Account) => {
+            ListItem() {
+              Row() {
+                Column() {
+                  Text(item.name)
+                    .fontSize(16)
+                    .fontWeight(FontWeight.Bold)
+                    .fontColor('#333333')
+                  Text(this.formatType(item.type))
+                    .fontSize(12)
+                    .fontColor('#999999')
+                    .margin({ top: 4 })
+                }
+                .alignItems(HorizontalAlign.Start)
+
+                Blank()
+
+                Text(`${item.balance >= 0 ? '+' : ''}${(item.balance ?? 0).toFixed(2)}`)
+                  .fontSize(20)
+                  .fontWeight(FontWeight.Bold)
+                  .fontColor(item.balance < 0 ? '#FF4D4F' : '#388E3C')
+              }
+              .width('100%')
+              .padding(20)
+              .borderRadius(16)
+              .backgroundColor('rgba(255, 255, 255, 0.4)')
+              .backdropBlur(25)
+              .border({ width: 1.5, color: 'rgba(255, 255, 255, 0.8)', style: BorderStyle.Solid })
+              .shadow({ radius: 16, color: 'rgba(0, 0, 0, 0.04)', offsetY: 6 })
+              .onClick(() => this.handleEdit(item))
+            }
+            .swipeAction({ end: this.DeleteButton(item.accountId) })
+          })
+        }
+        .layoutWeight(1)
+        .width('100%')
+        .padding({ left: 16, right: 16, bottom: 30 })
+      }
     }
     .width('100%')
     .height('100%')
-    .backgroundColor('#F1F3F5')
+    .expandSafeArea([SafeAreaType.SYSTEM], [SafeAreaEdge.TOP])
+    .linearGradient({
+      direction: GradientDirection.Bottom,
+      colors: [['#E0F2E9', 0.0], ['#F4F8F5', 0.4], ['#F4F8F5', 1.0]]
+    })
   }
 
   @Builder DeleteButton(id: number) {

@@ -27,6 +27,7 @@ import { BusinessError} from '@kit.BasicServicesKit';
 import { LogConfig } from '../common/config/AppConfig';
 import { BreakpointSystem } from '../common/config/BreakpointSystem';
 import { AppSettingsService } from '../service/AppSettingsService';
+import { GlobalContext } from '../common/GlobalContext';
 
 export default class EntryAbility extends UIAbility {
   private breakpointSystem: BreakpointSystem = new BreakpointSystem();
@@ -43,6 +44,10 @@ export default class EntryAbility extends UIAbility {
     // 统一初始化数据库和设置服务
     try {
       const context = this.context;
+
+      // 统一初始化全局上下文
+      GlobalContext.init(context);
+      hilog.info(LogConfig.DOMAIN, LogConfig.TAG, '✅ 全局上下文初始化成功');
 
       // 使用DatabaseManager统一初始化
       await DatabaseManager.initDatabase(context);
@@ -67,11 +72,26 @@ export default class EntryAbility extends UIAbility {
     hilog.info(LogConfig.DOMAIN, LogConfig.TAG, '%{public}s', 'Ability onDestroy')
   }
 
-  onWindowStageCreate(windowStage: Window.WindowStage) {
+  async onWindowStageCreate(windowStage: Window.WindowStage) {
     // 主窗口已创建，为该 Ability 设置主页面
     hilog.isLoggable(LogConfig.DOMAIN, LogConfig.TAG, hilog.LogLevel.INFO);
     hilog.info(LogConfig.DOMAIN, LogConfig.TAG, '%{public}s', 'Ability onWindowStageCreate')
-    
+
+    // 全局沉浸式状态栏：全屏布局 + 透明状态栏 + 深色图标
+    try {
+      const mainWindow = await windowStage.getMainWindow();
+      await mainWindow.setWindowLayoutFullScreen(true);
+      await mainWindow.setWindowSystemBarProperties({
+        statusBarColor: '#00000000',
+        statusBarContentColor: '#333333',
+        navigationBarColor: '#00000000',
+        navigationBarContentColor: '#333333'
+      });
+      hilog.info(LogConfig.DOMAIN, LogConfig.TAG, '✅ 沉浸式状态栏配置完成');
+    } catch (err) {
+      hilog.error(LogConfig.DOMAIN, LogConfig.TAG, '❌ 沉浸式状态栏配置失败: %{public}s', JSON.stringify(err));
+    }
+
     // 注册响应式断点系统
     this.breakpointSystem.register();
 

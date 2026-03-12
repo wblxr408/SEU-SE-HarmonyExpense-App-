@@ -19,13 +19,21 @@ export struct StatisticsPage {
   @State categoryRanking: CategoryStatItem[] = [];
   @State isLoading: boolean = false;
   @State isDarkTheme: boolean = false;
+  @State segmentPeriods: string[] = ['周', '月', '年'];
+  @State currentPeriod: string = '月';
   
-  // 数据持有者，支持切换而无需重新加载数据库
+  // 数据持有者
   private allBills: Bill[] = [];
   
   // 图表常量
-  private readonly DAYS_IN_MONTH = 31;
-  private readonly CHART_MAX_HEIGHT = 150;
+  private readonly DAYS_IN_MONTH: number = 31;
+  private readonly CHART_MAX_HEIGHT: number = 150;
+
+  // 环形图配色主色调 #FFB347 及同色系渐变色组
+  private donutColors: ResourceColor[] = [
+    '#FFB347', '#FFBF66', '#FFCB85', '#FFD8A3', '#FFE4C2',
+    '#FFF0E0', '#FFF5EB', '#FFF9F5', '#FFFCFA'
+  ];
 
   private get pageBackgroundColor() {
     return this.isDarkTheme ? '#000000' : '#F5F7F9';
@@ -40,8 +48,6 @@ export struct StatisticsPage {
   }
 
   private isSystemDarkTheme(): boolean {
-    // 默认返回false，因为ArkTS不支持动态获取系统主题
-    // 用户可以通过手动设置深色/浅色模式来控制
     return false;
   }
 
@@ -73,17 +79,14 @@ export struct StatisticsPage {
       const userId = await UserSessionService.getCurrentUserId();
       if (!userId) return;
 
-      // 1. 计算当前月份的日期范围
       const startDate = `${this.currentYear}-${this.currentMonth.toString().padStart(2, '0')}-01`;
       const lastDay = new Date(this.currentYear, this.currentMonth, 0).getDate();
       const endDate = `${this.currentYear}-${this.currentMonth.toString().padStart(2, '0')}-${lastDay}`;
       const dateRange: DateRangeFilter = { start: startDate, end: endDate };
 
-      // 2. 获取本月所有账单
       const bills = await BillDAO.getBillsByFilters(userId, dateRange);
-      this.allBills = bills; // 确保保存数据以供切换
+      this.allBills = bills;
 
-      // 3. 处理数据
       this.processData(bills, lastDay);
 
     } catch (error) {
@@ -94,29 +97,20 @@ export struct StatisticsPage {
   }
 
   processData(bills: Bill[], daysInMonth: number) {
-    let tExpense = 0;
-    let tIncome = 0;
+    let tExpense: number = 0;
+    let tIncome: number = 0;
     const dTrend: number[] = new Array(daysInMonth).fill(0);
-    const catMap = new Map<number, number>(); // 分类ID -> 金额
+    const catMap = new Map<number, number>(); 
 
     bills.forEach(bill => {
       if (bill.type === 'expense') {
         tExpense += bill.amount;
-        
-        // 每日趋势（天数索引为日期 - 1）
-        const date = new Date(bill.transactionDate);
-        // 确保日期解析正确（假设 YYYY-MM-DD 字符串）
-        // 注意：JS 中的 new Date('2023-01-01') 通常表现为 UTC，但 getDate() 使用本地时间。
-        // 为了避免时区问题，手动解析字符串或使用可靠的解析方法更安全。
         const day = parseInt(bill.transactionDate.split('-')[2]);
         if (day >= 1 && day <= daysInMonth) {
           dTrend[day - 1] += bill.amount;
         }
-
-        // 分类排行
         const currentCatAmount = catMap.get(bill.categoryId) || 0;
         catMap.set(bill.categoryId, currentCatAmount + bill.amount);
-
       } else if (bill.type === 'income') {
         tIncome += bill.amount;
       }
@@ -125,7 +119,6 @@ export struct StatisticsPage {
     this.totalExpense = tExpense;
     this.totalIncome = tIncome;
     
-    // 根据显示类型计算趋势
     this.recalculateTrendAndRanking(daysInMonth);
   }
 
@@ -144,12 +137,11 @@ export struct StatisticsPage {
 
     this.dailyTrend = dTrend; 
     
-    // 重新计算排行的总一百分比
     const totalBase = this.displayType === 'expense' ? this.totalExpense : this.totalIncome;
     this.loadCategories(catMap, totalBase);
   }
 
-  async loadCategories(catMap: Map<number, number>, totalExpense: number) {
+  async loadCategories(catMap: Map<number, number>, totalBase: number) {
     const userId = await UserSessionService.getCurrentUserId();
     if (!userId) return;
     
@@ -163,8 +155,8 @@ export struct StatisticsPage {
           categoryId: catId,
           name: cat.name,
           amount: amount,
-          percentage: totalExpense > 0 ? (amount / totalExpense) * 100 : 0,
-          color: '#E0E0E0' // 占位符颜色，如果有的话最好从 Category 获取
+          percentage: totalBase > 0 ? (amount / totalBase) * 100 : 0,
+          color: '#FFB347' 
         });
       }
     });
@@ -172,181 +164,6 @@ export struct StatisticsPage {
     // 按金额降序排序
     ranking.sort((a, b) => b.amount - a.amount);
     this.categoryRanking = ranking;
-  }
-
-  build() {
-    Column() {
-      // 头部
-      Row() {
-        Image($r('app.media.back')) // 假设这是导航返回或仅是 tab 标题
-          .width(24)
-          .height(24)
-          .visibility(Visibility.Hidden) // 因为在 tab 中所以隐藏
-        Text('统计报表')
-          .fontSize(20)
-          .fontWeight(FontWeight.Bold)
-          .fontColor(this.textMainColor)
-          .margin({ left: 16 })
-      }
-      .width('100%')
-      .padding(16)
-      .backgroundColor(this.pageBackgroundColor)
-      
-      Scroll() {
-        Column() {
-          // 月份选择器和总计
-          Column() {
-            Row() {
-              Text(`${this.currentYear}年${this.currentMonth}月`)
-                .fontSize(16)
-                .fontColor(Color.Gray)
-              Text(' ▽') // 简单指示器
-                .fontSize(12)
-                .fontColor(Color.Gray)
-            }
-            .onClick(() => {
-              DatePickerDialog.show({
-                selected: new Date(this.currentYear, this.currentMonth - 1),
-                onAccept: (value: DatePickerResult) => {
-                  this.currentYear = value.year!;
-                  this.currentMonth = value.month! + 1;
-                  this.loadData();
-                }
-              })
-            })
-            .margin({ top: 10, bottom: 5 })
-
-            Text(`¥${(this.displayType === 'expense' ? this.totalExpense : this.totalIncome).toFixed(2)}`)
-              .fontSize(36)
-              .fontWeight(FontWeight.Bold)
-              .fontColor(this.textMainColor)
-            
-            Text(this.displayType === 'expense' ? '总支出 (点击切换)' : '总收入 (点击切换)')
-              .fontSize(12)
-              .fontColor(Color.Gray)
-              .margin({ bottom: 20 })
-          }
-          .width('100%')
-          .alignItems(HorizontalAlign.Center)
-          .backgroundColor(this.pageBackgroundColor)
-          .padding({ top: 20, bottom: 20 })
-          .onClick(() => {
-             this.displayType = this.displayType === 'expense' ? 'income' : 'expense';
-             const lastDay = new Date(this.currentYear, this.currentMonth, 0).getDate();
-             this.recalculateTrendAndRanking(lastDay);
-          })
-
-          // 每日趋势图表
-          Column() {
-             Text('每日趋势')
-              .fontSize(14)
-              .fontColor(this.textMainColor)
-              .width('100%')
-              .margin({ bottom: 10 })
-            
-            // 柱状图区域
-            Scroll() {
-              Row({ space: 10 }) {
-                ForEach(this.getChartData(), (item: ChartItem) => {
-                  Column() {
-                    // 柱子
-                    Column()
-                      .width(8)
-                      .height(this.getBarHeight(item.amount))
-                      .backgroundColor('#4A90E2') // 蓝色柱子
-                      .borderRadius({ topLeft: 4, topRight: 4 })
-                    
-                    // 日期
-                    Text(item.day.toString())
-                      .fontSize(10)
-                      .fontColor(Color.Gray)
-                      .margin({ top: 5 })
-                  }
-                  .justifyContent(FlexAlign.End)
-                  .height(this.CHART_MAX_HEIGHT + 20)
-                })
-              }
-              .padding({ left: 10, right: 10 })
-            }
-            .scrollable(ScrollDirection.Horizontal)
-            .width('100%')
-            .scrollBar(BarState.Off)
-          }
-          .width('95%')
-          .padding(15)
-          .backgroundColor(this.cardBackgroundColor)
-          .borderRadius(16)
-          .margin({ top: -10, bottom: 10 }) // 如果需要可以稍微重叠，或者仅设置边距
- 
-          // 分类排行
-          Column() {
-            Text(this.displayType === 'expense' ? '支出分类排行' : '收入分类排行')
-              .fontSize(16)
-              .fontWeight(FontWeight.Bold)
-              .fontColor(this.textMainColor)
-              .width('100%')
-              .margin({ bottom: 15 })
-
-            List({ space: 15 }) {
-              ForEach(this.categoryRanking, (item: CategoryStatItem) => {
-                ListItem() {
-                  Column() {
-                    Row() {
-                      // 图标占位符
-                      Image($r('app.media.icon')) 
-                        .width(30)
-                        .height(30)
-                        .margin({ right: 10 })
-                      
-                      Column() {
-                        Row() {
-                          Text(item.name)
-                            .fontColor(this.textMainColor)
-                            .fontSize(16)
-                          Blank()
-                           Row() {
-                            Text(`${item.percentage.toFixed(1)}% `)
-                              .fontSize(12)
-                              .fontColor(Color.Gray)
-                            Text(`¥${item.amount.toFixed(0)}`)
-                              .fontSize(16)
-                              .fontWeight(FontWeight.Bold)
-                              .fontColor(this.textMainColor)
-                          }
-                        }
-                        .width('100%')
-                        .justifyContent(FlexAlign.SpaceBetween)
-
-                        // 进度条
-                        Progress({ value: item.percentage, total: 100, type: ProgressType.Linear })
-                          .color('#4A90E2')
-                          .backgroundColor(this.isDarkTheme ? '#333333' : '#E0E0E0')
-                          .height(6)
-                          .margin({ top: 8 })
-                      }
-                      .layoutWeight(1)
-                    }
-                  }
-                  .width('100%')
-                  .padding({ top: 5, bottom: 5 })
-                }
-              })
-            }
-            .width('100%')
-          }
-          .width('100%')
-          .padding(20) // 匹配截图中的间距
-          
-        }
-        .width('100%')
-        .constraintSize({ minHeight: '100%' })
-        .backgroundColor(this.pageBackgroundColor) // 主通用背景
-      }
-      .layoutWeight(1)
-    }
-    .width('100%')
-    .height('100%')
-    .backgroundColor(this.pageBackgroundColor)
   }
 
   getBarHeight(amount: number): number {
@@ -358,6 +175,371 @@ export struct StatisticsPage {
   getChartData(): ChartItem[] {
     return this.dailyTrend.map((amount, index) => new ChartItem(amount, index + 1));
   }
+
+  getTopCategoryValues(): number[] {
+    const values = this.categoryRanking.slice(0, 9).map(item => item.amount);
+    return values.length > 0 ? values : []; // 确保DataPanel有默认值结构
+  }
+  
+  getMaxTrendAmount(): number {
+    return this.dailyTrend.length > 0 ? Math.max(...this.dailyTrend) : 0;
+  }
+  
+  getAvgTrendAmount(): number {
+    if (this.dailyTrend.length === 0) return 0;
+    const sum = this.dailyTrend.reduce((a, b) => a + b, 0);
+    return sum / this.dailyTrend.length;
+  }
+
+  @Builder
+  CardHeader(title: string) {
+    Stack({ alignContent: Alignment.BottomStart }) {
+      Row()
+        .height(8)
+        .width(title.length * 16)
+        .backgroundColor('#FFF68F')
+        .margin({ bottom: 2 })
+      Text(title)
+        .fontSize(16)
+        .fontWeight(FontWeight.Bold)
+        .fontColor(this.textMainColor)
+    }
+    .margin({ bottom: 15, right: 'auto' })
+  }
+
+  @Builder
+  buildTopNav() {
+    Column() {
+      // 1. 分段选择器
+      Row() {
+        ForEach(this.segmentPeriods, (item: string) => {
+          Text(item)
+            .fontSize(14)
+            .fontWeight(this.currentPeriod === item ? FontWeight.Bold : FontWeight.Normal)
+            .fontColor(this.currentPeriod === item ? Color.White : '#388E3C')
+            .backgroundColor(this.currentPeriod === item ? '#7FB069' : Color.Transparent)
+            .borderRadius(24)
+            .padding({ top: 6, bottom: 6, left: 24, right: 24 })
+            .shadow(this.currentPeriod === item ? { radius: 8, color: 'rgba(127, 176, 105, 0.3)', offsetY: 2 } : undefined)
+            .onClick(() => {
+              this.currentPeriod = item;
+            })
+        })
+      }
+      .backgroundColor('rgba(152, 216, 200, 0.2)')
+      .borderRadius(24)
+      .padding(4)
+      .margin({ top: 40, bottom: 20 }) // 留出系统状态栏空间
+      
+      // 2. 月份切换组件
+      Row() {
+        Text('<')
+          .fontSize(18)
+          .fontColor('#388E3C')
+          .fontWeight(FontWeight.Bold)
+          .padding({ left: 10, right: 10, top: 5, bottom: 5 })
+          .onClick(() => {
+             if (this.currentMonth === 1) {
+                this.currentMonth = 12;
+                this.currentYear -= 1;
+             } else {
+                this.currentMonth -= 1;
+             }
+             this.loadData();
+          })
+
+        Text(`${this.currentYear}年${this.currentMonth}月统计`)
+          .fontSize(16)
+          .fontColor('#388E3C')
+          .fontWeight(FontWeight.Bold)
+          .margin({ left: 16, right: 16 })
+          .onClick(() => {
+            DatePickerDialog.show({
+              selected: new Date(this.currentYear, this.currentMonth - 1),
+              onAccept: (value: DatePickerResult) => {
+                this.currentYear = value.year!;
+                this.currentMonth = value.month! + 1;
+                this.loadData();
+              }
+            })
+          })
+
+        Text('>')
+          .fontSize(18)
+          .fontColor('#388E3C')
+          .fontWeight(FontWeight.Bold)
+          .padding({ left: 10, right: 10, top: 5, bottom: 5 })
+          .onClick(() => {
+             if (this.currentMonth === 12) {
+                this.currentMonth = 1;
+                this.currentYear += 1;
+             } else {
+                this.currentMonth += 1;
+             }
+             this.loadData();
+          })
+          
+        Blank()
+        
+        Text('👁️')
+          .fontSize(18)
+          .fontColor('#388E3C')
+          .padding({ right: 10 })
+      }
+      .width('100%')
+      .padding({ left: 16, right: 16 })
+      .margin({ bottom: 16 })
+      .alignItems(VerticalAlign.Center)
+    }
+    .width('100%')
+  }
+
+  @Builder
+  buildSummaryCards() {
+    Row() {
+      // 本月支出
+      Column() {
+        Text('本月支出')
+          .fontSize(14)
+          .fontColor(this.displayType === 'expense' ? '#FFFFFF' : Color.Gray)
+          .margin({ bottom: 8 })
+        Text(`¥${this.totalExpense.toFixed(2)}`)
+          .fontSize(22)
+          .fontWeight(FontWeight.Bold)
+          .fontColor(this.displayType === 'expense' ? '#FFFFFF' : this.textMainColor)
+      }
+      .layoutWeight(1)
+      .height(88)
+      .alignItems(HorizontalAlign.Start)
+      .justifyContent(FlexAlign.Center)
+      .padding({ left: 16 })
+      .borderRadius(16)
+      .backgroundColor(this.displayType === 'expense' ? Color.Transparent : 'rgba(255, 255, 255, 0.6)')
+      .linearGradient(this.displayType === 'expense' ? { angle: 135, colors: [['#98D8C8', 0.0], ['#7FB069', 1.0]] } : undefined)
+      .shadow(this.displayType === 'expense' ? { radius: 12, color: 'rgba(127, 176, 105, 0.4)', offsetY: 4 } : undefined)
+      .onClick(() => {
+        if (this.displayType !== 'expense') {
+          this.displayType = 'expense';
+          const lastDay = new Date(this.currentYear, this.currentMonth, 0).getDate();
+          this.recalculateTrendAndRanking(lastDay);
+        }
+      })
+
+      // 间隙
+      Row().width(12)
+
+      // 本月收入
+      Column() {
+        Text('本月收入')
+          .fontSize(14)
+          .fontColor(this.displayType === 'income' ? '#FFFFFF' : Color.Gray)
+          .margin({ bottom: 8 })
+        Text(`¥${this.totalIncome.toFixed(2)}`)
+          .fontSize(22)
+          .fontWeight(FontWeight.Bold)
+          .fontColor(this.displayType === 'income' ? '#FFFFFF' : this.textMainColor)
+      }
+      .layoutWeight(1)
+      .height(88)
+      .alignItems(HorizontalAlign.Start)
+      .justifyContent(FlexAlign.Center)
+      .padding({ left: 16 })
+      .borderRadius(16)
+      .backgroundColor(this.displayType === 'income' ? Color.Transparent : 'rgba(255, 255, 255, 0.6)')
+      .linearGradient(this.displayType === 'income' ? { angle: 135, colors: [['#98D8C8', 0.0], ['#7FB069', 1.0]] } : undefined)
+      .shadow(this.displayType === 'income' ? { radius: 12, color: 'rgba(127, 176, 105, 0.4)', offsetY: 4 } : undefined)
+      .onClick(() => {
+        if (this.displayType !== 'income') {
+          this.displayType = 'income';
+          const lastDay = new Date(this.currentYear, this.currentMonth, 0).getDate();
+          this.recalculateTrendAndRanking(lastDay);
+        }
+      })
+    }
+    .width('100%')
+    .justifyContent(FlexAlign.SpaceBetween)
+  }
+
+  @Builder
+  buildTrendDataSummary() {
+    Row() {
+      Column() {
+        Text('单日最高')
+          .fontSize(12)
+          .fontColor(Color.Gray)
+        Text(`¥${this.getMaxTrendAmount().toFixed(0)}`)
+          .fontSize(16)
+          .fontWeight(FontWeight.Bold)
+          .fontColor(this.textMainColor)
+          .margin({ top: 4 })
+      }
+      .alignItems(HorizontalAlign.Start)
+      
+      Column() {
+        Text('日均')
+          .fontSize(12)
+          .fontColor(Color.Gray)
+        Text(`¥${this.getAvgTrendAmount().toFixed(0)}`)
+          .fontSize(16)
+          .fontWeight(FontWeight.Bold)
+          .fontColor(this.textMainColor)
+          .margin({ top: 4 })
+      }
+      .alignItems(HorizontalAlign.Start)
+      .margin({ left: 30 })
+    }
+    .width('100%')
+    .margin({ bottom: 10 })
+  }
+
+  build() {
+    Column() {
+      // 1. 顶部区域：含状态栏隔离与月份切换器
+      this.buildTopNav()
+      
+      // 2. 主区：可滑动的各类卡片
+      Scroll() {
+        Column() {
+          // 2.1 总览：支出与收入双卡片
+          this.buildSummaryCards()
+
+          // 2.2 类别：趋势折线图
+          Column() {
+            this.CardHeader(this.displayType === 'expense' ? '支出趋势' : '收入趋势')
+            this.buildTrendDataSummary()
+            BezierLineChart({ data: this.dailyTrend, chartMaxHeight: this.CHART_MAX_HEIGHT })
+          }
+          .width('100%')
+          .backgroundColor('rgba(255,255,255,0.8)')
+          .backdropBlur(20)
+          .borderRadius(24)
+          .border({ width: 1.5, color: '#98D8C8', style: BorderStyle.Dashed })
+          .margin({ top: 16 })
+          .padding(20)
+
+          // 2.3 类别：占比概况（带洞环形图）
+          Column() {
+            this.CardHeader(this.displayType === 'expense' ? '支出占比概况' : '收入占比概况')
+            Stack({ alignContent: Alignment.Center }) {
+              DataPanel({ 
+                values: this.getTopCategoryValues(), 
+                max: this.displayType === 'expense' ? this.totalExpense : this.totalIncome, 
+                type: DataPanelType.Circle 
+              })
+                .width(180)
+                .height(180)
+                .valueColors(this.donutColors)
+              
+              Column() {
+                Text(this.displayType === 'expense' ? '本月支出' : '本月收入')
+                  .fontSize(12)
+                  .fontColor(Color.Gray)
+                Text(`¥${(this.displayType === 'expense' ? this.totalExpense : this.totalIncome).toFixed(2)}`)
+                  .fontSize(18)
+                  .fontWeight(FontWeight.Bold)
+                  .fontColor(this.textMainColor)
+              }
+            }
+            .margin({ top: 10, bottom: 10 })
+            .width('100%')
+            .align(Alignment.Center)
+          }
+          .width('100%')
+          .backgroundColor('rgba(255,255,255,0.8)')
+          .backdropBlur(20)
+          .borderRadius(24)
+          .border({ width: 1.5, color: '#98D8C8', style: BorderStyle.Dashed })
+          .margin({ top: 16 })
+          .padding({ top: 20, bottom: 20, left: 16, right: 16 })
+          .alignItems(HorizontalAlign.Start)
+
+          // 2.4 类别：支出类目排行
+          Column() {
+            this.CardHeader(this.displayType === 'expense' ? '支出类目排行' : '收入类目排行')
+            List({ space: 15 }) {
+              ForEach(this.categoryRanking, (item: CategoryStatItem, index: number) => {
+                ListItem() {
+                  Column() {
+                    Row() {
+                      Row() {
+                        Image($r('app.media.ic_tag_linear')) 
+                          .width(16)
+                          .height(16)
+                          .fillColor('#7FB069')
+                          .objectFit(ImageFit.Contain)
+                      }
+                      .width(30)
+                      .height(30)
+                      .margin({ right: 10 })
+                      .backgroundColor(Color.White)
+                      .borderRadius(20)
+                      .shadow({ radius: 8, color: 'rgba(0,0,0,0.05)', offsetY: 2 })
+                      .justifyContent(FlexAlign.Center)
+                      
+                      Column() {
+                        Row() {
+                          Text(item.name)
+                            .fontColor(this.textMainColor)
+                            .fontSize(16)
+                          Blank()
+                          Row() {
+                            Text(`${item.percentage.toFixed(1)}% `)
+                              .fontSize(12)
+                              .fontColor(Color.Gray)
+                            Text(`¥${item.amount.toFixed(0)}`)
+                              .fontSize(16)
+                              .fontWeight(FontWeight.Bold)
+                              .fontColor(this.textMainColor)
+                          }
+                        }
+                        .width('100%')
+
+                        Progress({ value: item.percentage, total: 100, type: ProgressType.Linear })
+                          .color('#FFB347')
+                          .backgroundColor(this.isDarkTheme ? '#333333' : '#E0E0E0')
+                          .height(6)
+                          .margin({ top: 8 })
+                      }
+                      .layoutWeight(1)
+                    }
+                    .width('100%')
+                    .padding({ top: 5, bottom: 5 })
+                  }
+                  .border({
+                    width: { bottom: 1 },
+                    color: { bottom: '#98D8C8' },
+                    style: { bottom: BorderStyle.Dashed }
+                  })
+                  .padding({ bottom: index < this.categoryRanking.length - 1 ? 10 : 0 })
+                }
+              })
+            }
+            .width('100%')
+            .margin({ top: 10 })
+          }
+          .width('100%')
+          .backgroundColor('rgba(255,255,255,0.8)')
+          .backdropBlur(20)
+          .borderRadius(24)
+          .border({ width: 1.5, color: '#98D8C8', style: BorderStyle.Dashed })
+          .margin({ top: 16, bottom: 30 }) 
+          .padding({ top: 20, bottom: 20, left: 16, right: 16 })
+          .alignItems(HorizontalAlign.Start)
+          
+        }
+        .width('100%')
+        .padding({ left: 16, right: 16 }) 
+        .constraintSize({ minHeight: '100%' })
+      }
+      .layoutWeight(1)
+      .scrollBar(BarState.Off)
+    }
+    .width('100%')
+    .height('100%')
+    // 渐变与沉浸式区域
+    .linearGradient({ direction: GradientDirection.Bottom, colors: [['#E8F5E9', 0.0], ['#F4F8F5', 0.3], ['#F4F8F5', 1.0]] })
+    .expandSafeArea([SafeAreaType.SYSTEM], [SafeAreaEdge.TOP])
+  }
 }
 
 class ChartItem {
@@ -368,7 +550,6 @@ class ChartItem {
     this.amount = amount;
     this.day = day;
   }
-
 }
 
 interface CategoryStatItem {
@@ -377,4 +558,103 @@ interface CategoryStatItem {
   amount: number;
   percentage: number;
   color: string;
+}
+
+@Component
+struct BezierLineChart {
+  @Prop data: number[];
+  @Prop chartMaxHeight: number;
+  @State canvasWidth: number = 0;
+  @State canvasHeight: number = 150;
+  private settings: RenderingContextSettings = new RenderingContextSettings(true);
+  private ctx: CanvasRenderingContext2D = new CanvasRenderingContext2D(this.settings);
+
+  aboutToAppear() {
+    this.canvasHeight = this.chartMaxHeight;
+  }
+
+  build() {
+    Canvas(this.ctx)
+      .width('100%')
+      .height(this.canvasHeight)
+      .onAreaChange((oldValue: Area, newValue: Area) => {
+        this.canvasWidth = Number(newValue.width);
+        this.canvasHeight = Number(newValue.height);
+        this.drawChart();
+      })
+      .onReady(() => {
+        this.drawChart();
+      })
+  }
+
+  drawChart() {
+    if (!this.ctx || this.canvasWidth === 0 || this.data.length === 0) return;
+    const ctx = this.ctx;
+    const w = this.canvasWidth;
+    const h = this.canvasHeight - 20; 
+    
+    ctx.clearRect(0, 0, this.canvasWidth, this.canvasHeight);
+
+    const maxVal = Math.max(...this.data, 1); 
+    const points: Point[] = [];
+    const stepX = w / Math.max((this.data.length - 1), 1);
+    
+    let maxIdx = 0;
+
+    this.data.forEach((val, i) => {
+      if (val > this.data[maxIdx]) maxIdx = i;
+      const p: Point = {
+        x: i * stepX,
+        y: h - (val / maxVal) * h + 10 
+      };
+      points.push(p);
+    });
+
+    if (points.length < 2) return;
+
+    const gradient = ctx.createLinearGradient(0, 0, 0, this.canvasHeight);
+    gradient.addColorStop(0, 'rgba(255, 107, 107, 0.4)');
+    gradient.addColorStop(1, 'rgba(255, 107, 107, 0.0)');
+    
+    ctx.beginPath();
+    ctx.moveTo(points[0].x, points[0].y);
+    
+    for (let i = 0; i < points.length - 1; i++) {
+        const p0 = points[i];
+        const p1 = points[i + 1];
+        const cxC = (p0.x + p1.x) / 2;
+        ctx.bezierCurveTo(cxC, p0.y, cxC, p1.y, p1.x, p1.y);
+    }
+    
+    ctx.lineTo(points[points.length - 1].x, this.canvasHeight);
+    ctx.lineTo(points[0].x, this.canvasHeight);
+    ctx.closePath();
+    ctx.fillStyle = gradient;
+    ctx.fill();
+
+    ctx.beginPath();
+    ctx.moveTo(points[0].x, points[0].y);
+    for (let i = 0; i < points.length - 1; i++) {
+        const p0 = points[i];
+        const p1 = points[i + 1];
+        const cxC = (p0.x + p1.x) / 2;
+        ctx.bezierCurveTo(cxC, p0.y, cxC, p1.y, p1.x, p1.y);
+    }
+    ctx.strokeStyle = '#FF6B6B';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+
+    const maxP = points[maxIdx];
+    ctx.beginPath();
+    ctx.arc(maxP.x, maxP.y, 4, 0, Math.PI * 2);
+    ctx.fillStyle = '#FFFFFF';
+    ctx.fill();
+    ctx.strokeStyle = '#FF6B6B';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+  }
+}
+interface Point {
+  x: number;
+  y: number;
 }

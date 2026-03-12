@@ -54,14 +54,14 @@ export class SessionInfo {
 
   static fromJSON(json: string): SessionInfo | null {
     try {
-      const data = JSON.parse(json);
+      const data = JSON.parse(json) as Record<string, Object>;
       return new SessionInfo(
-        data.userId,
-        data.username,
-        data.email,
-        data.loginTime,
-        data.lastActiveTime,
-        data.token
+        data['userId'] as number,
+        data['username'] as string,
+        data['email'] as string,
+        data['loginTime'] as string,
+        data['lastActiveTime'] as string,
+        data['token'] as string | undefined
       );
     } catch {
       return null;
@@ -201,7 +201,7 @@ export class UserSessionService {
         user.email,
         now,
         now,
-        UserSessionService.generateSecureToken(user.userId)
+        await UserSessionService.generateSecureToken(user.userId)
       );
 
       UserSessionService.currentSession = newSession;
@@ -355,7 +355,7 @@ export class UserSessionService {
         storedHash = parts[1];
       } else {
         // 新密码模式：生成随机盐值
-        saltHex = UserSessionService.generateSecureSalt();
+        saltHex = await UserSessionService.generateSecureSalt();
         storedHash = '';
       }
 
@@ -363,20 +363,19 @@ export class UserSessionService {
       const passwordBytes: Uint8Array = new util.TextEncoder().encodeInto(password);
 
       // 使用PBKDF2
-      const kdf = cryptoFramework.createKdf({
-        algName: 'PBKDF2',
-        spec: {
-          algName: 'PBKDF2',
-          salt: { data: saltBytes },
-          iterations: UserSessionService.PBKDF2_ITERATIONS,
-          keyLen: 32,
-          digest: 'SHA256'
-        }
-      });
+      const kdfAlg = 'PBKDF2|SHA256';
+      const kdf = cryptoFramework.createKdf(kdfAlg);
 
-      const derivedKey = await kdf.generateKey(passwordBytes);
-      const hashBytes = derivedKey.getEncoded();
-      const hashHex = UserSessionService.bytesToHex(new Uint8Array(hashBytes.data));
+      const spec: cryptoFramework.PBKDF2Spec = {
+        algName: 'PBKDF2',
+        password: passwordBytes,
+        salt: saltBytes,
+        iterations: UserSessionService.PBKDF2_ITERATIONS,
+        keySize: 32
+      };
+
+      const keyBlob = await kdf.generateSecret(spec);
+      const hashHex = UserSessionService.bytesToHex(new Uint8Array(keyBlob.data));
 
       if (existingHash) {
         return `${saltHex}:${storedHash}`;
@@ -418,41 +417,37 @@ export class UserSessionService {
       const saltBytes = UserSessionService.hexToBytes(saltHex);
       const passwordBytes = new util.TextEncoder().encodeInto(password);
 
-      const kdf = cryptoFramework.createKdf({
-        algName: 'PBKDF2',
-        spec: {
-          algName: 'PBKDF2',
-          salt: { data: saltBytes },
-          iterations: UserSessionService.PBKDF2_ITERATIONS,
-          keyLen: 32,
-          digest: 'SHA256'
-        }
-      });
+      const kdfAlg = 'PBKDF2|SHA256';
+      const kdf = cryptoFramework.createKdf(kdfAlg);
 
-      const derivedKey = await kdf.generateKey(passwordBytes);
-      const hashBytes = derivedKey.getEncoded();
-      const hashHex = UserSessionService.bytesToHex(new Uint8Array(hashBytes.data));
+      const spec: cryptoFramework.PBKDF2Spec = {
+        algName: 'PBKDF2',
+        password: passwordBytes,
+        salt: saltBytes,
+        iterations: UserSessionService.PBKDF2_ITERATIONS,
+        keySize: 32
+      };
+
+      const keyBlob = await kdf.generateSecret(spec);
+      const hashHex = UserSessionService.bytesToHex(new Uint8Array(keyBlob.data));
 
       return `${saltHex}:${hashHex}`;
     } catch (error) {
       console.error('[UserSessionService] 密码验证失败:', error);
-      throw error;
+      if (error instanceof Error) {
+        throw error;
+      }
+      throw new Error(String(error));
     }
   }
 
   /**
    * 生成加密安全的随机盐值
    */
-  private static generateSecureSalt(): string {
-    const random = new Uint8Array(UserSessionService.SALT_LENGTH);
-    cryptoFramework.generateRandomRandom({ size: UserSessionService.SALT_LENGTH }, (error, data) => {
-      if (!error && data) {
-        for (let i = 0; i < UserSessionService.SALT_LENGTH; i++) {
-          random[i] = data[i];
-        }
-      }
-    });
-    return UserSessionService.bytesToHex(random);
+  private static async generateSecureSalt(): Promise<string> {
+    const random = cryptoFramework.createRandom();
+    const randomData: cryptoFramework.DataBlob = await random.generateRandom(UserSessionService.SALT_LENGTH);
+    return UserSessionService.bytesToHex(new Uint8Array(randomData.data));
   }
 
   /**
@@ -460,17 +455,11 @@ export class UserSessionService {
    * @param userId 用户ID
    * @returns 令牌
    */
-  private static generateSecureToken(userId: number): string {
+  private static async generateSecureToken(userId: number): Promise<string> {
     const timestamp: number = Date.now();
-    const randomBytes = new Uint8Array(16);
-    cryptoFramework.generateRandomRandom({ size: 16 }, (error, data) => {
-      if (!error && data) {
-        for (let i = 0; i < 16; i++) {
-          randomBytes[i] = data[i];
-        }
-      }
-    });
-    const randomHex = UserSessionService.bytesToHex(randomBytes);
+    const random = cryptoFramework.createRandom();
+    const randomData: cryptoFramework.DataBlob = await random.generateRandom(16);
+    const randomHex = UserSessionService.bytesToHex(new Uint8Array(randomData.data));
     return `${userId}_${timestamp}_${randomHex}`;
   }
 
@@ -511,7 +500,7 @@ export class UserSessionService {
         user.email,
         now,
         now,
-        UserSessionService.generateSecureToken(user.userId)
+        await UserSessionService.generateSecureToken(user.userId)
       );
 
       UserSessionService.currentSession = newSession;

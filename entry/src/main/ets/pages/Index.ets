@@ -4,7 +4,6 @@ import { AccountDAO } from '../dao/AccountDAO';
 import { Bill } from '../model/Bill';
 import { BillDAO, DateRangeFilter } from '../dao/BillDAO';
 import hilog from '@ohos.hilog';
-import { CURRENT_USER_ID } from '../common/Constants';
 import { BusinessError } from '@ohos.base';
 import { Category } from '../model';
 import { CategoryDAO } from '../dao/CategoryDAO';
@@ -15,6 +14,7 @@ import { UserSessionService } from '../service/UserSessionService';
 import { AppTheme } from '../common/config/AppTheme';
 import { SharedLedgerService } from '../service/SharedLedgerService';
 import { LedgerInvitation } from '../model/SharedLedger';
+import { BillDetailDialog } from '../components/BillDetailDialog';
 
 interface DateFilter {
   start: string;
@@ -62,6 +62,38 @@ struct Index {
     }),
     autoCancel: false,
     customStyle: true
+  });
+
+  @State currentSelectedBill: Bill = new Bill();
+  
+  detailDialogController: CustomDialogController = new CustomDialogController({
+    builder: BillDetailDialog({
+      bill: this.currentSelectedBill,
+      categoryName: (this.allCategories.find(c => c.categoryId === this.currentSelectedBill.categoryId)?.name as string) || '',
+      onDelete: () => {
+        AlertDialog.show({
+          title: '确认删除',
+          message: '删除后金额将退回账户，确定要删除这条记录吗？',
+          primaryButton: {
+            value: '取消',
+            action: () => {}
+          },
+          secondaryButton: {
+            value: '删除',
+            fontColor: Color.Red,
+            action: () => {
+              this.deleteBill(this.currentSelectedBill);
+            }
+          }
+        });
+      },
+      onEdit: () => {
+        promptAction.showToast({ message: '编辑功能暂未实现' });
+      }
+    }),
+    alignment: DialogAlignment.Center,
+    customStyle: true,
+    autoCancel: true
   });
 
   private listPadding = new BreakPointType({ xs: 8, sm: 10, md: 12, lg: 16, xl: 20, xxl: 24 });
@@ -265,16 +297,14 @@ struct Index {
       // 2. 自定义绿色底部栏
       Row() {
         Column() {
-          Image($r('app.media.ic_bottom_home'))
-            .size({ width: 24, height: 24 })
-            .fillColor(Color.White)
+          Image(this.currentIndex === 1 ? $r('app.media.ic_pie_chart_filled') : $r('app.media.ic_pie_chart_linear'))
+            .width(24).height(24)
+            .fillColor(this.currentIndex === 1 ? '#7FB069' : '#999999')
             .objectFit(ImageFit.Contain)
-            .opacity(this.currentIndex === 1 ? 1 : 0.6)
           Text('统计')
-            .fontColor(Color.White)
+            .fontColor(this.currentIndex === 1 ? '#7FB069' : '#999999')
             .fontSize(10)
             .margin({ top: 4 })
-            .opacity(this.currentIndex === 1 ? 1 : 0.6)
         }
         .width(60)
         .justifyContent(FlexAlign.Center)
@@ -286,16 +316,14 @@ struct Index {
         Blank()
 
         Column() {
-          Image($r('app.media.ic_bottom_home'))
-            .size({ width: 24, height: 24 })
-            .fillColor(Color.White)
+          Image(this.currentIndex === 2 ? $r('app.media.ic_user_filled') : $r('app.media.ic_user_linear'))
+            .width(24).height(24)
+            .fillColor(this.currentIndex === 2 ? '#7FB069' : '#999999')
             .objectFit(ImageFit.Contain)
-            .opacity(this.currentIndex === 2 ? 1 : 0.6)
           Text('我的')
-            .fontColor(Color.White)
+            .fontColor(this.currentIndex === 2 ? '#7FB069' : '#999999')
             .fontSize(10)
             .margin({ top: 4 })
-            .opacity(this.currentIndex === 2 ? 1 : 0.6)
         }
         .width(60)
         .justifyContent(FlexAlign.Center)
@@ -338,16 +366,18 @@ struct Index {
         // 沉浸式首页结构背景直接铺满
         Scroll() {
           Column() {
-            // 1. 顶部自定义导航与日期 (Top Header)
+            // 1. 顶部自定义导航与日期 (Top Header) - 避让沉浸式状态栏
             Column() {
               // 第一行：猪猪头像、默认账本、搜索
               Row() {
-                Text('🐷').fontSize(28) // 模拟头像
+                Image($r('app.media.ic_user_avatar_linear'))
+                  .width(32).height(32).fillColor('#388E3C').objectFit(ImageFit.Contain)
                 Text('默认账本 ▼')
                   .fontSize('20fp')
                   .fontWeight(FontWeight.Bold)
                   .fontColor('#388E3C')
-                Text('🔍').fontSize(24)
+                Image($r('app.media.ic_search_linear'))
+                  .width(24).height(24).fillColor('#388E3C').objectFit(ImageFit.Contain)
               }
               .width('100%')
               .justifyContent(FlexAlign.SpaceBetween)
@@ -394,14 +424,15 @@ struct Index {
               .margin({ bottom: 40 })
             }
             .width('100%')
+            .padding({ top: 38 })
 
             // 2. 悬浮胶囊工具栏 (Floating Pill Bar)
             Row() {
-              Column() { Text('✏️').fontSize(24).margin({bottom: 4}); Text('记账').fontSize('12fp').fontColor('#333') }.onClick(() => router.pushUrl({ url: 'pages/AddBill' }))
-              Column() { Text('🤖').fontSize(24).margin({bottom: 4}); Text('AI记账').fontSize('12fp').fontColor('#333') }
-              Column() { Text('📅').fontSize(24).margin({bottom: 4}); Text('日历').fontSize('12fp').fontColor('#333') }
-              Column() { Text('💼').fontSize(24).margin({bottom: 4}); Text('资产').fontSize('12fp').fontColor('#333') }
-              Column() { Text('📊').fontSize(24).margin({bottom: 4}); Text('预算').fontSize('12fp').fontColor('#333') }.onClick(() => router.pushUrl({ url: 'pages/BudgetManagement' }))
+              Column() { Image($r('app.media.ic_book_linear')).width(28).height(28).fillColor('#7FB069').objectFit(ImageFit.Contain).margin({bottom: 4}); Text('记账').fontSize('12fp').fontColor('#333') }.onClick(() => router.pushUrl({ url: 'pages/AddBill' }))
+              Column() { Image($r('app.media.ic_ai_stars_linear')).width(28).height(28).fillColor('#7FB069').objectFit(ImageFit.Contain).margin({bottom: 4}); Text('AI记账').fontSize('12fp').fontColor('#333') }.onClick(() => promptAction.showToast({ message: 'AI记账功能开发中' }))
+              Column() { Image($r('app.media.ic_calendar_linear')).width(28).height(28).fillColor('#7FB069').objectFit(ImageFit.Contain).margin({bottom: 4}); Text('日历').fontSize('12fp').fontColor('#333') }.onClick(() => router.pushUrl({ url: 'pages/CalendarView' }))
+              Column() { Image($r('app.media.ic_wallet_linear')).width(28).height(28).fillColor('#7FB069').objectFit(ImageFit.Contain).margin({bottom: 4}); Text('资产').fontSize('12fp').fontColor('#333') }.onClick(() => promptAction.showToast({ message: '资产管理功能开发中' }))
+              Column() { Image($r('app.media.ic_chart_linear')).width(28).height(28).fillColor('#7FB069').objectFit(ImageFit.Contain).margin({bottom: 4}); Text('预算').fontSize('12fp').fontColor('#333') }.onClick(() => router.pushUrl({ url: 'pages/BudgetManagement' }))
             }
             .width('calc(100% - 32vp)')
             .margin({ top: -20, left: 16, right: 16 })
@@ -432,7 +463,8 @@ struct Index {
             // 4. 账单明细列表
             if (this.transactions.length === 0) {
               Column() {
-                Text('🐷').fontSize(64).margin({ bottom: 10, top: 40 })
+                Image($r('app.media.ic_empty_book'))
+                  .width(120).height(120).opacity(0.4).objectFit(ImageFit.Contain).margin({ bottom: 10, top: 40 })
                 Text('哎呀，当前时间没有记录呢~').fontColor('#999999').fontSize(14)
               }.width('100%').alignItems(HorizontalAlign.Center)
             } else {
@@ -441,6 +473,10 @@ struct Index {
                   ListItem() {
                     this.TransactionRow(item)
                   }
+                  .onClick(() => {
+                    this.currentSelectedBill = item;
+                    this.detailDialogController.open();
+                  })
                   .swipeAction({ end: this.DeleteButton(item) })
                   .backgroundColor('#FFFFFF')
                   .borderRadius(12)
@@ -462,6 +498,13 @@ struct Index {
     .titleMode(NavigationTitleMode.Mini)
     .hideTitleBar(true)
     .hideBackButton(true)
+  }
+
+  pageTransition() {
+    PageTransitionEnter({ duration: 200 })
+      .slide(SlideEffect.Right)
+    PageTransitionExit({ duration: 200 })
+      .slide(SlideEffect.Left)
   }
 
   @Builder
