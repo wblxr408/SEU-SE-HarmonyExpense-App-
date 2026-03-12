@@ -19,7 +19,7 @@ struct AnomalyHistoryPage {
   async loadData() {
     this.isLoading = true;
     try {
-      const userId = UserSessionService.getCurrentUserId();
+      const userId =await UserSessionService.getCurrentUserId();
       if (!userId) {
         promptAction.showToast({ message: '请先登录' });
         return;

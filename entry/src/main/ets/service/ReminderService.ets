@@ -99,7 +99,7 @@ class ReminderStatistics {
  * 提醒服务
  */
 export class ReminderService {
-  private static processedReminders: Set<number> = new Set();
+  private static processedReminders: Map<number,number> = new Map();
   private static readonly PROCESSING_TIMEOUT: number = 60000;
 
   /**
@@ -107,9 +107,7 @@ export class ReminderService {
    */
   static async checkNotificationPermission(): Promise<boolean> {
     try {
-      const bundleInfo = await bundleManager.getBundleInfoForSelf(bundleManager.BundleFlag.GET_BUNDLE_INFO_WITH_APPLICATION);
-      const appInfo = bundleInfo.appInfo;
-      return appInfo.allowNotification;
+      return await notificationManager.isNotificationEnabled();
     } catch (error) {
       console.error('[ReminderService] 检查通知权限失败:', error);
       return false;

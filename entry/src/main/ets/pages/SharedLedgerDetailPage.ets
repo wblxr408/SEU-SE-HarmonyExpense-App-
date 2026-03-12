@@ -26,11 +26,11 @@ struct SharedLedgerDetailPage {
     customStyle: true
   });
 
-  aboutToAppear() {
+ async  aboutToAppear() {
     const params = router.getParams() as Record<string, number>;
     if (params && params.ledgerId) {
       this.ledgerId = params.ledgerId;
-      this.currentUserId = UserSessionService.getCurrentUserId() ?? 0;
+      this.currentUserId =await UserSessionService.getCurrentUserId() ?? 0;
     } else {
       // promptAction.showToast({ message: '参数错误' });
     }

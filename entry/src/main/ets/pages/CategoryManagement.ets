@@ -234,7 +234,7 @@ struct CategoryManagement {
 
   async loadCategories() {
     try {
-      const userId = UserSessionService.getCurrentUserId();
+      const userId =await UserSessionService.getCurrentUserId();
       if (!userId) throw new Error('未登录');
       
       // 1. 加载所有分类（用于父分类选择）
@@ -291,7 +291,7 @@ struct CategoryManagement {
 
   async handleDelete(categoryId: number) {
     try {
-      const userId = UserSessionService.getCurrentUserId();
+      const userId =await UserSessionService.getCurrentUserId();
       if (!userId) throw new Error('未登录');
       await CategoryDAO.softDelete(userId, categoryId)
       this.showToast('删除成功')
@@ -313,7 +313,7 @@ struct CategoryManagement {
     try {
       const now = new Date().toISOString()
       this.currentEditingCategory.updatedAt = now
-      const userId = UserSessionService.getCurrentUserId();
+      const userId = await UserSessionService.getCurrentUserId();
       if (!userId) throw new Error('未登录');
 
       if (this.currentEditingCategory.categoryId === 0) {

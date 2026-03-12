@@ -89,7 +89,7 @@ struct ReminderSettingsPage {
   async updateReminder() {
     // 这里简单调用 ReminderService 逻辑
     // 实际需要根据 switch 状态调用 createReminder (daily) 或 deleteReminder
-    const userId = UserSessionService.getCurrentUserId();
+    const userId =await UserSessionService.getCurrentUserId();
     if (!userId) {
        promptAction.showToast({ message: '请先登录' });
        return;

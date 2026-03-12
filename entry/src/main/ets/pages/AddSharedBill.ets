@@ -39,7 +39,7 @@ struct AddSharedBill {
   async loadData() {
     this.isLoading = true;
     try {
-      const userId = UserSessionService.getCurrentUserId();
+      const userId = await UserSessionService.getCurrentUserId();
       if (!userId) return;
 
       // 1. 获取成员
@@ -111,7 +111,7 @@ struct AddSharedBill {
 
     this.isLoading = true;
     try {
-      const currentUser = UserSessionService.getCurrentSession();
+      const currentUser =await UserSessionService.getCurrentSession();
       if (!currentUser) {
         promptAction.showToast({ message: '请先登录' });
         return;

@@ -4,7 +4,7 @@ import { AccountDAO } from '../dao/AccountDAO';
 import { Bill } from '../model/Bill';
 import { BillDAO, DateRangeFilter } from '../dao/BillDAO';
 import hilog from '@ohos.hilog';
-import { CURRENT_USER_ID } from '../common/Constants';
+import { CURRENT_USER_ID } from '../common/constants/Constants';
 import { BusinessError } from '@ohos.base';
 import { Category } from '../model';
 import { CategoryDAO } from '../dao/CategoryDAO';
@@ -86,7 +86,7 @@ struct Index {
   }
 
   async checkInvitations(): Promise<void> {
-    const userId = UserSessionService.getCurrentUserId();
+    const userId =await UserSessionService.getCurrentUserId();
     if (userId) {
        const invites = await SharedLedgerService.getUserInvitations(userId);
        if (invites.length > 0) {
@@ -122,7 +122,7 @@ struct Index {
       const dateRange = dateRangeObj as DateRangeFilter;
       hilog.info(HILOG_DOMAIN, LOG_TAG, `加载账单: DateRange=${JSON.stringify(dateRange)}, CategoryID=${this.selectedCategoryId}`);
 
-      const userId = UserSessionService.getCurrentUserId();
+      const userId =await UserSessionService.getCurrentUserId();
       if (!userId) { 
         hilog.warn(HILOG_DOMAIN, LOG_TAG, 'loadBills skipped: No user logged in');
         return; 
@@ -143,7 +143,7 @@ struct Index {
 
   async loadFilterData(): Promise<void> {
     try {
-      const userId = UserSessionService.getCurrentUserId();
+      const userId =await UserSessionService.getCurrentUserId();
       if (!userId) return;
       const categories: Category[]= await CategoryDAO.getAll(userId);
       const allOption = new Category();
@@ -178,7 +178,7 @@ struct Index {
 
   async deleteBill(bill: Bill): Promise<void> {
     try {
-      const userId = UserSessionService.getCurrentUserId();
+      const userId =await UserSessionService.getCurrentUserId();
       if (!userId) return;
 
       const account = await AccountDAO.getById(bill.accountId);

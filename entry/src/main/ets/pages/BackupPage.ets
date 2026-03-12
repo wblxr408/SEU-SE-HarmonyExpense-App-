@@ -95,7 +95,7 @@ struct BackupPage {
 
   async handleExport() {
     this.isProcessing = true;
-    const userId = UserSessionService.getCurrentUserId();
+    const userId =await UserSessionService.getCurrentUserId();
     if (!userId) {
       promptAction.showToast({ message: '请先登录' });
       this.isProcessing = false;
