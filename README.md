@@ -408,7 +408,7 @@ const loginResult = await UserSessionService.login(
 
 // 检查登录状态
 if (UserSessionService.isLoggedIn()) {
-  const userId = UserSessionService.getCurrentUserId();
+  const userId = await UserSessionService.getCurrentUserId();
 }
 
 // 用户登出

@@ -15,7 +15,7 @@ export class NotificationService {
    * @param content 内容
    */
   static async push(type: NotificationType, title: string, content: string): Promise<boolean> {
-    const userId = await UserSessionService.getCurrentUserId();
+    const userId =await UserSessionService.getCurrentUserId();
     if (!userId) {
       console.error('[NotificationService] 未登录，无法推送通知');
       return false;
@@ -68,7 +68,7 @@ export class NotificationService {
    * 标记所有通知为已读
    */
   static async markAllAsRead(): Promise<void> {
-    const userId = await UserSessionService.getCurrentUserId();
+    const userId =await UserSessionService.getCurrentUserId();
     if (!userId) {
       return;
     }
@@ -79,7 +79,7 @@ export class NotificationService {
    * 获取未读通知数量
    */
   static async getUnreadCount(): Promise<number> {
-    const userId = await UserSessionService.getCurrentUserId();
+    const userId =await UserSessionService.getCurrentUserId();
     if (!userId) {
       return 0;
     }
@@ -90,7 +90,7 @@ export class NotificationService {
    * 清空所有通知
    */
   static async clearAll(): Promise<void> {
-    const userId = await UserSessionService.getCurrentUserId();
+    const userId =await UserSessionService.getCurrentUserId();
     if (!userId) {
       return;
     }

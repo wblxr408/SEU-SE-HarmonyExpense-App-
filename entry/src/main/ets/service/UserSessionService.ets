@@ -13,7 +13,7 @@ import cryptoFramework from '@ohos.security.cryptoFramework';
 import util from '@ohos.util';
 import preferences from '@ohos.data.preferences';
 import { GlobalContext } from '../common/GlobalContext';
-
+import {BusinessError} from '@ohos.base'
 /**
  * 会话信息
  */
@@ -53,15 +53,23 @@ export class SessionInfo {
   }
 
   static fromJSON(json: string): SessionInfo | null {
+    interface SessionData {
+      userId: number;
+      username: string;
+      email: string;
+      loginTime: string;
+      lastActiveTime: string;
+      token?: string;
+    }
     try {
-      const data = JSON.parse(json) as Record<string, Object>;
+      const data = JSON.parse(json) as SessionData;
       return new SessionInfo(
-        data['userId'] as number,
-        data['username'] as string,
-        data['email'] as string,
-        data['loginTime'] as string,
-        data['lastActiveTime'] as string,
-        data['token'] as string | undefined
+        data.userId,
+        data.username,
+        data.email,
+        data.loginTime,
+        data.lastActiveTime,
+        data.token
       );
     } catch {
       return null;
@@ -355,27 +363,49 @@ export class UserSessionService {
         storedHash = parts[1];
       } else {
         // 新密码模式：生成随机盐值
-        saltHex = await UserSessionService.generateSecureSalt();
+        saltHex =await UserSessionService.generateSecureSalt();
         storedHash = '';
       }
 
       const saltBytes: Uint8Array = UserSessionService.hexToBytes(saltHex);
       const passwordBytes: Uint8Array = new util.TextEncoder().encodeInto(password);
 
-      // 使用PBKDF2
-      const kdfAlg = 'PBKDF2|SHA256';
-      const kdf = cryptoFramework.createKdf(kdfAlg);
+      // // 使用PBKDF2
+      // const kdf = cryptoFramework.createKdf({
+      //   algName: 'PBKDF2',
+      //   spec: {
+      //     algName: 'PBKDF2',
+      //     salt: { data: saltBytes },
+      //     iterations: UserSessionService.PBKDF2_ITERATIONS,
+      //     keyLen: 32,
+      //     digest: 'SHA256'
+      //   }
+      // });
+      //
+      // const derivedKey = await kdf.generateKey(passwordBytes);
+      // const hashBytes = derivedKey.getEncoded();
+      // const hashHex = UserSessionService.bytesToHex(new Uint8Array(hashBytes.data));
+const kdf = cryptoFramework.createKdf('PBKDF2|SHA256');
+const spec: cryptoFramework.PBKDF2Spec={
+  algName: 'PBKDF2',
+  password: passwordBytes,
+  salt: saltBytes,
+  iterations: UserSessionService.PBKDF2_ITERATIONS,
+  keySize: 32
 
-      const spec: cryptoFramework.PBKDF2Spec = {
-        algName: 'PBKDF2',
-        password: passwordBytes,
-        salt: saltBytes,
-        iterations: UserSessionService.PBKDF2_ITERATIONS,
-        keySize: 32
-      };
+};
+      const secret = await new Promise<cryptoFramework.DataBlob>((resolve, reject) => {
+        kdf.generateSecret(spec, (err: BusinessError, data: cryptoFramework.DataBlob) => {
+          if (err) {
+            reject(err);
+          } else {
+            resolve(data);
+          }
+        });
+      });
 
-      const keyBlob = await kdf.generateSecret(spec);
-      const hashHex = UserSessionService.bytesToHex(new Uint8Array(keyBlob.data));
+      const hashBytes = new Uint8Array(secret.data);
+      const hashHex = UserSessionService.bytesToHex(hashBytes);
 
       if (existingHash) {
         return `${saltHex}:${storedHash}`;
@@ -417,52 +447,95 @@ export class UserSessionService {
       const saltBytes = UserSessionService.hexToBytes(saltHex);
       const passwordBytes = new util.TextEncoder().encodeInto(password);
 
-      const kdfAlg = 'PBKDF2|SHA256';
-      const kdf = cryptoFramework.createKdf(kdfAlg);
-
+      const kdf = cryptoFramework.createKdf('PBKDF2|SHA256');
       const spec: cryptoFramework.PBKDF2Spec = {
         algName: 'PBKDF2',
         password: passwordBytes,
         salt: saltBytes,
         iterations: UserSessionService.PBKDF2_ITERATIONS,
-        keySize: 32
+        keySize: 32 // 32字节 = 256位
       };
 
-      const keyBlob = await kdf.generateSecret(spec);
-      const hashHex = UserSessionService.bytesToHex(new Uint8Array(keyBlob.data));
+      const secret = await new Promise<cryptoFramework.DataBlob>((resolve, reject) => {
+        kdf.generateSecret(spec, (err: BusinessError, data: cryptoFramework.DataBlob) => {
+          if (err) {
+            reject(err);
+          } else {
+            resolve(data);
+          }
+        });
+      });
+
+      const hashBytes = new Uint8Array(secret.data);
+      const hashHex = UserSessionService.bytesToHex(hashBytes);
 
       return `${saltHex}:${hashHex}`;
     } catch (error) {
       console.error('[UserSessionService] 密码验证失败:', error);
-      if (error instanceof Error) {
-        throw error;
-      }
-      throw new Error(String(error));
+      throw new Error(error instanceof Error ? error.message : String(error));
     }
   }
 
   /**
    * 生成加密安全的随机盐值
    */
+  // private static generateSecureSalt(): string {
+  //   const random = new Uint8Array(UserSessionService.SALT_LENGTH);
+  //   cryptoFramework.generateRandomRandom({ size: UserSessionService.SALT_LENGTH }, (error, data) => {
+  //     if (!error && data) {
+  //       for (let i = 0; i < UserSessionService.SALT_LENGTH; i++) {
+  //         random[i] = data[i];
+  //       }
+  //     }
+  //   });
+  //   return UserSessionService.bytesToHex(random);
+  // }
   private static async generateSecureSalt(): Promise<string> {
-    const random = cryptoFramework.createRandom();
-    const randomData: cryptoFramework.DataBlob = await random.generateRandom(UserSessionService.SALT_LENGTH);
-    return UserSessionService.bytesToHex(new Uint8Array(randomData.data));
+    try {
+      const random = cryptoFramework.createRandom();
+      const randomData: cryptoFramework.DataBlob = await random.generateRandom(UserSessionService.SALT_LENGTH);
+      return UserSessionService.bytesToHex(new Uint8Array(randomData.data));
+    } catch (error) {
+      console.error('[UserSessionService] 生成盐值失败:', error);
+      // 降级方案：使用非加密随机数（仅用于演示）
+      const fallback = new Uint8Array(UserSessionService.SALT_LENGTH);
+      for (let i = 0; i < fallback.length; i++) {
+        fallback[i] = Math.floor(Math.random() * 256);
+      }
+      return UserSessionService.bytesToHex(fallback);
+    }
   }
-
   /**
    * 生成安全的会话令牌
    * @param userId 用户ID
    * @returns 令牌
    */
+  // private static generateSecureToken(userId: number): string {
+  //   const timestamp: number = Date.now();
+  //   const randomBytes = new Uint8Array(16);
+  //   cryptoFramework.generateRandomRandom({ size: 16 }, (error, data) => {
+  //     if (!error && data) {
+  //       for (let i = 0; i < 16; i++) {
+  //         randomBytes[i] = data[i];
+  //       }
+  //     }
+  //   });
+  //   const randomHex = UserSessionService.bytesToHex(randomBytes);
+  //   return `${userId}_${timestamp}_${randomHex}`;
+  // }
   private static async generateSecureToken(userId: number): Promise<string> {
     const timestamp: number = Date.now();
-    const random = cryptoFramework.createRandom();
-    const randomData: cryptoFramework.DataBlob = await random.generateRandom(16);
-    const randomHex = UserSessionService.bytesToHex(new Uint8Array(randomData.data));
-    return `${userId}_${timestamp}_${randomHex}`;
+    try {
+      const random = cryptoFramework.createRandom();
+      const randomData: cryptoFramework.DataBlob = await random.generateRandom(16);
+      const randomHex = UserSessionService.bytesToHex(new Uint8Array(randomData.data));
+      return `${userId}_${timestamp}_${randomHex}`;
+    } catch (error) {
+      console.error('[UserSessionService] 生成令牌失败:', error);
+      // 降级方案：使用时间戳和随机数组合
+      return `${userId}_${timestamp}_${Math.random().toString(36).substring(2)}`;
+    }
   }
-
   /**
    * 字节数组转十六进制字符串
    */

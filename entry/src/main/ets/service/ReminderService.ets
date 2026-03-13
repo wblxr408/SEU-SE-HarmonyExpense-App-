@@ -99,7 +99,7 @@ class ReminderStatistics {
  * 提醒服务
  */
 export class ReminderService {
-  private static processedReminders: Map<number, number> = new Map();
+  private static processedReminders: Map<number,number> = new Map();
   private static readonly PROCESSING_TIMEOUT: number = 60000;
 
   /**
