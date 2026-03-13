@@ -21,7 +21,7 @@ struct SyncSettingsPage {
     Column() {
       // 标题栏
       Row() {
-        Image($r('app.media.back'))
+        Image($r('app.media.ic_back_glass'))
           .width(24)
           .height(24)
           .onClick(() => router.back())
@@ -88,7 +88,7 @@ struct SyncSettingsPage {
     }
     .width('100%')
     .height('100%')
-    .backgroundColor('#F1F3F5')
+    .backgroundColor('#F5F5F7')
   }
 
   async startSync() {

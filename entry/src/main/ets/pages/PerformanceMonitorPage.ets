@@ -119,7 +119,7 @@ struct PerformanceMonitorPage {
       Row() {
         Text('←')
           .fontSize(24)
-          .fontColor('#007AFF')
+          .fontColor('#1A1A1A')
           .margin({ right: 16 })
           .onClick(() => {
             router.back();
@@ -132,7 +132,7 @@ struct PerformanceMonitorPage {
 
         Text('刷新')
           .fontSize(14)
-          .fontColor('#007AFF')
+          .fontColor('#1A1A1A')
           .onClick(() => {
             this.refreshData();
             promptAction.showToast({ message: '数据已刷新' });
@@ -165,7 +165,7 @@ struct PerformanceMonitorPage {
     }
     .width('100%')
     .height('100%')
-    .backgroundColor('#F1F3F5')
+    .backgroundColor('#F5F5F7')
   }
 
   /**
@@ -181,9 +181,9 @@ struct PerformanceMonitorPage {
         .alignSelf(ItemAlign.Start)
 
       Row() {
-        this.StatItem('总查询数', `${this.totalQueries}`, '#007AFF')
-        this.StatItem('平均耗时', `${this.totalAvgTime}ms`, '#34C759')
-        this.StatItem('慢查询', `${this.totalSlowQueries}`, this.totalSlowQueries > 0 ? '#FF9500' : '#34C759')
+        this.StatItem('总查询数', `${this.totalQueries}`, '#1A1A1A')
+        this.StatItem('平均耗时', `${this.totalAvgTime}ms`, '#1A1A1A')
+        this.StatItem('慢查询', `${this.totalSlowQueries}`, this.totalSlowQueries > 0 ? '#8E8E93' : '#1A1A1A')
       }
       .width('100%')
       .justifyContent(FlexAlign.SpaceAround)
@@ -208,8 +208,8 @@ struct PerformanceMonitorPage {
         .alignSelf(ItemAlign.Start)
 
       Row() {
-        this.StatItem('有效缓存', `${this.cacheStats.validCount}`, '#007AFF')
-        this.StatItem('过期缓存', `${this.cacheStats.expiredCount}`, this.cacheStats.expiredCount > 0 ? '#FF9500' : '#8E8E93')
+        this.StatItem('有效缓存', `${this.cacheStats.validCount}`, '#1A1A1A')
+        this.StatItem('过期缓存', `${this.cacheStats.expiredCount}`, this.cacheStats.expiredCount > 0 ? '#8E8E93' : '#8E8E93')
         this.StatItem('总计', `${this.cacheStats.totalCount}`, '#8E8E93')
       }
       .width('100%')
@@ -285,7 +285,7 @@ struct PerformanceMonitorPage {
       Text(item.methodName)
         .fontSize(14)
         .fontWeight(FontWeight.Medium)
-        .fontColor('#333333')
+        .fontColor('#1A1A1A33')
         .maxLines(1)
         .textOverflow({ overflow: TextOverflow.Ellipsis })
         .width('100%')
@@ -298,18 +298,18 @@ struct PerformanceMonitorPage {
 
         Text(`平均: ${item.avgTime}ms`)
           .fontSize(12)
-          .fontColor('#34C759')
+          .fontColor('#1A1A1A')
           .margin({ left: 12 })
 
         Text(`最大: ${item.maxTime}ms`)
           .fontSize(12)
-          .fontColor(item.maxTime > 100 ? '#FF9500' : '#8E8E93')
+          .fontColor(item.maxTime > 100 ? '#8E8E93' : '#8E8E93')
           .margin({ left: 12 })
 
         if (item.slowQueryCount > 0) {
           Text(`慢查询: ${item.slowQueryRate}%`)
             .fontSize(12)
-            .fontColor('#FF3B30')
+            .fontColor('#8E8E93')
             .margin({ left: 12 })
         }
       }
@@ -318,7 +318,7 @@ struct PerformanceMonitorPage {
     }
     .width('100%')
     .padding({ top: 12, bottom: 12 })
-    .border({ width: { bottom: 1 }, color: '#F0F0F0' })
+    .border({ width: { bottom: 1 }, color: '#F5F5F7' })
   }
 
   /**
@@ -329,8 +329,8 @@ struct PerformanceMonitorPage {
     Row() {
       Button('清除统计')
         .fontSize(14)
-        .fontColor('#FF3B30')
-        .backgroundColor('#FFF0F0')
+        .fontColor('#8E8E93')
+        .backgroundColor('#FFFFFF')
         .borderRadius(8)
         .height(40)
         .layoutWeight(1)
@@ -340,8 +340,8 @@ struct PerformanceMonitorPage {
 
       Button('清理过期缓存')
         .fontSize(14)
-        .fontColor('#007AFF')
-        .backgroundColor('#F0F8FF')
+        .fontColor('#1A1A1A')
+        .backgroundColor('#FFFFFF')
         .borderRadius(8)
         .height(40)
         .layoutWeight(1)

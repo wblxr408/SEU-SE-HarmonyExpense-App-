@@ -3,6 +3,7 @@ import { SharedLedgerService } from '../service/SharedLedgerService';
 import { SharedBill, LedgerMember, BillSplitDetail } from '../model/SharedLedger';
 import { UserSessionService } from '../service/UserSessionService';
 import promptAction from '@ohos.promptAction';
+import { AppTheme } from '../common/config/AppTheme';
 
 @Entry
 @Component
@@ -25,22 +26,22 @@ struct SharedBillDetailPage {
     alignment: DialogAlignment.Center
   });
 
-  aboutToAppear(): void {
+  async aboutToAppear(): Promise<void> {
     const params = router.getParams() as Record<string, number>;
     if (params && params.billId) {
       this.billId = params.billId;
-      const userId: number | null = UserSessionService.getCurrentUserId();
+      const userId: number | null = await UserSessionService.getCurrentUserId();
       this.currentUserId = userId ?? 0;
-      this.loadData();
+      await this.loadData();
     } else {
       promptAction.showToast({ message: '参数错误' });
       router.back();
     }
   }
 
-  onPageShow(): void {
+  async onPageShow(): Promise<void> {
     if (this.billId) {
-      this.loadData();
+      await this.loadData();
     }
   }
 
@@ -95,7 +96,7 @@ struct SharedBillDetailPage {
     Column() {
       // 1. Header
       Row() {
-        Image($r('app.media.back')) // Assumption: Resource exists
+        Image($r('app.media.ic_back_glass')) // Assumption: Resource exists
           .width(24).height(24)
           .onClick((): void => router.back())
           .margin({ right: 10 })
@@ -125,10 +126,10 @@ struct SharedBillDetailPage {
               Row() {
                  // Placeholder for category icon
                  Stack() {
-                   Circle({ width: 40, height: 40 }).fill('#E3F2FD')
+                   Circle({ width: 40, height: 40 }).fill(AppTheme.GlassBackground)
                    Text(this.bill.categoryName.substring(0, 1))
                      .fontSize(18)
-                     .fontColor('#2196F3')
+                     .fontColor(AppTheme.TextMain)
                  }
                  .width(40)
                  .height(40)
@@ -145,13 +146,13 @@ struct SharedBillDetailPage {
               // Amount
               Text(`¥${this.bill.amount.toFixed(2)}`)
                 .fontSize(36).fontWeight(FontWeight.Bold)
-                .fontColor(Color.Black)
+                .fontColor(AppTheme.TextMain)
                 .margin({ bottom: 5 })
               
               Text(`由 ${this.bill.creatorName} 支付`)
                 .fontSize(14).fontColor(Color.Gray).margin({ bottom: 20 })
 
-              Divider().color('#EEE')
+              Divider().color(AppTheme.Border)
 
               // Metadata
               Row().height(10)
@@ -175,7 +176,7 @@ struct SharedBillDetailPage {
                     Row() {
                       // Avatar placeholder
                       Stack() {
-                        Circle({ width: 32, height: 32 }).fill('#F5F5F5')
+                        Circle({ width: 32, height: 32 }).fill(AppTheme.Background)
                         Text(split.memberName.substring(0, 1)).fontSize(12)
                       }
                       .width(32)
@@ -190,7 +191,7 @@ struct SharedBillDetailPage {
                       Column() {
                         Text(`¥${split.amount.toFixed(2)}`)
                           .fontSize(16).fontWeight(FontWeight.Medium)
-                          .fontColor(Color.Black)
+                          .fontColor(AppTheme.TextMain)
                         Text(`${split.percentage.toFixed(0)}%`)
                            .fontSize(12).fontColor(Color.Gray).margin({top: 2})
                       }.alignItems(HorizontalAlign.End)
@@ -210,8 +211,9 @@ struct SharedBillDetailPage {
             if (this.isOwnerOrAdmin) {
               Button('删除账单')
                 .width('100%')
-                .backgroundColor('#FFEBEE')
-                .fontColor(Color.Red)
+                .backgroundColor(AppTheme.CardBg)
+                .fontColor(AppTheme.TextMain)
+                .border({ width: 0.5, color: AppTheme.Border })
                 .margin({ top: 20 })
                 .onClick((): void => {
                   this.deleteController.open();
@@ -224,7 +226,7 @@ struct SharedBillDetailPage {
     }
     .width('100%')
     .height('100%')
-    .backgroundColor('#F1F3F5')
+    .backgroundColor(AppTheme.Background)
   }
 
   @Builder MetaRow(label: string, value: string) {
@@ -287,7 +289,7 @@ struct ConfirmDialog {
       Text(this.title).fontSize(18).fontWeight(FontWeight.Bold).margin({ bottom: 15 })
       Text(this.message).fontSize(16).margin({ bottom: 20 })
       Row() {
-        Button('取消').backgroundColor('#F0F0F0').fontColor('#333')
+        Button('取消').backgroundColor(AppTheme.Background).fontColor(AppTheme.TextMain)
           .onClick((): void => this.controller.close()).width('40%')
         Button('确定').backgroundColor(Color.Red).fontColor(Color.White)
           .onClick((): void => {

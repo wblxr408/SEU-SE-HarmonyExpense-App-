@@ -56,7 +56,7 @@ struct OCRScanPage {
 
   // 执行OCR识别
   async processOCR() {
-    const userId =await UserSessionService.getCurrentUserId();
+    const userId = await UserSessionService.getCurrentUserId();
     if (!userId) {
       promptAction.showToast({ message: '请先登录' });
       return;
@@ -122,11 +122,11 @@ struct OCRScanPage {
             LoadingProgress()
               .width(80)
               .height(80)
-              .color('#4A90E2')
+              .color('#1A1A1A')
 
             Text('正在识别小票...')
               .fontSize(16)
-              .fontColor('#666')
+              .fontColor('#8E8E93')
               .margin({ top: 20 })
           }
           .width('100%')
@@ -147,11 +147,11 @@ struct OCRScanPage {
               Row() {
                 Text('商家')
                   .fontSize(14)
-                  .fontColor('#888')
+                  .fontColor('#8E8E93')
                   .width(80)
                 Text(this.merchantName || '未识别')
                   .fontSize(16)
-                  .fontColor('#333')
+                  .fontColor('#1A1A1A')
                   .layoutWeight(1)
               }
               .width('100%')
@@ -162,12 +162,12 @@ struct OCRScanPage {
               Row() {
                 Text('金额')
                   .fontSize(14)
-                  .fontColor('#888')
+                  .fontColor('#8E8E93')
                   .width(80)
                 Text(`¥ ${this.totalAmount.toFixed(2)}`)
                   .fontSize(20)
                   .fontWeight(FontWeight.Bold)
-                  .fontColor('#E74C3C')
+                  .fontColor('#8E8E93')
                   .layoutWeight(1)
               }
               .width('100%')
@@ -178,11 +178,11 @@ struct OCRScanPage {
               Row() {
                 Text('日期')
                   .fontSize(14)
-                  .fontColor('#888')
+                  .fontColor('#8E8E93')
                   .width(80)
                 Text(this.transactionDate || '今天')
                   .fontSize(16)
-                  .fontColor('#333')
+                  .fontColor('#1A1A1A')
                   .layoutWeight(1)
               }
               .width('100%')
@@ -193,11 +193,11 @@ struct OCRScanPage {
               Row() {
                 Text('分类')
                   .fontSize(14)
-                  .fontColor('#888')
+                  .fontColor('#8E8E93')
                   .width(80)
                 Text(this.suggestedCategoryName || '其他')
                   .fontSize(16)
-                  .fontColor('#4A90E2')
+                  .fontColor('#1A1A1A')
                   .layoutWeight(1)
               }
               .width('100%')
@@ -206,14 +206,14 @@ struct OCRScanPage {
               Row() {
                 Text('置信度')
                   .fontSize(14)
-                  .fontColor('#888')
+                  .fontColor('#8E8E93')
                   .width(80)
                 Progress({ value: this.confidenceScore * 100, total: 100, type: ProgressType.Linear })
                   .width(150)
                   .height(8)
                 Text(`${(this.confidenceScore * 100).toFixed(0)}%`)
                   .fontSize(12)
-                  .fontColor('#888')
+                  .fontColor('#8E8E93')
                   .margin({ left: 10 })
               }
               .width('100%')
@@ -230,8 +230,8 @@ struct OCRScanPage {
                 .type(ButtonType.Normal)
                 .width('45%')
                 .height(50)
-                .backgroundColor('#F0F0F0')
-                .fontColor('#333')
+                .backgroundColor('#F5F5F7')
+                .fontColor('#1A1A1A')
                 .borderRadius(25)
                 .onClick(() => this.retry())
 
@@ -239,7 +239,7 @@ struct OCRScanPage {
                 .type(ButtonType.Normal)
                 .width('45%')
                 .height(50)
-                .backgroundColor('#4A90E2')
+                .backgroundColor('#1A1A1A')
                 .fontColor(Color.White)
                 .borderRadius(25)
                 .onClick(() => this.useResult())
@@ -260,14 +260,14 @@ struct OCRScanPage {
 
             Text(this.errorMessage)
               .fontSize(16)
-              .fontColor('#E74C3C')
+              .fontColor('#8E8E93')
               .textAlign(TextAlign.Center)
 
             Button('重新选择图片')
               .type(ButtonType.Capsule)
               .width('60%')
               .height(45)
-              .backgroundColor('#4A90E2')
+              .backgroundColor('#1A1A1A')
               .onClick(() => this.selectImage())
           }
           .width('100%')
@@ -284,11 +284,11 @@ struct OCRScanPage {
             Text('扫描小票')
               .fontSize(24)
               .fontWeight(FontWeight.Bold)
-              .fontColor('#333')
+              .fontColor('#1A1A1A')
 
             Text('拍照或选择小票图片，自动识别金额和商家信息')
               .fontSize(14)
-              .fontColor('#888')
+              .fontColor('#8E8E93')
               .textAlign(TextAlign.Center)
               .padding({ left: 40, right: 40 })
 
@@ -298,14 +298,14 @@ struct OCRScanPage {
               .width('70%')
               .height(50)
               .fontSize(18)
-              .backgroundColor('#4A90E2')
+              .backgroundColor('#1A1A1A')
               .margin({ top: 20 })
               .onClick(() => this.selectImage())
 
             // 提示
             Text('支持超市小票、餐饮发票等常见票据')
               .fontSize(12)
-              .fontColor('#AAA')
+              .fontColor('#8E8E93')
               .margin({ top: 30 })
           }
           .width('100%')
@@ -315,7 +315,7 @@ struct OCRScanPage {
       }
       .width('100%')
       .height('100%')
-      .backgroundColor('#F5F5F5')
+      .backgroundColor('#F5F5F7')
     }
     .title('扫描小票')
     .titleMode(NavigationTitleMode.Mini)

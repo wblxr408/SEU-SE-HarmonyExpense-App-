@@ -1,8 +1,10 @@
+
 import router from '@ohos.router';
 import { SharedLedgerService, SettlementResult } from '../service/SharedLedgerService';
 import { SharedLedger, LedgerMember, SharedBill } from '../model/SharedLedger';
 import { UserSessionService } from '../service/UserSessionService';
 import promptAction from '@ohos.promptAction';
+import { AppTheme } from '../common/config/AppTheme';
 
 @Entry
 @Component
@@ -26,19 +28,19 @@ struct SharedLedgerDetailPage {
     customStyle: true
   });
 
- async  aboutToAppear() {
+  async aboutToAppear() {
     const params = router.getParams() as Record<string, number>;
     if (params && params.ledgerId) {
       this.ledgerId = params.ledgerId;
-      this.currentUserId =await UserSessionService.getCurrentUserId() ?? 0;
+      this.currentUserId = await UserSessionService.getCurrentUserId() ?? 0;
     } else {
       // promptAction.showToast({ message: '参数错误' });
     }
   }
 
-  onPageShow() {
+  async onPageShow() {
     if (this.ledgerId) {
-      this.loadData();
+      await this.loadData();
     }
   }
 
@@ -86,7 +88,7 @@ struct SharedLedgerDetailPage {
       // 头部
       Row() {
         Button({ type: ButtonType.Circle, stateEffect: true }) {
-           Text('<').fontSize(20).fontColor(Color.Black)
+           Text('<').fontSize(20).fontColor(AppTheme.TextMain)
         }
         .width(40).height(40).backgroundColor(Color.Transparent)
         .onClick(() => router.back())
@@ -96,7 +98,7 @@ struct SharedLedgerDetailPage {
         Blank()
       }
       .width('100%').height(56).padding({ left: 16, right: 16 })
-      .backgroundColor(Color.White)
+      .backgroundColor(AppTheme.CardBg)
 
       Tabs() {
         // Tab 1: 账单 (Bills)
@@ -104,7 +106,7 @@ struct SharedLedgerDetailPage {
            Stack({ alignContent: Alignment.BottomEnd }) {
              Column() {
                if (this.bills.length === 0) {
-                  Text('暂无账单').fontColor(Color.Gray).margin({ top: 50 })
+                  Text('暂无账单').fontColor(AppTheme.TextSub).margin({ top: 50 })
                } else {
                   List({ space: 10 }) {
                     ForEach(this.bills, (bill: SharedBill) => {
@@ -126,12 +128,12 @@ struct SharedLedgerDetailPage {
 
              // 添加账单浮动按钮
              Button({ type: ButtonType.Circle, stateEffect: true }) {
-                Text('+').fontSize(30).fontColor(Color.White).margin({bottom: 4}) // 略微偏移以居中
+                Text('+').fontSize(30).fontColor(AppTheme.TextWhite).margin({bottom: 4}) // 略微偏移以居中
              }
              .width(56).height(56)
-             .backgroundColor('#2196F3')
+             .backgroundColor(AppTheme.HeroBg)
              .margin({ bottom: 20, right: 20 })
-             .shadow({ radius: 4, color: '#999999', offsetY: 2 })
+             .shadow(AppTheme.FabShadow)
              .onClick(() => {
                router.pushUrl({
                  url: 'pages/AddSharedBill',
@@ -157,7 +159,7 @@ struct SharedLedgerDetailPage {
              Button('邀请新成员')
                .width('90%')
                .height(48)
-               .backgroundColor('#4CAF50')
+               .backgroundColor(AppTheme.HeroBg)
                .margin({ bottom: 20, top: 10 })
                .onClick(() => {
                  this.dialogController.open();
@@ -171,12 +173,12 @@ struct SharedLedgerDetailPage {
            Column() {
              if (this.settlements.length === 0) {
                 if (this.bills.length === 0) {
-                   Text('暂无账单，无需结算').fontColor(Color.Gray).margin({ top: 50 })
+                   Text('暂无账单，无需结算').fontColor(AppTheme.TextSub).margin({ top: 50 })
                 } else {
-                   Text('账平了！无需转账').fontColor(Color.Green).margin({ top: 50 }).fontSize(18)
+                   Text('账平了！无需转账').fontColor(AppTheme.Income).margin({ top: 50 }).fontSize(18)
                 }
              } else {
-                Text('建议转账方案 (最小化交易)').fontSize(14).fontColor(Color.Gray).margin({top: 10, bottom: 10})
+                Text('建议转账方案 (最小化交易)').fontSize(14).fontColor(AppTheme.TextSub).margin({top: 10, bottom: 10})
                 List({ space: 10 }) {
                   ForEach(this.settlements, (item: SettlementResult) => {
                     ListItem() {
@@ -196,7 +198,7 @@ struct SharedLedgerDetailPage {
     }
     .width('100%')
     .height('100%')
-    .backgroundColor('#F5F5F5')
+    .backgroundColor(AppTheme.Background)
   }
 
   @Builder SettlementRow(item: SettlementResult) {
@@ -204,8 +206,8 @@ struct SharedLedgerDetailPage {
       // 支付方
       Row() {
         Text(item.from.memberName.substring(0, 1))
-          .fontSize(12).fontColor(Color.White).fontWeight(FontWeight.Bold)
-          .width(24).height(24).borderRadius(12).backgroundColor('#F44336').textAlign(TextAlign.Center)
+          .fontSize(12).fontColor(AppTheme.TextWhite).fontWeight(FontWeight.Bold)
+          .width(24).height(24).borderRadius(24).backgroundColor(AppTheme.HeroBg).textAlign(TextAlign.Center)
         Text(item.from.memberName)
           .fontSize(16).margin({ left: 5 })
       }
@@ -213,9 +215,9 @@ struct SharedLedgerDetailPage {
       // 箭头和金额
       Column() {
         Text(`支付 ¥${item.amount.toFixed(2)}`)
-          .fontSize(14).fontWeight(FontWeight.Bold).fontColor('#2196F3')
+          .fontSize(14).fontWeight(FontWeight.Bold).fontColor(AppTheme.TextMain)
         Text('---->')
-          .fontSize(12).fontColor(Color.Gray)
+          .fontSize(12).fontColor(AppTheme.TextSub)
       }
       .margin({ left: 10, right: 10 })
       
@@ -224,16 +226,16 @@ struct SharedLedgerDetailPage {
         Text(item.to.memberName)
           .fontSize(16).margin({ right: 5 })
         Text(item.to.memberName.substring(0, 1))
-          .fontSize(12).fontColor(Color.White).fontWeight(FontWeight.Bold)
-          .width(24).height(24).borderRadius(12).backgroundColor('#4CAF50').textAlign(TextAlign.Center)
+          .fontSize(12).fontColor(AppTheme.TextWhite).fontWeight(FontWeight.Bold)
+          .width(24).height(24).borderRadius(24).backgroundColor(AppTheme.HeroBg).textAlign(TextAlign.Center)
       }
     }
     .width('100%')
-    .padding(15)
-    .backgroundColor(Color.White)
+    .padding(20)
+    .backgroundColor(AppTheme.CardBg)
     .borderRadius(8)
     .justifyContent(FlexAlign.Center)
-    .shadow({ radius: 2, color: '#E0E0E0', offsetY: 1 })
+    .shadow({ radius: 2, color: AppTheme.Border, offsetY: 1 })
   }
 
   @Builder BillRow(bill: SharedBill) {
@@ -244,7 +246,7 @@ struct SharedLedgerDetailPage {
           .fontWeight(FontWeight.Bold)
         Text(`${bill.creatorName} ${bill.transactionDate}`)
           .fontSize(12)
-          .fontColor(Color.Gray)
+          .fontColor(AppTheme.TextSub)
           .margin({ top: 4 })
       }
       .alignItems(HorizontalAlign.Start)
@@ -254,11 +256,11 @@ struct SharedLedgerDetailPage {
       Text(`¥${bill.amount.toFixed(2)}`)
         .fontSize(18)
         .fontWeight(FontWeight.Bold)
-        .fontColor(bill.type === 'income' ? '#4CAF50' : '#F44336')
+        .fontColor(bill.type === 'income' ? AppTheme.Income : AppTheme.Expense)
     }
     .width('100%')
     .padding(12)
-    .backgroundColor(Color.White)
+    .backgroundColor(AppTheme.CardBg)
     .borderRadius(8)
   }
 
@@ -268,11 +270,11 @@ struct SharedLedgerDetailPage {
       Text(member.userName.substring(0, 1).toUpperCase())
         .fontSize(16)
         .fontWeight(FontWeight.Bold)
-        .fontColor(Color.White)
+        .fontColor(AppTheme.TextWhite)
         .width(40)
         .height(40)
         .borderRadius(20)
-        .backgroundColor('#FF9800')
+        .backgroundColor(AppTheme.HeroBg)
         .textAlign(TextAlign.Center)
         .margin({ right: 12 })
         
@@ -282,7 +284,7 @@ struct SharedLedgerDetailPage {
           .fontWeight(FontWeight.Bold)
         Text(member.role)
           .fontSize(12)
-          .fontColor(Color.Gray)
+          .fontColor(AppTheme.TextSub)
       }
       .alignItems(HorizontalAlign.Start)
       
@@ -291,15 +293,15 @@ struct SharedLedgerDetailPage {
       if (member.userId === this.ledger?.ownerId) {
          Text('群主')
            .fontSize(12)
-           .fontColor(Color.Blue)
-           .backgroundColor('#E3F2FD')
+           .fontColor(AppTheme.TextMain)
+           .backgroundColor(AppTheme.GlassBackground)
            .padding(4)
            .borderRadius(4)
       }
     }
     .width('100%')
     .padding(12)
-    .backgroundColor(Color.White)
+    .backgroundColor(AppTheme.CardBg)
     .borderRadius(8)
   }
 }
@@ -325,13 +327,13 @@ struct InviteMemberDialog {
       
       Text('注：演示模式下请输入对方的 User ID')
         .fontSize(12)
-        .fontColor(Color.Gray)
+        .fontColor(AppTheme.TextSub)
         .margin({ bottom: 20 })
 
       Row() {
         Button('取消')
-          .backgroundColor('#F0F0F0')
-          .fontColor('#333')
+          .backgroundColor(AppTheme.Background)
+          .fontColor(AppTheme.TextMain)
           .width('40%')
           .onClick(() => this.controller.close())
         
@@ -346,7 +348,7 @@ struct InviteMemberDialog {
       .width('90%')
       .margin({ bottom: 10 })
     }
-    .backgroundColor(Color.White)
+    .backgroundColor(AppTheme.CardBg)
     .borderRadius(16)
     .width('80%')
     .padding(20)

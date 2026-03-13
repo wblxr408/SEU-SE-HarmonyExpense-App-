@@ -1,16 +1,38 @@
 import router from '@ohos.router';
 import { UserSessionService, SessionInfo } from '../service/UserSessionService';
 import { NotificationService } from '../service/NotificationService';
-import promptAction from '@ohos.promptAction';
+import { promptAction } from '@kit.ArkUI';
 import { AppTheme } from '../common/config/AppTheme';
+
+@Component
+struct GlassCardContainer {
+  @BuilderParam content: () => void;
+
+  build() {
+    Column() {
+      if (this.content) {
+        this.content();
+      }
+    }
+    .backgroundColor(AppTheme.CardBg)
+    
+    .borderRadius(24)
+    
+    .shadow(AppTheme.CardShadow)
+    .margin({ left: 16, right: 16, bottom: 16 })
+    .padding(24)
+  }
+}
 
 @Component
 export struct MinePage {
   @State currentUser: SessionInfo | null = null;
   @State unreadCount: number = 0;
+  @State daysCount: number = 128;
+  @State billsCount: number = 856;
 
- async  aboutToAppear() {
-    this.currentUser =await UserSessionService.getCurrentSession();
+  async aboutToAppear() {
+    this.currentUser = await UserSessionService.getCurrentSession();
     this.loadUnreadCount();
   }
 
@@ -18,188 +40,228 @@ export struct MinePage {
     try {
       this.unreadCount = await NotificationService.getUnreadCount();
     } catch (error) {
-      console.error('[MinePage] 加载未读数量失败:', error);
+      console.error('[MinePage] Failed to load unread count:', error);
     }
   }
 
   build() {
     Column() {
-      // 用户信息卡片 - 可点击编辑
-      Row() {
-        Image($r('app.media.icon')) // 默认头像
-          .width(60)
-          .height(60)
-          .margin({ right: 16 })
-          .borderRadius(30)
-          .backgroundColor('#E0E0E0')
-        
+      Scroll() {
         Column() {
+          Column() {
+            Row() {
+              Image($r('app.media.ic_user_avatar_glass'))
+                .width(64)
+                .height(64)
+                .padding(10)
+                .borderRadius(32)
+                .backgroundColor(AppTheme.CardBg)
+                .shadow(AppTheme.CardShadow)
+                .margin({ right: 16 })
+                .onClick(() => {
+                  if (this.currentUser) {
+                    router.pushUrl({ url: 'pages/ProfileEditPage' });
+                  }
+                })
+
+              Column() {
+                if (this.currentUser) {
+                  Text(this.currentUser.username)
+                    .fontSize('18fp')
+                    .fontWeight(FontWeight.Bold)
+                    .fontColor(AppTheme.TextMain)
+                  Text(this.currentUser.email)
+                    .fontSize('12fp')
+                    .fontColor(AppTheme.TextSub)
+                    .margin({ top: 4 })
+                } else {
+                  Text('点击登录')
+                    .fontSize('18fp')
+                    .fontWeight(FontWeight.Bold)
+                    .fontColor(AppTheme.TextMain)
+                    .onClick(() => {
+                      router.pushUrl({ url: 'pages/LoginPage' });
+                    })
+                }
+              }
+              .alignItems(HorizontalAlign.Start)
+              .layoutWeight(1)
+            }
+            .width('100%')
+
+            Row() {
+              Row() {
+                Text('记账天数 ')
+                  .fontSize('14fp')
+                  .fontColor(AppTheme.TextSub)
+                Text(this.daysCount.toString())
+                  .fontSize('18fp')
+                  .fontWeight(FontWeight.Bolder)
+                  .fontColor(AppTheme.TextMain)
+              }
+              .margin({ right: 24 })
+
+              Row() {
+                Text('记账笔数 ')
+                  .fontSize('14fp')
+                  .fontColor(AppTheme.TextSub)
+                Text(this.billsCount.toString())
+                  .fontSize('18fp')
+                  .fontWeight(FontWeight.Bolder)
+                  .fontColor(AppTheme.TextMain)
+              }
+            }
+            .width('100%')
+            .margin({ top: 20 })
+          }
+          .width('100%')
+          .padding({ left: 24, right: 24, top: 40, bottom: 20 })
+          .margin({ left: 16, right: 16, bottom: 16 })
+          .backgroundColor(AppTheme.GlassBackground)
+          .backdropBlur(30)
+          .borderRadius(28)
+
+          GlassCardContainer() {
+            Row({ space: 12 }) {
+              this.CoreActionCard($r('app.media.ic_wallet_glass'), '账户资产', () => {
+                router.pushUrl({ url: 'pages/AccountManagementPage' });
+              })
+
+              this.CoreActionCard($r('app.media.ic_users_glass'), '多人共享账本', () => {
+                router.pushUrl({ url: 'pages/SharedLedgerListPage' });
+              })
+            }
+          }
+
+          GlassCardContainer() {
+            Grid() {
+              GridItem() {
+                this.GridToolItem($r('app.media.ic_tag_linear'), '分类管理', () => {
+                  router.pushUrl({ url: 'pages/CategoryManagement' });
+                })
+              }
+              GridItem() {
+                this.GridToolItem($r('app.media.ic_ai_brain_linear'), '智能规则', () => {
+                  router.pushUrl({ url: 'pages/SmartCategoryRulesPage' });
+                })
+              }
+              GridItem() {
+                this.GridToolItem($r('app.media.ic_sync_linear'), '数据同步', () => {
+                  router.pushUrl({ url: 'pages/SyncSettingsPage' });
+                })
+              }
+              GridItem() {
+                this.GridToolItem($r('app.media.ic_backup_linear'), '备份恢复', () => {
+                  router.pushUrl({ url: 'pages/BackupPage' });
+                })
+              }
+            }
+            .columnsTemplate('1fr 1fr 1fr 1fr')
+            .rowsGap(16)
+            .height(80)
+          }
+
+          GlassCardContainer() {
+            Column() {
+              this.ListItemRow('通知中心', this.unreadCount > 0, () => {
+                router.pushUrl({ url: 'pages/NotificationCenterPage' });
+              })
+              this.ListItemRow('提醒设置', false, () => {
+                router.pushUrl({ url: 'pages/ReminderSettingsPage' });
+              })
+              this.ListItemRow('应用设置', false, () => {
+                router.pushUrl({ url: 'pages/AppSettingsPage' });
+              }, true)
+            }
+          }
+
           if (this.currentUser) {
-            Text(this.currentUser.username)
-              .fontSize(20)
-              .fontWeight(FontWeight.Bold)
-            Text(this.currentUser.email)
-              .fontSize(14)
-              .fontColor(Color.Gray)
-              .margin({ top: 4 })
-          } else {
-            Text('未登录')
-              .fontSize(20)
-              .fontWeight(FontWeight.Bold)
+            Button('退出登录')
+              .width('80%')
+              .height(48)
+              .backgroundColor(AppTheme.HeroBg)
+              .fontColor(AppTheme.TextWhite)
+              .fontSize('16fp')
+              .fontWeight(FontWeight.Medium)
+              .shadow(AppTheme.FabShadow)
+              .margin({ top: 24, bottom: 40 })
               .onClick(() => {
-                router.pushUrl({ url: 'pages/LoginPage' });
+                UserSessionService.logout();
+                this.currentUser = null;
+                promptAction.showToast({ message: '已退出登录' });
+                router.replaceUrl({ url: 'pages/LoginPage' });
               })
           }
         }
-        .alignItems(HorizontalAlign.Start)
-        .layoutWeight(1)
-
-        // 编辑按钮
-        if (this.currentUser) {
-          Text('编辑')
-            .fontSize(14)
-            .fontColor('#2E65F3')
-        }
+        .width('100%')
       }
       .width('100%')
-      .padding(24)
-      .backgroundColor(Color.White)
-      .margin({ bottom: 12 })
-      .onClick(() => {
-        if (this.currentUser) {
-          router.pushUrl({ url: 'pages/ProfileEditPage' });
-        }
-      })
-
-      // 功能菜单
-      List() {
-        // 通知中心 - 带未读角标
-        ListItem() {
-          this.MenuRowWithBadge('通知中心', this.unreadCount, () => {
-             router.pushUrl({ url: 'pages/NotificationCenterPage' });
-          })
-        }
-
-        // 应用设置
-        ListItem() {
-          this.MenuRow('应用设置', () => {
-             router.pushUrl({ url: 'pages/AppSettingsPage' });
-          })
-        }
-
-        // 账户管理
-        ListItem() {
-          this.MenuRow('账户资产', () => {
-             router.pushUrl({ url: 'pages/AccountManagementPage' });
-          })
-        }
-
-        // 共享账本
-        ListItem() {
-          this.MenuRow('多人共享账本', () => {
-             router.pushUrl({ url: 'pages/SharedLedgerListPage' });
-          })
-        }
-
-        // 数据同步
-        ListItem() {
-          this.MenuRow('数据同步', () => {
-             router.pushUrl({ url: 'pages/SyncSettingsPage' });
-          })
-        }
-        
-        // 数据备份
-        ListItem() {
-          this.MenuRow('备份与恢复', () => {
-            router.pushUrl({ url: 'pages/BackupPage' });
-          })
-        }
-
-        // 提醒设置
-        ListItem() {
-          this.MenuRow('提醒设置', () => {
-            router.pushUrl({ url: 'pages/ReminderSettingsPage' });
-          })
-        }
-
-        // 智能分类规则
-        ListItem() {
-          this.MenuRow('智能分类规则', () => {
-            router.pushUrl({ url: 'pages/SmartCategoryRulesPage' });
-          })
-        }
-
-        // 分类管理
-        ListItem() {
-          this.MenuRow('分类管理', () => {
-            router.pushUrl({ url: 'pages/CategoryManagement' });
-          })
-        }
-      }
-      .width('100%')
-      .backgroundColor(Color.White)
-      .divider({ strokeWidth: 1, color: '#F0F0F0', startMargin: 16 })
-
-      // 退出登录按钮
-      if (this.currentUser) {
-        Button('退出登录')
-          .width('90%')
-          .height(50)
-          .fontColor(Color.Red)
-          .backgroundColor(Color.White)
-          .margin({ top: 40 })
-          .onClick(() => {
-            UserSessionService.logout();
-            this.currentUser = null;
-            promptAction.showToast({ message: '已退出登录' });
-            router.replaceUrl({ url: 'pages/LoginPage' });
-          })
-      }
+      .layoutWeight(1)
     }
     .width('100%')
     .height('100%')
+    .expandSafeArea([SafeAreaType.SYSTEM], [SafeAreaEdge.TOP])
     .backgroundColor(AppTheme.Background)
   }
 
   @Builder
-  MenuRow(title: string, onClick: () => void) {
-    Row() {
-      Text(title)
-        .fontSize(16)
-        .layoutWeight(1)
-      Text('>')
-        .fontSize(16)
-        .fontColor('#8395A7')
+  CoreActionCard(icon: Resource, label: string, onClick: () => void) {
+    Column() {
+      Image(icon)
+        .width(24)
+        .height(24)
+        .margin({ bottom: 8 })
+      Text(label)
+        .fontSize('14fp')
+        .fontWeight(FontWeight.Medium)
+        .fontColor(AppTheme.TextMain)
     }
-    .width('100%')
-    .padding(16)
-    .backgroundColor(Color.White)
+    .layoutWeight(1)
+    .alignItems(HorizontalAlign.Center)
+    .backgroundColor(AppTheme.CardBg)
+    .borderRadius(24)
+    .padding(20)
+    .shadow(AppTheme.CardShadow)
     .onClick(onClick)
   }
 
   @Builder
-  MenuRowWithBadge(title: string, badge: number, onClick: () => void) {
+  GridToolItem(iconRes: Resource, label: string, onClick: () => void) {
+    Column() {
+      Image(iconRes)
+        .width(28)
+        .height(28)
+        .fillColor(AppTheme.TextMain)
+        .opacity(0.9)
+        .objectFit(ImageFit.Contain)
+      Text(label).fontSize('12fp').fontColor(AppTheme.TextSub).margin({ top: 8 })
+    }
+    .onClick(onClick)
+  }
+
+  @Builder
+  ListItemRow(title: string, hasBadge: boolean, onClick: () => void, isLast: boolean = false) {
     Row() {
-      Text(title)
-        .fontSize(16)
-        .layoutWeight(1)
-      if (badge > 0) {
-        Text(badge > 99 ? '99+' : badge.toString())
-          .fontSize(12)
-          .fontColor(Color.White)
-          .backgroundColor('#FF4D4F')
-          .borderRadius(10)
-          .padding({ left: 6, right: 6, top: 2, bottom: 2 })
-          .margin({ right: 8 })
+      Row() {
+        Text(title).fontSize('14fp').fontColor(AppTheme.TextMain)
+        if (hasBadge) {
+          Circle({ width: 8, height: 8 }).fill(AppTheme.TextMain).margin({ left: 6 })
+        }
       }
-      Text('>')
-        .fontSize(16)
-        .fontColor('#8395A7')
+      Image($r('app.media.ic_chevron_right_glass'))
+        .width(16)
+        .height(16)
+        .opacity(0.85)
     }
     .width('100%')
-    .padding(16)
-    .backgroundColor(Color.White)
+    .height(52)
+    .justifyContent(FlexAlign.SpaceBetween)
+    .border({
+      width: { bottom: isLast ? 0 : 0.5 },
+      color: AppTheme.Border
+    })
     .onClick(onClick)
   }
 }
+
 

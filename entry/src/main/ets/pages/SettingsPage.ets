@@ -1,7 +1,9 @@
+
 import router from '@ohos.router';
 import promptAction from '@ohos.promptAction';
 import { SharedLedgerService } from '../service/SharedLedgerService';
 import { LedgerInvitation } from '../model/SharedLedger';
+import { AppTheme } from '../common/config/AppTheme';
 
 @Entry
 @Component
@@ -100,8 +102,8 @@ struct SettingsPage {
         }
         .width('100%')
         // .layoutWeight(1) // 让列表占据中间剩余空间
-        .backgroundColor('#F1F3F5')
-        .divider({ strokeWidth: 1, color: '#E0E0E0', startMargin: 15, endMargin: 15 })
+        .backgroundColor(AppTheme.Background)
+        .divider({ strokeWidth: 1, color: AppTheme.Border, startMargin: 15, endMargin: 15 })
 
         // --- 退出登录按钮 (放在底部或者列表最后) ---
         // 这里我把它作为一个单独的按钮放在列表下方，更醒目
@@ -109,8 +111,8 @@ struct SettingsPage {
           .width('90%')
           .height(50)
           .margin({ top: 30 })
-          .fontColor(Color.White)
-          .backgroundColor('#FF4D4F') // 红色警示色
+          .fontColor(AppTheme.TextWhite)
+          .backgroundColor(AppTheme.HeroBg) // 红色警示色
           .type(ButtonType.Capsule)
           .onClick(() => {
             this.handleLogout();
@@ -118,7 +120,7 @@ struct SettingsPage {
       }
       .width('100%')
       .height('100%')
-      .backgroundColor('#F1F3F5')
+      .backgroundColor(AppTheme.Background)
     }
     .title('设置')
     .titleMode(NavigationTitleMode.Mini)
@@ -130,17 +132,17 @@ struct SettingsPage {
     Row() {
       Text(title)
         .fontSize(16)
-        .fontColor(Color.Black)
+        .fontColor(AppTheme.TextMain)
         .layoutWeight(1)
 
-      Text('>')
-        .fontSize(18)
-        .fontColor(Color.Gray)
+      Image($r('app.media.ic_chevron_right_glass'))
+        .width(16)
+        .height(16)
     }
     .width('100%')
     .height(56)
     .padding({ left: 15, right: 15 })
-    .backgroundColor(Color.White)
+    .backgroundColor(AppTheme.CardBg)
     .onClick(onClick)
   }
 }

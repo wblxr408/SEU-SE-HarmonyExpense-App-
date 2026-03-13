@@ -1,11 +1,9 @@
-/**
- * 个人信息编辑页面
- * 支持头像更换、昵称编辑、邮箱修改、密码修改
- */
+
 import router from '@ohos.router';
 import promptAction from '@ohos.promptAction';
 import picker from '@ohos.file.picker';
 import { UserSessionService, SessionInfo } from '../service/UserSessionService';
+import { AppTheme } from '../common/config/AppTheme';
 
 @Entry
 @Component
@@ -16,14 +14,13 @@ struct ProfileEditPage {
   @State avatarPath: string = '';
   @State isLoading: boolean = false;
 
-  // 密码修改
   @State showPasswordDialog: boolean = false;
   @State oldPassword: string = '';
   @State newPassword: string = '';
   @State confirmPassword: string = '';
 
-async   aboutToAppear() {
-    this.currentUser =await UserSessionService.getCurrentSession();
+  async aboutToAppear() {
+    this.currentUser = await UserSessionService.getCurrentSession();
     if (this.currentUser) {
       this.nickname = this.currentUser.username;
       this.email = this.currentUser.email;
@@ -34,70 +31,69 @@ async   aboutToAppear() {
     Navigation() {
       Scroll() {
         Column() {
-          // 头像区域
           Column() {
             Stack() {
               if (this.avatarPath) {
                 Image(this.avatarPath)
-                  .width(100)
-                  .height(100)
-                  .borderRadius(50)
+                  .width(104)
+                  .height(104)
+                  .borderRadius(52)
                   .objectFit(ImageFit.Cover)
               } else {
-                Image($r('app.media.icon'))
-                  .width(100)
-                  .height(100)
-                  .borderRadius(50)
-                  .backgroundColor('#E0E0E0')
+                Image($r('app.media.ic_user_avatar_glass'))
+                  .width(104)
+                  .height(104)
+                  .padding(14)
+                  .borderRadius(52)
+                  .backgroundColor(AppTheme.CardBg)
+                  .backdropBlur(18)
+                  .border({ width: 0.5, color: AppTheme.Border })
               }
-              // 编辑按钮
+
               Row() {
-                Text('📷')
-                  .fontSize(16)
+                Image($r('app.media.ic_edit_glass'))
+                  .width(16)
+                  .height(16)
               }
               .width(32)
               .height(32)
-              .backgroundColor('#2E65F3')
+              .backgroundColor(AppTheme.HeroBg)
               .borderRadius(16)
               .justifyContent(FlexAlign.Center)
-              .position({ x: 70, y: 70 })
+              .position({ x: 72, y: 72 })
             }
-            .width(100)
-            .height(100)
+            .width(104)
+            .height(104)
             .onClick(() => this.selectAvatar())
 
             Text('点击更换头像')
               .fontSize(12)
-              .fontColor('#8395A7')
-              .margin({ top: 8 })
+              .fontColor(AppTheme.TextSub)
+              .margin({ top: 10 })
           }
           .margin({ top: 24, bottom: 24 })
 
-          // 表单区域
           Column() {
-            // 昵称
             this.FormItem('昵称', this.nickname, (value: string) => {
               this.nickname = value;
             })
 
-            Divider().color('#F0F0F0')
+            Divider().color(AppTheme.Border)
 
-            // 邮箱
             this.FormItem('邮箱', this.email, (value: string) => {
               this.email = value;
             })
 
-            Divider().color('#F0F0F0')
+            Divider().color(AppTheme.Border)
 
-            // 修改密码
             Row() {
               Text('修改密码')
                 .fontSize(16)
-                .fontColor('#2D3436')
+                .fontColor(AppTheme.TextMain)
                 .layoutWeight(1)
-              Text('>')
-                .fontSize(18)
-                .fontColor('#8395A7')
+              Image($r('app.media.ic_chevron_right_glass'))
+                .width(16)
+                .height(16)
             }
             .width('100%')
             .height(56)
@@ -106,25 +102,27 @@ async   aboutToAppear() {
               this.showPasswordDialog = true;
             })
           }
-          .backgroundColor(Color.White)
-          .borderRadius(12)
+          .backgroundColor(AppTheme.CardBg)
+          .backdropBlur(18)
+          .border({ width: 0.5, color: AppTheme.Border })
+          .borderRadius(20)
           .margin({ left: 16, right: 16 })
 
-          // 保存按钮
-          Button('保存修改')
+          Button(this.isLoading ? '保存中...' : '保存修改')
             .width('90%')
             .height(50)
             .margin({ top: 40 })
-            .backgroundColor('#2E65F3')
+            .backgroundColor(AppTheme.HeroBg)
+            .fontColor(AppTheme.TextWhite)
+            .enabled(!this.isLoading)
             .onClick(() => this.saveProfile())
         }
         .width('100%')
       }
       .width('100%')
       .height('100%')
-      .backgroundColor('#F5F7F9')
+      .backgroundColor(AppTheme.Background)
 
-      // 密码修改弹窗
       if (this.showPasswordDialog) {
         this.PasswordDialog()
       }
@@ -138,7 +136,7 @@ async   aboutToAppear() {
     Row() {
       Text(label)
         .fontSize(16)
-        .fontColor('#2D3436')
+        .fontColor(AppTheme.TextMain)
         .width(80)
       TextInput({ text: value, placeholder: `请输入${label}` })
         .layoutWeight(1)
@@ -153,21 +151,20 @@ async   aboutToAppear() {
   @Builder
   PasswordDialog() {
     Column() {
-      // 遮罩层
       Column()
         .width('100%')
         .height('100%')
-        .backgroundColor('rgba(0,0,0,0.5)')
+        .backgroundColor('rgba(0,0,0,0.45)')
         .position({ x: 0, y: 0 })
         .onClick(() => {
           this.showPasswordDialog = false;
         })
 
-      // 弹窗内容
       Column() {
         Text('修改密码')
           .fontSize(20)
           .fontWeight(FontWeight.Bold)
+          .fontColor(AppTheme.TextMain)
           .margin({ bottom: 24 })
 
         TextInput({ placeholder: '请输入旧密码' })
@@ -201,8 +198,8 @@ async   aboutToAppear() {
           Button('取消')
             .width('45%')
             .height(44)
-            .backgroundColor('#F5F7F9')
-            .fontColor('#2D3436')
+            .backgroundColor(AppTheme.Background)
+            .fontColor(AppTheme.TextMain)
             .onClick(() => {
               this.showPasswordDialog = false;
               this.oldPassword = '';
@@ -212,15 +209,17 @@ async   aboutToAppear() {
           Button('确认')
             .width('45%')
             .height(44)
-            .backgroundColor('#2E65F3')
+            .backgroundColor(AppTheme.HeroBg)
+            .fontColor(AppTheme.TextWhite)
             .onClick(() => this.changePassword())
         }
         .width('100%')
         .justifyContent(FlexAlign.SpaceBetween)
       }
       .padding(24)
-      .backgroundColor(Color.White)
-      .borderRadius(16)
+      .backgroundColor(AppTheme.CardBg)
+      .backdropBlur(20)
+      .borderRadius(20)
       .width('85%')
       .position({ x: '7.5%', y: '30%' })
     }
@@ -241,7 +240,7 @@ async   aboutToAppear() {
         promptAction.showToast({ message: '头像已选择' });
       }
     } catch (error) {
-      console.error('[ProfileEditPage] 选择头像失败:', error);
+      console.error('[ProfileEditPage] Failed to select avatar:', error);
       promptAction.showToast({ message: '选择图片失败' });
     }
   }
@@ -254,14 +253,12 @@ async   aboutToAppear() {
 
     this.isLoading = true;
     try {
-      // 更新资料
       const profileResult = await UserSessionService.updateProfile(this.nickname, this.avatarPath);
       if (!profileResult) {
         promptAction.showToast({ message: '保存失败' });
         return;
       }
 
-      // 如果邮箱有变化，更新邮箱
       if (this.email !== this.currentUser?.email) {
         const emailResult = await UserSessionService.updateEmail(this.email);
         if (!emailResult.success) {
@@ -273,7 +270,7 @@ async   aboutToAppear() {
       promptAction.showToast({ message: '保存成功' });
       router.back();
     } catch (error) {
-      console.error('[ProfileEditPage] 保存失败:', error);
+      console.error('[ProfileEditPage] Failed to save profile:', error);
       promptAction.showToast({ message: '保存失败' });
     } finally {
       this.isLoading = false;
@@ -290,7 +287,7 @@ async   aboutToAppear() {
       return;
     }
     if (this.newPassword.length < 6) {
-      promptAction.showToast({ message: '新密码长度至少6位' });
+      promptAction.showToast({ message: '新密码长度至少 6 位' });
       return;
     }
 

@@ -1,3 +1,6 @@
+import { GlobalContext } from '../common/GlobalContext';
+import common from '@ohos.app.ability.common';
+import { DatabaseManager } from '../database/DatabaseManager';
 import { UserSessionService } from './UserSessionService';
 import { AccountDAO } from '../dao/AccountDAO';
 import { CategoryDAO } from '../dao/CategoryDAO';
@@ -30,40 +33,103 @@ export class DemoDataService {
   /**
    * 设置演示用户（登录或注册，并填充数据）
    */
-  static async setupDemoUser(): Promise<boolean> {
+  static async setupDemoUser(context: common.Context): Promise<boolean> {
+    console.info('[DemoDataService] >>> 开始准备演示账户环境...');
     try {
-      // 1. 尝试登录
-      let result = await UserSessionService.login(DemoDataService.DEMO_EMAIL, DemoDataService.DEMO_PASS);
+      // 0. 确保全局上下文和数据库已初始化 (修复关键：异步加载可能在 EntryAbility 结束前触发)
+      GlobalContext.init(context);
       
-      // 2. 如果登录失败（用户不存在），则注册
-      if (!result.success) {
-        console.info('[DemoDataService] 演示用户不存在，正在注册...');
-        result = await UserSessionService.register(DemoDataService.DEMO_NAME, DemoDataService.DEMO_EMAIL, DemoDataService.DEMO_PASS);
+      if (!DatabaseManager.isDbInitialized()) {
+        console.info('[DemoDataService] [Fix] 检测到数据库未就绪，正在手动驱动初始化...');
+        await DatabaseManager.initDatabase(context);
+        console.info('[DemoDataService] [Fix] 数据库初始化补救方案完成');
       }
 
-      if (!result.success || !result.session) {
-        console.error('[DemoDataService] 无法创建或登录演示用户');
+      // 1. 尝试登录
+      console.info(`[DemoDataService] [Step 1] 尝试登录: ${DemoDataService.DEMO_EMAIL}`);
+      let result = await UserSessionService.login(DemoDataService.DEMO_EMAIL, DemoDataService.DEMO_PASS);
+      
+      // 2. 如果登录失败
+      if (!result.success) {
+        if (result.message === '用户不存在') {
+          console.info('[DemoDataService] [Step 1] 用户不存在，准备注册新账号...');
+        } else {
+          console.warn(`[DemoDataService] [Step 1] 登录失败 (${result.message})，可能为脏数据。清理旧数据并重新注册...`);
+          // 尝试清理异常遗留数据
+          const allUsers = await (await import('../dao/UserDAO')).UserDAO.getAll();
+          const dirtyUser = allUsers.find(u => u.email === DemoDataService.DEMO_EMAIL);
+          if (dirtyUser) {
+            const db = DatabaseManager.getDatabase();
+            const userTables = [
+              'notifications', 'accounts', 'categories', 'bills', 'budgets', 
+              'monthly_statistics', 'tags', 'reminders', 'cloud_sync_records', 
+              'anomaly_records', 'user_spending_baselines', 'domain_events', 
+              'commands', 'read_models', 'ledger_members', 'member_activities', 
+              'smart_category_training'
+            ];
+            for (let table of userTables) {
+              try { await db.executeSql(`DELETE FROM ${table} WHERE user_id = ?`, [dirtyUser.userId]); } catch (e) {}
+            }
+            try { await db.executeSql(`DELETE FROM shared_ledgers WHERE owner_id = ?`, [dirtyUser.userId]); } catch (e) {}
+            try { await db.executeSql(`DELETE FROM shared_bills WHERE creator_id = ?`, [dirtyUser.userId]); } catch (e) {}
+            try { await db.executeSql(`DELETE FROM ledger_invitations WHERE inviter_id = ?`, [dirtyUser.userId]); } catch (e) {}
+            try { await db.executeSql(`DELETE FROM approval_records WHERE requester_id = ?`, [dirtyUser.userId]); } catch (e) {}
+
+            await (await import('../dao/UserDAO')).UserDAO.delete(dirtyUser.userId);
+            console.info('[DemoDataService] [Step 1] 脏数据清理清理完毕');
+          }
+        }
+        
+        result = await UserSessionService.register(DemoDataService.DEMO_NAME, DemoDataService.DEMO_EMAIL, DemoDataService.DEMO_PASS);
+        
+        if (!result.success) {
+          console.error('[DemoDataService] [Error] 注册失败: ' + result.message);
+          return false;
+        }
+        console.info('[DemoDataService] [Step 1] 注册成功');
+      } else {
+        console.info('[DemoDataService] [Step 1] 登录成功');
+      }
+
+      if (!result.session) {
+        console.error('[DemoDataService] [Error] Session 为空，无法继续执行任务');
         return false;
       }
 
       const userId = result.session.userId;
-      console.info(`[DemoDataService] 演示用户 ID: ${userId}`);
-
-      // 3. 检查数据是否充足，不足则补充
-      const bills = await BillDAO.getByUserId(userId);
-      if (bills.length < 20) {
-        console.info('[DemoDataService] 检测到演示数据不足，开始生成...');
-        await DemoDataService.seedData(userId);
-      } else {
-        console.info('[DemoDataService] 演示数据已存在，跳过生成');
+      console.info(`[DemoDataService] 当前演示用户 ID: ${userId}`);
+      if (!userId || userId <= 0) {
+        console.error('[DemoDataService] [Error] 非法的 UserId，停止数据生成');
+        return false;
       }
 
-      // 4. 独立检查共享账本数据 (无论是否有常规账单)
-      await DemoDataService.seedSharedLedger(userId);
+      // 3. 检查数据是否充足，不足则补充
+      console.info('[DemoDataService] [Step 2] 检查基础业务数据...');
+      const bills = await BillDAO.getByUserId(userId);
+      console.info(`[DemoDataService] 当前记录数: ${bills.length}`);
+      
+      if (bills.length < 20) {
+        console.info('[DemoDataService] [Step 2] 数据量不足 (<20)，开始生成 seedData...');
+        await DemoDataService.seedData(userId);
+        console.info('[DemoDataService] [Step 2] seedData 执行完成');
+      } else {
+        console.info('[DemoDataService] [Step 2] 数据已充足，跳过 seedData');
+      }
 
+      // 4. 独立检查共享账本数据
+      console.info('[DemoDataService] [Step 3] 检查共享账本演示数据 (seedSharedLedger)...');
+      await DemoDataService.seedSharedLedger(userId);
+      console.info('[DemoDataService] [Step 3] seedSharedLedger 执行完成');
+
+      console.info('[DemoDataService] <<< 演示环境初始化成功！');
       return true;
     } catch (e) {
-      console.error('[DemoDataService] 设置演示用户失败: ', e);
+      console.error('[DemoDataService] [FATAL ERROR] 设置演示用户时发生崩溃:');
+      console.error(`[DemoDataService] 类型: ${typeof e}, 内容: ${JSON.stringify(e)}`);
+      if (e instanceof Error) {
+        console.error(`[DemoDataService] 消息: ${e.message}`);
+        console.error(`[DemoDataService] 堆栈: ${e.stack}`);
+      }
       return false;
     }
   }
@@ -605,16 +671,56 @@ export class DemoDataService {
 
   // ---------------- 共享账本填充 ----------------
   private static async seedSharedLedger(userId: number) {
+    console.info('[SharedLedger] 开始填充共享账本数据...');
     const daoModule = await import('../dao/SharedLedgerDAO');
     const SharedLedgerDAO = daoModule.SharedLedgerDAO;
     const LedgerMemberDAO = daoModule.LedgerMemberDAO;
     const SharedBillDAO = daoModule.SharedBillDAO;
 
     const ledgers = await SharedLedgerDAO.getByUserId(userId);
-    if (ledgers.length > 0) return;
+    if (ledgers.length > 0) {
+      console.info('[SharedLedger] 用户已有共享账本，停止填充');
+      return;
+    }
+
+    // 获取必需的关联数据 ID
+    const categories = await CategoryDAO.getAll(userId);
+    const accounts = await AccountDAO.getByUserId(userId);
+    
+    if (categories.length === 0 || accounts.length === 0) {
+      console.warn('[SharedLedger] [Warn] 缺少分类或账号，无法生成共享账单');
+      return;
+    }
+
+    const defaultAccId = accounts[0].accountId;
+    const defaultCatId = categories[0].categoryId;
+
+    // 修复：确保伙伴用户在 users 表中存在，以满足外键约束
+    console.info('[SharedLedger] 检查伙伴用户是否存在...');
+    const partnerEmail = 'partner@example.com';
+    const partnerName = '亲爱的';
+    let partnerUser = await (await import('../dao/UserDAO')).UserDAO.getByUsername(partnerName);
+    
+    if (!partnerUser) {
+      console.info('[SharedLedger] 伙伴用户不存在，正在创建用户记录...');
+      const UserModel = (await import('../model/User')).User;
+      // 密码哈希可以随便给一个，演示模式不校验伙伴登录
+      const newPartner = new UserModel(0, partnerName, partnerEmail, 'partner_secret_123');
+      await (await import('../dao/UserDAO')).UserDAO.insert(newPartner);
+      partnerUser = await (await import('../dao/UserDAO')).UserDAO.getByUsername(partnerName);
+    }
+    
+    if (!partnerUser) {
+      console.error('[SharedLedger] [Error] 无法创建伙伴用户，将无法继续插入其作为成员的记录');
+      return;
+    }
+    const partnerId = partnerUser.userId;
+    console.info('[SharedLedger] 伙伴用户确认可用, ID: ' + partnerId);
 
     // 1. 创建一个共享账本
-    const ledger = new (await import('../model/SharedLedger')).SharedLedger();
+    console.info('[SharedLedger] 创建主账本实体...');
+    const SharedLedgerModel = (await import('../model/SharedLedger')).SharedLedger;
+    const ledger = new SharedLedgerModel();
     ledger.name = '家庭账本';
     ledger.type = 'family';
     ledger.ownerId = userId;
@@ -623,72 +729,73 @@ export class DemoDataService {
     ledger.color = '#4CAF50';
     ledger.createdAt = new Date().toISOString();
     
-    // SharedLedgerDAO.insert 返回 number|void，根据代码假定为 number
     const ledgerId = await SharedLedgerDAO.insert(ledger);
+    console.info('[SharedLedger] 账本创建成功, ledgerId: ' + ledgerId);
 
     // 2. 将所有者添加为成员
-    const LedgerMember = (await import('../model/SharedLedger')).LedgerMember;
-    const ownerMember = new LedgerMember();
+    console.info('[SharedLedger] 添加所有者到成员列表...');
+    const LedgerMemberModel = (await import('../model/SharedLedger')).LedgerMember;
+    const ownerMember = new LedgerMemberModel();
     ownerMember.ledgerId = ledgerId;
     ownerMember.userId = userId;
     ownerMember.role = 'owner';
     ownerMember.username = DemoDataService.DEMO_NAME;
+    ownerMember.email = DemoDataService.DEMO_EMAIL; 
     ownerMember.joinedAt = new Date().toISOString();
-    // 正确方法: LedgerMemberDAO.insert
     await LedgerMemberDAO.insert(ownerMember);
 
     // 3. 添加一个演示伙伴
-    const partnerId = 9999; // 伙伴的虚拟ID
-    const partnerMember = new LedgerMember();
+    console.info('[SharedLedger] 添加伙伴到成员列表...');
+    const partnerMember = new LedgerMemberModel();
     partnerMember.ledgerId = ledgerId;
     partnerMember.userId = partnerId;
-    // 注意: 检查 'editor' 是否为有效角色，默认为 'member', 'admin', 'owner'
-    // 在 SharedLedger.ets 中: ALL_MEMBER_ROLES = ['owner', 'admin', 'member', 'viewer']
-    // 'editor' 不在列表中。应该使用 'member' 或 'admin'。这里使用 'member'。
-    // 或者之前的上下文中 'editor' 是有效的？ 'admin' 似乎更安全。
     partnerMember.role = 'member'; 
-    partnerMember.username = '亲爱的';
+    partnerMember.username = partnerName;
+    partnerMember.email = partnerEmail;
     partnerMember.joinedAt = new Date().toISOString();
     await LedgerMemberDAO.insert(partnerMember);
 
     // 4. 添加共享账单
-    const SharedBill = (await import('../model/SharedLedger')).SharedBill;
+    console.info('[SharedLedger] 开始生成演示共享账单...');
+    const SharedBillModel = (await import('../model/SharedLedger')).SharedBill;
     const now = new Date();
     
-    // 账单 1: 超市 (所有者支付 258.50)
-    // 分摊: 所有者 129.25, 伙伴 129.25
-    const b1 = new SharedBill();
+    // 账单 1: 超市
+    const b1 = new SharedBillModel();
     b1.ledgerId = ledgerId;
     b1.creatorId = userId;
     b1.creatorName = DemoDataService.DEMO_NAME;
+    b1.accountId = defaultAccId;  
+    b1.categoryId = defaultCatId; 
     b1.amount = 258.50;
     b1.type = 'expense';
     b1.note = '周末超市采购 (AA)';
     b1.transactionDate = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 2).toISOString();
-    b1.splitMethod = 'equal';
-    b1.splitsJson = JSON.stringify([
+    b1.splitType = 'equal';
+    b1.splitDetailsJson = JSON.stringify([
       { memberId: userId, amount: 129.25, percentage: 50 },
       { memberId: partnerId, amount: 129.25, percentage: 50 }
     ]);
-    // 正确方法: SharedBillDAO.insert
     await SharedBillDAO.insert(b1);
 
-    // 账单 2: 晚餐 (伙伴支付 320.00)
-    // 分摊: 所有者 160.00, 伙伴 160.00
-    const b2 = new SharedBill();
+    // 账单 2: 晚餐
+    const b2 = new SharedBillModel();
     b2.ledgerId = ledgerId;
     b2.creatorId = partnerId;
-    b2.creatorName = '亲爱的';
+    b2.creatorName = partnerName;
+    b2.accountId = defaultAccId;  
+    b2.categoryId = defaultCatId; 
     b2.amount = 320.00;
     b2.type = 'expense';
     b2.note = '纪念日晚餐 (AA)';
     b2.transactionDate = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 5).toISOString();
-    b2.splitMethod = 'equal';
-    b2.splitsJson = JSON.stringify([
+    b2.splitType = 'equal';
+    b2.splitDetailsJson = JSON.stringify([
       { memberId: userId, amount: 160.00, percentage: 50 },
       { memberId: partnerId, amount: 160.00, percentage: 50 }
     ]);
     await SharedBillDAO.insert(b2);
+    console.info('[SharedLedger] 演示账单插入成功');
   }
 }
 

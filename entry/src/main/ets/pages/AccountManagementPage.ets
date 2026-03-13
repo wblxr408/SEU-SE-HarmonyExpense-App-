@@ -4,6 +4,7 @@ import { AccountDAO } from '../dao/AccountDAO';
 import { UserSessionService } from '../service/UserSessionService';
 import promptAction from '@ohos.promptAction';
 import { BusinessError } from '@kit.BasicServicesKit';
+import { AppTheme } from '../common/config/AppTheme';
 
 @CustomDialog
 struct AccountEditDialog {
@@ -49,13 +50,14 @@ struct AccountEditDialog {
           })
 
         Row({ space: 10 }) {
-          Button('取消').onClick(() => this.controller.close()).layoutWeight(1).backgroundColor(Color.Gray)
-          Button('保存').onClick(this.onSave).layoutWeight(1).type(ButtonType.Capsule)
+          Button('取消').onClick(() => this.controller.close()).layoutWeight(1).backgroundColor(AppTheme.CardBg).fontColor(AppTheme.TextMain).border({ width: 0.5, color: AppTheme.Border })
+          Button('保存').onClick(this.onSave).layoutWeight(1).type(ButtonType.Capsule).backgroundColor(AppTheme.HeroBg).fontColor(AppTheme.TextWhite)
         }.width('100%').margin({ top: 10 })
       }
-      .padding(20)
-      .backgroundColor(Color.White)
-      .borderRadius(15)
+      .padding(24)
+      .backgroundColor(AppTheme.CardBg)
+      .borderRadius(24)
+      .shadow(AppTheme.CardShadow)
       .width('90%')
     } else {
       Column()
@@ -83,8 +85,8 @@ struct AccountManagementPage {
     alignment: DialogAlignment.Center
   });
 
-  onPageShow() {
-    if (!UserSessionService.getCurrentUserId()) {
+  async onPageShow() {
+    if (!await UserSessionService.getCurrentUserId()) {
       promptAction.showToast({ message: '登录已过期' });
       router.replaceUrl({ url: 'pages/LoginPage' });
       return;
@@ -94,15 +96,15 @@ struct AccountManagementPage {
 
   async loadAccounts() {
     try {
-      const userId =await UserSessionService.getCurrentUserId() as number;
+      const userId = (await UserSessionService.getCurrentUserId())!;
       this.accounts = await AccountDAO.getByUserId(userId);
     } catch (e) {
       promptAction.showToast({ message: '加载账户失败' });
     }
   }
 
-  async  handleCreate() {
-    const userId =await UserSessionService.getCurrentUserId();
+  async handleCreate() {
+    const userId = await UserSessionService.getCurrentUserId();
     if (!userId) return;
     this.editingAccount = new Account(0, userId); // 检查 Account 构造函数签名
     this.dialogController.open();
@@ -143,63 +145,205 @@ struct AccountManagementPage {
     }
   }
 
+  // 计算总资产（余额 > 0 的部分）
+  get totalAssets(): number {
+    return this.accounts.filter(acc => acc.balance > 0).reduce((sum, acc) => sum + acc.balance, 0);
+  }
+
+  // 计算总负债（余额 < 0 的部分，取绝对值）
+  get totalLiabilities(): number {
+    return this.accounts.filter(acc => acc.balance < 0).reduce((sum, acc) => sum + Math.abs(acc.balance), 0);
+  }
+
+  // 计算净资产
+  get netAssets(): number {
+    return this.totalAssets - this.totalLiabilities;
+  }
+
   build() {
     Column() {
-      // 头部
+      // 1. 顶部导航栏
       Row() {
-        Image($r('app.media.back'))
-          .width(24).height(24)
+        Image($r('app.media.ic_back_glass'))
+          .width(24)
+          .height(24)
+          .fillColor(AppTheme.TextMain)
           .onClick(() => router.back())
-        Text('账户管理')
+        Text('资产')
           .fontSize(20)
           .fontWeight(FontWeight.Bold)
+          .fontColor(AppTheme.TextMain)
           .margin({ left: 16 })
       }
-      .width('100%').padding(16).backgroundColor(Color.White)
-
-      // 列表
-      List({ space: 10 }) {
-        ForEach(this.accounts, (item: Account) => {
-          ListItem() {
-            Row() {
-              Column() {
-                Text(item.name).fontSize(18).fontWeight(FontWeight.Bold)
-                Text(this.formatType(item.type)).fontSize(14).fontColor(Color.Gray).margin({ top: 4 })
-              }.alignItems(HorizontalAlign.Start)
-              
-              Blank()
-              
-              Text(`¥${item.balance.toFixed(2)}`)
-                .fontSize(18)
-                .fontColor(item.balance < 0 ? Color.Red : Color.Black)
-            }
-            .width('100%')
-            .padding(15)
-            .backgroundColor(Color.White)
-            .borderRadius(8)
-            .onClick(() => this.handleEdit(item))
-          }
-          .swipeAction({ end: this.DeleteButton(item.accountId) })
-        })
-      }
-      .layoutWeight(1)
       .width('100%')
-      .padding(15)
+      .padding({ left: 20, right: 20, top: 20, bottom: 12 })
+      .backgroundColor(AppTheme.GlassBackground)
+      .backdropBlur(30)
 
-      Button('添加账户')
-        .width('90%')
-        .height(50)
-        .type(ButtonType.Capsule)
-        .margin(20)
-        .onClick(() => this.handleCreate())
+      // 2. 顶部总览卡片 (Summary Card) - 玻璃拟态
+      Column() {
+        // 上半部分：净资产
+        Column() {
+          Text('净资产')
+            .fontSize(14)
+            .fontColor(AppTheme.TextWhite)
+            .opacity(0.8)
+          Text(`¥${(this.netAssets ?? 0).toFixed(2)}`)
+            .fontSize(38)
+            .fontWeight(FontWeight.Bolder)
+            .fontColor(AppTheme.TextWhite)
+            .margin({ top: 8 })
+        }
+        .alignItems(HorizontalAlign.Center)
+        .width('100%')
+
+        // 分割线
+        Divider()
+          .color('rgba(255, 255, 255, 0.28)')
+          .strokeWidth(1)
+          .margin({ top: 16, bottom: 16 })
+
+        // 下半部分：资产与负债
+        Row() {
+          Column() {
+            Text('总资产')
+              .fontSize(12)
+              .fontColor(AppTheme.TextWhite)
+              .opacity(0.78)
+            Text(`¥${(this.totalAssets ?? 0).toFixed(2)}`)
+              .fontSize(16)
+              .fontWeight(FontWeight.Bold)
+              .fontColor(AppTheme.TextWhite)
+              .margin({ top: 4 })
+          }
+          .alignItems(HorizontalAlign.Start)
+
+          Column() {
+            Text('总负债')
+              .fontSize(12)
+              .fontColor(AppTheme.TextWhite)
+              .opacity(0.78)
+            Text(`¥${(this.totalLiabilities ?? 0).toFixed(2)}`)
+              .fontSize(16)
+              .fontWeight(FontWeight.Medium)
+              .fontColor(AppTheme.TextWhite)
+              .opacity(0.72)
+              .margin({ top: 4 })
+          }
+          .alignItems(HorizontalAlign.End)
+        }
+        .width('100%')
+        .justifyContent(FlexAlign.SpaceBetween)
+      }
+      .width('calc(100% - 32vp)')
+      .margin({ left: 16, right: 16, top: 16 })
+      .padding(24)
+      .borderRadius(24)
+      .backgroundColor(AppTheme.HeroBg)
+      .shadow(AppTheme.CardShadow)
+
+      // 3. 标题与操作区 (Title & Action Area)
+      Row() {
+        // 左侧标题 - 马克笔高亮效果
+        Stack({ alignContent: Alignment.BottomStart }) {
+          Row()
+            .width('100%')
+            .height(8)
+            .backgroundColor(AppTheme.CardBg)
+            .margin({ bottom: 2 })
+          Text('资产账户')
+            .fontSize(18)
+            .fontWeight(FontWeight.Bold)
+            .fontColor(AppTheme.TextMain)
+            // 为了让高亮跨越文字宽度的设置
+            .padding({ left: 4, right: 4 })
+        }
+        // 由于Stack的width如果设为100%会占满，这里让内部自己撑开
+        .align(Alignment.Start)
+
+        // 右侧操作按钮
+        Button('+ 添加账户')
+          .height(32)
+          .fontSize(14)
+          .fontColor(AppTheme.TextWhite)
+          .backgroundColor(AppTheme.HeroBg)
+          .borderRadius(16)
+          .shadow(AppTheme.FabShadow)
+          .onClick(() => this.handleCreate())
+      }
+      .width('100%')
+      .padding({ left: 20, right: 20, top: 24, bottom: 12 })
+      .justifyContent(FlexAlign.SpaceBetween)
+
+      // 4. 账户列表区与空状态
+      if (this.accounts.length === 0) {
+        Column() {
+          Text('💳')
+            .fontSize(64)
+          Text('哎呀，还没有资产账户呢~')
+            .fontSize(14)
+            .fontColor(AppTheme.TextSub)
+            .margin({ top: 16 })
+        }
+        .layoutWeight(1)
+        .width('100%')
+        .justifyContent(FlexAlign.Center)
+        .alignItems(HorizontalAlign.Center)
+      } else {
+        List({ space: 12 }) {
+          ForEach(this.accounts, (item: Account) => {
+            ListItem() {
+              Row() {
+                Column() {
+                  Text(item.name)
+                    .fontSize(16)
+                    .fontWeight(FontWeight.Bold)
+                    .fontColor(AppTheme.TextMain)
+                  Text(this.formatType(item.type))
+                    .fontSize(12)
+                    .fontColor(AppTheme.TextSub)
+                    .margin({ top: 4 })
+                }
+                .alignItems(HorizontalAlign.Start)
+
+                Blank()
+
+                Text(`${item.balance >= 0 ? '+' : ''}${(item.balance ?? 0).toFixed(2)}`)
+                  .fontSize(22)
+                  .fontWeight(item.balance < 0 ? FontWeight.Medium : FontWeight.Bolder)
+                  .fontColor(item.balance < 0 ? AppTheme.Expense : AppTheme.Income)
+              }
+              .width('100%')
+              .padding(24)
+              .borderRadius(24)
+              .backgroundColor(AppTheme.CardBg)
+              .shadow(AppTheme.CardShadow)
+              .border({
+                width: { bottom: 0.5 },
+                color: { bottom: AppTheme.Border }
+              })
+              .onClick(() => this.handleEdit(item))
+            }
+            .swipeAction({ end: this.DeleteButton(item.accountId) })
+          })
+        }
+        .layoutWeight(1)
+        .width('100%')
+        .padding({ left: 20, right: 20, bottom: 30 })
+      }
     }
     .width('100%')
     .height('100%')
-    .backgroundColor('#F1F3F5')
+    .expandSafeArea([SafeAreaType.SYSTEM], [SafeAreaEdge.TOP])
+    .backgroundColor(AppTheme.Background)
   }
 
   @Builder DeleteButton(id: number) {
-    Button('删除').type(ButtonType.Circle).backgroundColor(Color.Red).onClick(() => this.handleDelete(id))
+    Button('删除')
+      .type(ButtonType.Circle)
+      .backgroundColor(AppTheme.HeroBg)
+      .fontColor(AppTheme.TextWhite)
+      .onClick(() => this.handleDelete(id))
   }
 
   formatType(type: string): string {

@@ -23,6 +23,7 @@
     "pages/PerformanceMonitorPage",
     "pages/ProfileEditPage",
     "pages/AppSettingsPage",
-    "pages/NotificationCenterPage"
+    "pages/NotificationCenterPage",
+    "pages/CalendarView"
   ]
 }

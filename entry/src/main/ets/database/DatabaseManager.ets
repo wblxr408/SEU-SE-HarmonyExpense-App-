@@ -124,7 +124,7 @@ export class DatabaseManager {
           content TEXT NOT NULL,
           is_read INTEGER DEFAULT 0 CHECK (is_read IN (0, 1)),
           created_at TEXT NOT NULL,
-          FOREIGN KEY (user_id) REFERENCES users(user_id)
+          FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE
         );
       `);
       await store.executeSql(`
@@ -145,7 +145,7 @@ export class DatabaseManager {
           created_at TEXT NOT NULL,
           updated_at TEXT NOT NULL,
           is_deleted INTEGER DEFAULT 0,
-          FOREIGN KEY (user_id) REFERENCES users(user_id)
+          FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE
         );
       `);
       console.log('[DatabaseManager] 表 accounts 创建成功');
@@ -164,7 +164,7 @@ export class DatabaseManager {
           created_at TEXT NOT NULL,
           updated_at TEXT NOT NULL,
           is_deleted INTEGER DEFAULT 0 CHECK (is_deleted IN (0, 1)),
-          FOREIGN KEY (user_id) REFERENCES users(user_id),
+          FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE,
           UNIQUE(user_id, name, type)
         );
       `);
@@ -198,9 +198,9 @@ export class DatabaseManager {
           created_at TEXT NOT NULL,
           updated_at TEXT NOT NULL,
           is_deleted INTEGER DEFAULT 0,
-          FOREIGN KEY (user_id) REFERENCES users(user_id),
-          FOREIGN KEY (account_id) REFERENCES accounts(account_id),
-          FOREIGN KEY (category_id) REFERENCES categories(category_id)
+          FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE,
+          FOREIGN KEY (account_id) REFERENCES accounts(account_id) ON DELETE CASCADE,
+          FOREIGN KEY (category_id) REFERENCES categories(category_id) ON DELETE CASCADE
         );
       `);
       console.log('[DatabaseManager] 表 bills 创建成功');
@@ -218,8 +218,8 @@ export class DatabaseManager {
           is_active INTEGER DEFAULT 1,
           is_deleted INTEGER DEFAULT 0,
           created_at TEXT NOT NULL,
-          FOREIGN KEY (user_id) REFERENCES users(user_id),
-          FOREIGN KEY (category_id) REFERENCES categories(category_id)
+          FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE,
+          FOREIGN KEY (category_id) REFERENCES categories(category_id) ON DELETE CASCADE
         );
       `);
       console.log('[DatabaseManager] 表 budgets 创建成功');
@@ -271,7 +271,7 @@ export class DatabaseManager {
           created_at TEXT NOT NULL,
           updated_at TEXT NOT NULL,
           is_deleted INTEGER DEFAULT 0 CHECK (is_deleted IN (0, 1)),
-          FOREIGN KEY (user_id) REFERENCES users(user_id),
+          FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE,
           UNIQUE (user_id, name)
         );
       `);
@@ -329,10 +329,10 @@ export class DatabaseManager {
           created_at TEXT NOT NULL,
           updated_at TEXT NOT NULL,
           is_deleted INTEGER DEFAULT 0 CHECK (is_deleted IN (0, 1)),
-          FOREIGN KEY (user_id) REFERENCES users(user_id),
-          FOREIGN KEY (category_id) REFERENCES categories(category_id),
-          FOREIGN KEY (account_id) REFERENCES accounts(account_id),
-          FOREIGN KEY (budget_id) REFERENCES budgets(budget_id)
+          FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE,
+          FOREIGN KEY (category_id) REFERENCES categories(category_id) ON DELETE CASCADE,
+          FOREIGN KEY (account_id) REFERENCES accounts(account_id) ON DELETE CASCADE,
+          FOREIGN KEY (budget_id) REFERENCES budgets(budget_id) ON DELETE CASCADE
         );
       `);
       
@@ -368,7 +368,7 @@ export class DatabaseManager {
           last_sync_hash TEXT,
           created_at TEXT NOT NULL,
           updated_at TEXT NOT NULL,
-          FOREIGN KEY (user_id) REFERENCES users(user_id)
+          FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE
         );
       `);
       
@@ -409,8 +409,8 @@ export class DatabaseManager {
           created_at TEXT NOT NULL,
           updated_at TEXT NOT NULL,
           is_deleted INTEGER DEFAULT 0 CHECK (is_deleted IN (0, 1)),
-          FOREIGN KEY (user_id) REFERENCES users(user_id),
-          FOREIGN KEY (bill_id) REFERENCES bills(bill_id)
+          FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE,
+          FOREIGN KEY (bill_id) REFERENCES bills(bill_id) ON DELETE CASCADE
         );
       `);
 
@@ -451,7 +451,7 @@ export class DatabaseManager {
           created_at TEXT NOT NULL,
           updated_at TEXT NOT NULL,
           is_deleted INTEGER DEFAULT 0 CHECK (is_deleted IN (0, 1)),
-          FOREIGN KEY (user_id) REFERENCES users(user_id),
+          FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE,
           UNIQUE (user_id, category_id, period)
         );
       `);
@@ -475,7 +475,7 @@ export class DatabaseManager {
           metadata_json TEXT NOT NULL DEFAULT '{}',
           occurred_at TEXT NOT NULL,
           created_at TEXT NOT NULL,
-          FOREIGN KEY (user_id) REFERENCES users(user_id)
+          FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE
         );
       `);
 
@@ -508,7 +508,7 @@ export class DatabaseManager {
           issued_at TEXT NOT NULL,
           processed_at TEXT,
           error_message TEXT,
-          FOREIGN KEY (user_id) REFERENCES users(user_id)
+          FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE
         );
       `);
 
@@ -551,7 +551,7 @@ export class DatabaseManager {
           last_event_version INTEGER NOT NULL DEFAULT 0,
           last_updated_at TEXT NOT NULL,
           created_at TEXT NOT NULL,
-          FOREIGN KEY (user_id) REFERENCES users(user_id),
+          FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE,
           UNIQUE (model_type, user_id)
         );
       `);
@@ -579,7 +579,7 @@ export class DatabaseManager {
           created_at TEXT NOT NULL,
           updated_at TEXT NOT NULL,
           is_deleted INTEGER DEFAULT 0 CHECK (is_deleted IN (0, 1)),
-          FOREIGN KEY (owner_id) REFERENCES users(user_id)
+          FOREIGN KEY (owner_id) REFERENCES users(user_id) ON DELETE CASCADE
         );
       `);
 
@@ -614,7 +614,7 @@ export class DatabaseManager {
           updated_at TEXT NOT NULL,
           is_deleted INTEGER DEFAULT 0 CHECK (is_deleted IN (0, 1)),
           FOREIGN KEY (ledger_id) REFERENCES shared_ledgers(ledger_id) ON DELETE CASCADE,
-          FOREIGN KEY (user_id) REFERENCES users(user_id),
+          FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE,
           UNIQUE (ledger_id, user_id)
         );
       `);
@@ -649,7 +649,7 @@ export class DatabaseManager {
           updated_at TEXT NOT NULL,
           is_deleted INTEGER DEFAULT 0 CHECK (is_deleted IN (0, 1)),
           FOREIGN KEY (ledger_id) REFERENCES shared_ledgers(ledger_id) ON DELETE CASCADE,
-          FOREIGN KEY (inviter_id) REFERENCES users(user_id),
+          FOREIGN KEY (inviter_id) REFERENCES users(user_id) ON DELETE CASCADE,
           UNIQUE (invitation_code)
         );
       `);
@@ -696,9 +696,9 @@ export class DatabaseManager {
           updated_at TEXT NOT NULL,
           is_deleted INTEGER DEFAULT 0 CHECK (is_deleted IN (0, 1)),
           FOREIGN KEY (ledger_id) REFERENCES shared_ledgers(ledger_id) ON DELETE CASCADE,
-          FOREIGN KEY (creator_id) REFERENCES users(user_id),
-          FOREIGN KEY (account_id) REFERENCES accounts(account_id),
-          FOREIGN KEY (category_id) REFERENCES categories(category_id)
+          FOREIGN KEY (creator_id) REFERENCES users(user_id) ON DELETE CASCADE,
+          FOREIGN KEY (account_id) REFERENCES accounts(account_id) ON DELETE CASCADE,
+          FOREIGN KEY (category_id) REFERENCES categories(category_id) ON DELETE CASCADE
         );
       `);
 
@@ -737,7 +737,7 @@ export class DatabaseManager {
           is_deleted INTEGER DEFAULT 0 CHECK (is_deleted IN (0, 1)),
           FOREIGN KEY (ledger_id) REFERENCES shared_ledgers(ledger_id) ON DELETE CASCADE,
           FOREIGN KEY (bill_id) REFERENCES shared_bills(bill_id) ON DELETE CASCADE,
-          FOREIGN KEY (requester_id) REFERENCES users(user_id)
+          FOREIGN KEY (requester_id) REFERENCES users(user_id) ON DELETE CASCADE
         );
       `);
 
@@ -765,7 +765,7 @@ export class DatabaseManager {
           metadata_json TEXT NOT NULL DEFAULT '{}',
           created_at TEXT NOT NULL,
           FOREIGN KEY (ledger_id) REFERENCES shared_ledgers(ledger_id) ON DELETE CASCADE,
-          FOREIGN KEY (user_id) REFERENCES users(user_id)
+          FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE
         );
       `);
 
@@ -791,8 +791,8 @@ export class DatabaseManager {
           features_json TEXT NOT NULL DEFAULT '{}',
           is_correct INTEGER DEFAULT 0 CHECK (is_correct IN (0, 1)),
           created_at TEXT NOT NULL,
-          FOREIGN KEY (user_id) REFERENCES users(user_id),
-          FOREIGN KEY (bill_id) REFERENCES bills(bill_id)
+          FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE,
+          FOREIGN KEY (bill_id) REFERENCES bills(bill_id) ON DELETE CASCADE
         );
       `);
 
@@ -822,8 +822,8 @@ export class DatabaseManager {
           created_at TEXT NOT NULL,
           updated_at TEXT NOT NULL,
           is_deleted INTEGER DEFAULT 0 CHECK (is_deleted IN (0, 1)),
-          FOREIGN KEY (user_id) REFERENCES users(user_id),
-          FOREIGN KEY (category_id) REFERENCES categories(category_id)
+          FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE,
+          FOREIGN KEY (category_id) REFERENCES categories(category_id) ON DELETE CASCADE
         );
       `);
 
@@ -856,8 +856,8 @@ export class DatabaseManager {
           created_at TEXT NOT NULL,
           updated_at TEXT NOT NULL,
           is_deleted INTEGER DEFAULT 0 CHECK (is_deleted IN (0, 1)),
-          FOREIGN KEY (user_id) REFERENCES users(user_id),
-          FOREIGN KEY (bill_id) REFERENCES bills(bill_id)
+          FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE,
+          FOREIGN KEY (bill_id) REFERENCES bills(bill_id) ON DELETE CASCADE
         );
       `);
 

@@ -65,25 +65,22 @@ export class CategoryDAO {
 
     // 2. 不存在重复 -> 执行正常插入
     const now = new Date().toISOString();
-    const sql = `
-      INSERT INTO categories
-        (user_id, name, type, icon, color, parent_category_id, sort_order, created_at, updated_at, is_deleted)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `;
-    const params = [
-      category.userId,
-      category.name,
-      category.type,
-      category.icon,
-      category.color,
-      category.parentCategoryId,
-      category.sortOrder,
-      now,
-      now,
-      0
-    ];
+    const valueBucket: relationalStore.ValuesBucket = {
+      user_id: category.userId,
+      name: category.name,
+      type: category.type,
+      icon: category.icon,
+      color: category.color,
+      parent_category_id: category.parentCategoryId,
+      sort_order: category.sortOrder,
+      created_at: now,
+      updated_at: now,
+      is_deleted: 0
+    };
     try {
-      await store.executeSql(sql, params);
+      const rowId = await store.insert('categories', valueBucket);
+      category.categoryId = rowId as number;
+      console.log(`[CategoryDAO] 插入成功: ${category.name}, id=${category.categoryId}`);
       
       // 尝试获取新插入的 ID (需要再次查询，因为 executeSql 不返回 ID)
       // 为简化，UI层通常会刷新列表，或者我们可以做一次查询
@@ -109,29 +106,24 @@ export class CategoryDAO {
     await DAOHelper.transaction(async () => {
       const now = new Date().toISOString();
       const store = DatabaseManager.getDatabase();
-      const sql = `
-        INSERT INTO categories
-          (user_id, name, type, icon, color, parent_category_id, sort_order, created_at, updated_at, is_deleted)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-      `;
-      
       for (const category of categories) {
         if (!category.validate()) {
           throw new Error(`[CategoryDAO] 无效分类数据: ${category.name}`);
         }
-        const params = [
-          category.userId,
-          category.name,
-          category.type,
-          category.icon,
-          category.color,
-          category.parentCategoryId,
-          category.sortOrder,
-          now,
-          now,
-          0
-        ];
-        await store.executeSql(sql, params);
+        const valueBucket: relationalStore.ValuesBucket = {
+          user_id: category.userId,
+          name: category.name,
+          type: category.type,
+          icon: category.icon,
+          color: category.color,
+          parent_category_id: category.parentCategoryId,
+          sort_order: category.sortOrder,
+          created_at: now,
+          updated_at: now,
+          is_deleted: 0
+        };
+        const rowId = await store.insert('categories', valueBucket);
+        category.categoryId = rowId as number;
       }
     }, '[CategoryDAO] 批量插入');
     

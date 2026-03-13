@@ -14,12 +14,17 @@ export class UserDAO {
     const now = new Date().toISOString();
     user.createdAt = now;
     user.updatedAt = now;
-    const sql = `
-      INSERT INTO users (username, email, password_hash, created_at, updated_at, is_deleted)
-      VALUES (?, ?, ?, ?, ?, ?)
-    `;
-    const params = [user.username, user.email, user.passwordHash, user.createdAt, user.updatedAt, user.is_deleted];
-    await store.executeSql(sql, params);
+    const valueBucket: relationalStore.ValuesBucket = {
+      username: user.username,
+      email: user.email,
+      password_hash: user.passwordHash,
+      created_at: user.createdAt,
+      updated_at: user.updatedAt,
+      is_deleted: user.is_deleted
+    };
+    const rowId = await store.insert('users', valueBucket);
+    user.userId = rowId as number;
+    console.log(`[UserDAO] 插入用户成功 id=${user.userId}`);
   }
 
   /** 批量插入 - 使用 DAOHelper 统一事务处理 */
@@ -38,13 +43,13 @@ export class UserDAO {
       rs = await store.querySql(sql, [userId]);
       if (!rs.goToNextRow()) return null;
       const u = new User();
-      u.userId = rs.getLong(0);
-      u.username = rs.getString(1);
-      u.email = rs.getString(2);
-      u.passwordHash = rs.getString(3);
-      u.createdAt = rs.getString(4);
-      u.updatedAt = rs.getString(5);
-      u.is_deleted = rs.getLong(6);
+      u.userId = rs.getLong(rs.getColumnIndex('user_id'));
+      u.username = rs.getString(rs.getColumnIndex('username'));
+      u.email = rs.getString(rs.getColumnIndex('email'));
+      u.passwordHash = rs.getString(rs.getColumnIndex('password_hash'));
+      u.createdAt = rs.getString(rs.getColumnIndex('created_at'));
+      u.updatedAt = rs.getString(rs.getColumnIndex('updated_at'));
+      u.is_deleted = rs.getLong(rs.getColumnIndex('is_deleted'));
       return u;
     } finally { rs?.close(); }
   }
@@ -87,13 +92,13 @@ export class UserDAO {
       rs = await store.querySql(sql);
       while (rs.goToNextRow()) {
         const u = new User();
-        u.userId = rs.getLong(0);
-        u.username = rs.getString(1);
-        u.email = rs.getString(2);
-        u.passwordHash = rs.getString(3);
-        u.createdAt = rs.getString(4);
-        u.updatedAt = rs.getString(5);
-        u.is_deleted = rs.getLong(6);
+        u.userId = rs.getLong(rs.getColumnIndex('user_id'));
+        u.username = rs.getString(rs.getColumnIndex('username'));
+        u.email = rs.getString(rs.getColumnIndex('email'));
+        u.passwordHash = rs.getString(rs.getColumnIndex('password_hash'));
+        u.createdAt = rs.getString(rs.getColumnIndex('created_at'));
+        u.updatedAt = rs.getString(rs.getColumnIndex('updated_at'));
+        u.is_deleted = rs.getLong(rs.getColumnIndex('is_deleted'));
         users.push(u);
       }
       return users;

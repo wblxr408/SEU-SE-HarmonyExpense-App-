@@ -13,7 +13,7 @@ struct ReminderSettingsPage {
     Column() {
       // 标题栏
       Row() {
-        Image($r('app.media.back'))
+        Image($r('app.media.ic_back_glass'))
           .width(24)
           .height(24)
           .onClick(() => router.back())
@@ -68,7 +68,7 @@ struct ReminderSettingsPage {
             .width('100%')
             .padding(16)
             .backgroundColor(Color.White)
-            .border({ width: { top: 1 }, color: '#F0F0F0' })
+            .border({ width: { top: 1 }, color: '#F5F5F7' })
           }
         }
       }
@@ -77,7 +77,7 @@ struct ReminderSettingsPage {
     }
     .width('100%')
     .height('100%')
-    .backgroundColor('#F1F3F5')
+    .backgroundColor('#F5F5F7')
   }
 
   formatTime(date: Date): string {
@@ -89,7 +89,7 @@ struct ReminderSettingsPage {
   async updateReminder() {
     // 这里简单调用 ReminderService 逻辑
     // 实际需要根据 switch 状态调用 createReminder (daily) 或 deleteReminder
-    const userId =await UserSessionService.getCurrentUserId();
+    const userId = await UserSessionService.getCurrentUserId();
     if (!userId) {
        promptAction.showToast({ message: '请先登录' });
        return;

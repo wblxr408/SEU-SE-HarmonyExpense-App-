@@ -1,12 +1,14 @@
-import router from '@ohos.router';
 import { Category } from '../model/Category'
 import { CategoryDAO } from '../dao/CategoryDAO'
 import { CategoryTreeNode } from '../model/AggregationTypes'
 import promptAction from '@ohos.promptAction'
 import hilog from '@ohos.hilog'
 import type { BusinessError } from '@ohos.base'
+import router from '@ohos.router';
 import { BreakPointType } from '../common/config/BreakpointSystem';
 import { UserSessionService } from '../service/UserSessionService';
+import { AppTheme } from '../common/config/AppTheme';
+
 
 // HILOG 定义
 const LOG_TAG = 'CategoryManagement'
@@ -56,7 +58,7 @@ struct CategoryEditDialog {
             })
 
           TextInput({
-            placeholder: '颜色 (例如: #FF6B6B)',
+            placeholder: '颜色 (例如: #1A1A1A)',
             text: this.editingCategory.color
           })
             .onChange((value: string) => {
@@ -83,14 +85,14 @@ struct CategoryEditDialog {
           Column({ space: 5 }) {
             Text('父分类')
               .fontSize(14)
-              .fontColor('#666')
+              .fontColor(AppTheme.TextSub)
               .alignSelf(ItemAlign.Start)
             
             Select(this.buildParentOptions())
               .selected(this.getSelectedParentIndex())
               .value(this.getParentDisplayName())
               .font({ size: 16 })
-              .fontColor('#333')
+              .fontColor(AppTheme.TextMain)
               .selectedOptionFont({ size: 16 })
               .optionFont({ size: 16 })
               .onSelect((index: number) => {
@@ -111,12 +113,18 @@ struct CategoryEditDialog {
           // 操作按钮
           Row({ space: 10 }) {
             Button('取消')
+              .height(44)
+              .backgroundColor(AppTheme.Background)
+              .fontColor(AppTheme.TextMain)
               .onClick(() => {
                 this.controller.close()
               })
               .layoutWeight(1)
 
             Button('保存')
+              .height(44)
+              .backgroundColor(AppTheme.HeroBg)
+              .fontColor(AppTheme.TextWhite)
               .onClick(() => {
                 this.onSave()
               })
@@ -126,11 +134,12 @@ struct CategoryEditDialog {
           .width('100%')
           .margin({ top: 10 })
         }
-        .padding(20)
-        .width('90%')
+        .padding(24)
+        .width('92%')
       }
-      .backgroundColor(Color.White)
-      .borderRadius(15)
+      .backgroundColor(AppTheme.CardBg)
+      .borderRadius(24)
+      .shadow(AppTheme.CardShadow)
     } else {
       Column()
     }
@@ -221,8 +230,8 @@ struct CategoryManagement {
   // 自定义弹窗控制器
   dialogController: CustomDialogController | null = null
 
-  onPageShow() {
-    if (!UserSessionService.getCurrentUserId()) {
+  async onPageShow(): Promise<void> {
+    if (!await UserSessionService.getCurrentUserId()) {
        promptAction.showToast({ message: '登录已过期，请重新登录' });
        setTimeout(() => {
           router.replaceUrl({ url: 'pages/LoginPage' });
@@ -234,7 +243,7 @@ struct CategoryManagement {
 
   async loadCategories() {
     try {
-      const userId =await UserSessionService.getCurrentUserId();
+      const userId = await UserSessionService.getCurrentUserId();
       if (!userId) throw new Error('未登录');
       
       // 1. 加载所有分类（用于父分类选择）
@@ -291,7 +300,7 @@ struct CategoryManagement {
 
   async handleDelete(categoryId: number) {
     try {
-      const userId =await UserSessionService.getCurrentUserId();
+      const userId = await UserSessionService.getCurrentUserId();
       if (!userId) throw new Error('未登录');
       await CategoryDAO.softDelete(userId, categoryId)
       this.showToast('删除成功')
@@ -430,15 +439,18 @@ struct CategoryManagement {
         Button('新建分类')
           .width(this.buttonWidth.getValue(this.currentBreakpoint) as string)
           .height(50)
+          .backgroundColor(AppTheme.HeroBg)
+          .fontColor(AppTheme.TextWhite)
           .type(ButtonType.Capsule)
-          .margin(15)
+          .shadow(AppTheme.FabShadow)
+          .margin({ top: 10, bottom: 18 })
           .onClick(() => {
             this.openCreateDialog(0)
           })
       }
       .width('100%')
       .height('100%')
-      .backgroundColor('#F1F3F5')
+      .backgroundColor(AppTheme.Background)
     }
     .title('分类管理')
     .titleMode(NavigationTitleMode.Mini)
@@ -446,8 +458,8 @@ struct CategoryManagement {
 
   @Builder
   CategoryList() {
-    List({ space: 8 }) {
-      ForEach(this.flatItems, (item: FlatTreeItem, index: number) => {
+    List({ space: 12 }) {
+      ForEach(this.flatItems, (item: FlatTreeItem) => {
         ListItem() {
           Row() {
             // 缩进（根据层级）
@@ -460,7 +472,7 @@ struct CategoryManagement {
             if (item.hasChildren) {
               Text(item.isExpanded ? '▼' : '▶')
                 .fontSize(12)
-                .fontColor('#666')
+                .fontColor(AppTheme.TextSub)
                 .width(20)
                 .textAlign(TextAlign.Center)
                 .margin({ right: 8 })
@@ -476,6 +488,7 @@ struct CategoryManagement {
             // 分类名称
             Text(item.category.name)
               .fontSize(this.itemFontSize.getValue(this.currentBreakpoint) as number)
+              .fontColor(AppTheme.TextMain)
               .layoutWeight(1)
             
             // 添加子分类按钮（仅顶级分类显示）
@@ -483,20 +496,22 @@ struct CategoryManagement {
               Button({ type: ButtonType.Circle, stateEffect: true }) {
                 Text('+')
                   .fontSize(18)
-                  .fontColor('#666')
+                  .fontColor(AppTheme.TextMain)
               }
               .width(28)
               .height(28)
-              .backgroundColor('#E8E8E8')
+              .backgroundColor(AppTheme.CardBg)
+              .shadow(AppTheme.CardShadow)
               .margin({ right: 8 })
               .onClick(() => {
                 this.openCreateDialog(item.category.categoryId)
               })
             }
           }
-          .padding({ left: 12, right: 12, top: 12, bottom: 12 })
-          .backgroundColor(Color.White)
-          .borderRadius(8)
+          .padding({ left: 16, right: 16, top: 14, bottom: 14 })
+          .backgroundColor(AppTheme.CardBg)
+          .borderRadius(20)
+          .shadow(AppTheme.CardShadow)
           .onClick(() => {
             this.openEditDialog(item.category)
           })
@@ -509,14 +524,21 @@ struct CategoryManagement {
     .padding({ 
       left: this.listPadding.getValue(this.currentBreakpoint) as number, 
       right: this.listPadding.getValue(this.currentBreakpoint) as number,
-      top: 10
+      top: 12
     })
   }
 
   @Builder
   SwipeDeleteButton(categoryId: number) {
-    Button('删除')
-      .type(ButtonType.Circle)
+    Button({ type: ButtonType.Normal }) {
+      Image($r('app.media.ic_public_delete'))
+        .width(20)
+        .height(20)
+        .fillColor(Color.White)
+        .objectFit(ImageFit.Contain)
+    }
+      .width(60)
+      .height('100%')
       .backgroundColor(Color.Red)
       .onClick(() => {
         this.handleDelete(categoryId)
