@@ -200,7 +200,7 @@ struct SmartCategoryRulesPage {
         } else if (this.rules.length === 0) {
            Column() {
              Text('暂无智能分类规则').fontSize(16).fontColor(Color.Gray).margin({ top: 100 })
-             Text('添加规则后，记账时将自动推荐分类').fontSize(14).fontColor('#CCC').margin({ top: 10 })
+             Text('添加规则后，记账时将自动推荐分类').fontSize(14).fontColor('#8E8E93').margin({ top: 10 })
            }.width('100%')
         } else {
            List() {
@@ -229,7 +229,7 @@ struct SmartCategoryRulesPage {
       }
       .width('100%')
       .height('100%')
-      .backgroundColor('#F1F3F5')
+      .backgroundColor('#F5F5F7')
     }
     .title('智能分类规则')
     .titleMode(NavigationTitleMode.Mini)
@@ -243,12 +243,12 @@ struct SmartCategoryRulesPage {
           Text(rule.ruleName)
             .fontSize(16)
             .fontWeight(FontWeight.Medium)
-            .fontColor('#333')
+            .fontColor('#1A1A1A')
           
           Text(rule.categoryName)
             .fontSize(12)
             .fontColor(Color.White)
-            .backgroundColor('#4A90E2')
+            .backgroundColor('#1A1A1A')
             .padding({ left: 8, right: 8, top: 2, bottom: 2 })
             .borderRadius(10)
             .margin({ left: 10 })
@@ -355,8 +355,8 @@ struct AddRuleDialog {
       Row() {
         Button('取消')
           .onClick(() => { this.controller.close(); })
-          .backgroundColor('#F5F5F5')
-          .fontColor('#666')
+          .backgroundColor('#F5F5F7')
+          .fontColor('#8E8E93')
           .width('40%')
           .margin({ right: 10 })
         

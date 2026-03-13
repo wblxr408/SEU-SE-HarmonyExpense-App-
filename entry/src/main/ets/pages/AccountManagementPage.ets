@@ -4,6 +4,7 @@ import { AccountDAO } from '../dao/AccountDAO';
 import { UserSessionService } from '../service/UserSessionService';
 import promptAction from '@ohos.promptAction';
 import { BusinessError } from '@kit.BasicServicesKit';
+import { AppTheme } from '../common/config/AppTheme';
 
 @CustomDialog
 struct AccountEditDialog {
@@ -49,13 +50,14 @@ struct AccountEditDialog {
           })
 
         Row({ space: 10 }) {
-          Button('取消').onClick(() => this.controller.close()).layoutWeight(1).backgroundColor(Color.Gray)
-          Button('保存').onClick(this.onSave).layoutWeight(1).type(ButtonType.Capsule)
+          Button('取消').onClick(() => this.controller.close()).layoutWeight(1).backgroundColor(AppTheme.CardBg).fontColor(AppTheme.TextMain).border({ width: 0.5, color: AppTheme.Border })
+          Button('保存').onClick(this.onSave).layoutWeight(1).type(ButtonType.Capsule).backgroundColor(AppTheme.HeroBg).fontColor(AppTheme.TextWhite)
         }.width('100%').margin({ top: 10 })
       }
-      .padding(20)
-      .backgroundColor(Color.White)
-      .borderRadius(15)
+      .padding(24)
+      .backgroundColor(AppTheme.CardBg)
+      .borderRadius(24)
+      .shadow(AppTheme.CardShadow)
       .width('90%')
     } else {
       Column()
@@ -162,20 +164,21 @@ struct AccountManagementPage {
     Column() {
       // 1. 顶部导航栏
       Row() {
-        Image($r('app.media.back'))
+        Image($r('app.media.ic_back_glass'))
           .width(24)
           .height(24)
-          .fillColor('#388E3C')
+          .fillColor(AppTheme.TextMain)
           .onClick(() => router.back())
         Text('资产')
           .fontSize(20)
           .fontWeight(FontWeight.Bold)
-          .fontColor('#388E3C')
+          .fontColor(AppTheme.TextMain)
           .margin({ left: 16 })
       }
       .width('100%')
-      .padding({ left: 16, right: 16, top: 16, bottom: 8 })
-      .backgroundColor(Color.Transparent)
+      .padding({ left: 20, right: 20, top: 20, bottom: 12 })
+      .backgroundColor(AppTheme.GlassBackground)
+      .backdropBlur(30)
 
       // 2. 顶部总览卡片 (Summary Card) - 玻璃拟态
       Column() {
@@ -183,11 +186,12 @@ struct AccountManagementPage {
         Column() {
           Text('净资产')
             .fontSize(14)
-            .fontColor('#666666')
+            .fontColor(AppTheme.TextWhite)
+            .opacity(0.8)
           Text(`¥${(this.netAssets ?? 0).toFixed(2)}`)
-            .fontSize(36)
-            .fontWeight(FontWeight.Bold)
-            .fontColor('#333333')
+            .fontSize(38)
+            .fontWeight(FontWeight.Bolder)
+            .fontColor(AppTheme.TextWhite)
             .margin({ top: 8 })
         }
         .alignItems(HorizontalAlign.Center)
@@ -195,7 +199,7 @@ struct AccountManagementPage {
 
         // 分割线
         Divider()
-          .color('rgba(255, 255, 255, 0.6)')
+          .color('rgba(255, 255, 255, 0.28)')
           .strokeWidth(1)
           .margin({ top: 16, bottom: 16 })
 
@@ -204,11 +208,12 @@ struct AccountManagementPage {
           Column() {
             Text('总资产')
               .fontSize(12)
-              .fontColor('#666666')
+              .fontColor(AppTheme.TextWhite)
+              .opacity(0.78)
             Text(`¥${(this.totalAssets ?? 0).toFixed(2)}`)
               .fontSize(16)
               .fontWeight(FontWeight.Bold)
-              .fontColor('#333333')
+              .fontColor(AppTheme.TextWhite)
               .margin({ top: 4 })
           }
           .alignItems(HorizontalAlign.Start)
@@ -216,11 +221,13 @@ struct AccountManagementPage {
           Column() {
             Text('总负债')
               .fontSize(12)
-              .fontColor('#666666')
+              .fontColor(AppTheme.TextWhite)
+              .opacity(0.78)
             Text(`¥${(this.totalLiabilities ?? 0).toFixed(2)}`)
               .fontSize(16)
-              .fontWeight(FontWeight.Bold)
-              .fontColor('#333333')
+              .fontWeight(FontWeight.Medium)
+              .fontColor(AppTheme.TextWhite)
+              .opacity(0.72)
               .margin({ top: 4 })
           }
           .alignItems(HorizontalAlign.End)
@@ -232,10 +239,8 @@ struct AccountManagementPage {
       .margin({ left: 16, right: 16, top: 16 })
       .padding(24)
       .borderRadius(24)
-      .backgroundColor('rgba(255, 255, 255, 0.4)')
-      .backdropBlur(25)
-      .border({ width: 1.5, color: 'rgba(255, 255, 255, 0.8)', style: BorderStyle.Solid })
-      .shadow({ radius: 16, color: 'rgba(0, 0, 0, 0.04)', offsetY: 6 })
+      .backgroundColor(AppTheme.HeroBg)
+      .shadow(AppTheme.CardShadow)
 
       // 3. 标题与操作区 (Title & Action Area)
       Row() {
@@ -244,12 +249,12 @@ struct AccountManagementPage {
           Row()
             .width('100%')
             .height(8)
-            .backgroundColor('#FFF68F')
+            .backgroundColor(AppTheme.CardBg)
             .margin({ bottom: 2 })
           Text('资产账户')
             .fontSize(18)
             .fontWeight(FontWeight.Bold)
-            .fontColor('#333333')
+            .fontColor(AppTheme.TextMain)
             // 为了让高亮跨越文字宽度的设置
             .padding({ left: 4, right: 4 })
         }
@@ -260,14 +265,14 @@ struct AccountManagementPage {
         Button('+ 添加账户')
           .height(32)
           .fontSize(14)
-          .fontColor(Color.White)
-          .backgroundColor('#FFB347')
+          .fontColor(AppTheme.TextWhite)
+          .backgroundColor(AppTheme.HeroBg)
           .borderRadius(16)
-          .shadow({ radius: 8, color: 'rgba(255, 179, 71, 0.4)', offsetY: 2 })
+          .shadow(AppTheme.FabShadow)
           .onClick(() => this.handleCreate())
       }
       .width('100%')
-      .padding({ left: 16, right: 16, top: 24, bottom: 12 })
+      .padding({ left: 20, right: 20, top: 24, bottom: 12 })
       .justifyContent(FlexAlign.SpaceBetween)
 
       // 4. 账户列表区与空状态
@@ -277,7 +282,7 @@ struct AccountManagementPage {
             .fontSize(64)
           Text('哎呀，还没有资产账户呢~')
             .fontSize(14)
-            .fontColor('#999999')
+            .fontColor(AppTheme.TextSub)
             .margin({ top: 16 })
         }
         .layoutWeight(1)
@@ -293,10 +298,10 @@ struct AccountManagementPage {
                   Text(item.name)
                     .fontSize(16)
                     .fontWeight(FontWeight.Bold)
-                    .fontColor('#333333')
+                    .fontColor(AppTheme.TextMain)
                   Text(this.formatType(item.type))
                     .fontSize(12)
-                    .fontColor('#999999')
+                    .fontColor(AppTheme.TextSub)
                     .margin({ top: 4 })
                 }
                 .alignItems(HorizontalAlign.Start)
@@ -304,17 +309,19 @@ struct AccountManagementPage {
                 Blank()
 
                 Text(`${item.balance >= 0 ? '+' : ''}${(item.balance ?? 0).toFixed(2)}`)
-                  .fontSize(20)
-                  .fontWeight(FontWeight.Bold)
-                  .fontColor(item.balance < 0 ? '#FF4D4F' : '#388E3C')
+                  .fontSize(22)
+                  .fontWeight(item.balance < 0 ? FontWeight.Medium : FontWeight.Bolder)
+                  .fontColor(item.balance < 0 ? AppTheme.Expense : AppTheme.Income)
               }
               .width('100%')
-              .padding(20)
-              .borderRadius(16)
-              .backgroundColor('rgba(255, 255, 255, 0.4)')
-              .backdropBlur(25)
-              .border({ width: 1.5, color: 'rgba(255, 255, 255, 0.8)', style: BorderStyle.Solid })
-              .shadow({ radius: 16, color: 'rgba(0, 0, 0, 0.04)', offsetY: 6 })
+              .padding(24)
+              .borderRadius(24)
+              .backgroundColor(AppTheme.CardBg)
+              .shadow(AppTheme.CardShadow)
+              .border({
+                width: { bottom: 0.5 },
+                color: { bottom: AppTheme.Border }
+              })
               .onClick(() => this.handleEdit(item))
             }
             .swipeAction({ end: this.DeleteButton(item.accountId) })
@@ -322,20 +329,21 @@ struct AccountManagementPage {
         }
         .layoutWeight(1)
         .width('100%')
-        .padding({ left: 16, right: 16, bottom: 30 })
+        .padding({ left: 20, right: 20, bottom: 30 })
       }
     }
     .width('100%')
     .height('100%')
     .expandSafeArea([SafeAreaType.SYSTEM], [SafeAreaEdge.TOP])
-    .linearGradient({
-      direction: GradientDirection.Bottom,
-      colors: [['#E0F2E9', 0.0], ['#F4F8F5', 0.4], ['#F4F8F5', 1.0]]
-    })
+    .backgroundColor(AppTheme.Background)
   }
 
   @Builder DeleteButton(id: number) {
-    Button('删除').type(ButtonType.Circle).backgroundColor(Color.Red).onClick(() => this.handleDelete(id))
+    Button('删除')
+      .type(ButtonType.Circle)
+      .backgroundColor(AppTheme.HeroBg)
+      .fontColor(AppTheme.TextWhite)
+      .onClick(() => this.handleDelete(id))
   }
 
   formatType(type: string): string {

@@ -4,7 +4,6 @@ import { AccountDAO } from '../dao/AccountDAO';
 import { Bill } from '../model/Bill';
 import { BillDAO, DateRangeFilter } from '../dao/BillDAO';
 import hilog from '@ohos.hilog';
-import { BusinessError } from '@ohos.base';
 import { Category } from '../model';
 import { CategoryDAO } from '../dao/CategoryDAO';
 import { BreakPointType } from '../common/config/BreakpointSystem';
@@ -50,15 +49,11 @@ struct Index {
   @State selectedCategoryId: number = 0;
   @State statRefreshTrigger: number = 0;
   @StorageProp('currentBreakpoint') currentBreakpoint: string = 'md';
-  
-  // 邀请状态
   @State pendingInvitations: LedgerInvitation[] = [];
-  
-  // 弹窗控制器
   invitationController: CustomDialogController = new CustomDialogController({
     builder: InvitationProcessingDialog({
       invitations: $pendingInvitations,
-      onHandle: (invite, action) => this.handleInvitation(invite, action)
+      onHandle: (invite: LedgerInvitation, action: 'accept' | 'decline') => this.handleInvitation(invite, action)
     }),
     autoCancel: false,
     customStyle: true
@@ -72,15 +67,15 @@ struct Index {
       categoryName: (this.allCategories.find(c => c.categoryId === this.currentSelectedBill.categoryId)?.name as string) || '',
       onDelete: () => {
         AlertDialog.show({
-          title: '确认删除',
-          message: '删除后金额将退回账户，确定要删除这条记录吗？',
+          title: '\u786e\u8ba4\u5220\u9664',
+          message: '\u5220\u9664\u540e\u91d1\u989d\u5c06\u9000\u56de\u8d26\u6237\uff0c\u786e\u5b9a\u8981\u5220\u9664\u8fd9\u6761\u8bb0\u5f55\u5417\uff1f',
           primaryButton: {
-            value: '取消',
+            value: '\u53d6\u6d88',
             action: () => {}
           },
           secondaryButton: {
-            value: '删除',
-            fontColor: Color.Red,
+            value: '\u5220\u9664',
+            fontColor: AppTheme.TextMain,
             action: () => {
               this.deleteBill(this.currentSelectedBill);
             }
@@ -88,7 +83,7 @@ struct Index {
         });
       },
       onEdit: () => {
-        promptAction.showToast({ message: '编辑功能暂未实现' });
+        promptAction.showToast({ message: '\u7f16\u8f91\u529f\u80fd\u6682\u672a\u5b9e\u73b0' });
       }
     }),
     alignment: DialogAlignment.Center,
@@ -112,8 +107,6 @@ struct Index {
 
     await this.loadFilterData();
     await this.loadBills();
-    
-    // 检查邀请
     this.checkInvitations();
   }
 
@@ -132,10 +125,10 @@ struct Index {
     try {
       if (action === 'accept') {
         await SharedLedgerService.acceptInvitation(invite.invitationId);
-        promptAction.showToast({ message: '已加入账本' });
+        promptAction.showToast({ message: '\u5df2\u52a0\u5165\u8d26\u672c' });
       } else {
         await SharedLedgerService.declineInvitation(invite.invitationId);
-        promptAction.showToast({ message: '已拒绝邀请' });
+        promptAction.showToast({ message: '\u5df2\u62d2\u7edd\u9080\u8bf7' });
       }
       this.pendingInvitations = this.pendingInvitations.filter(i => i.invitationId !== invite.invitationId);
       
@@ -143,7 +136,7 @@ struct Index {
         this.invitationController.close();
       }
     } catch (error) {
-       promptAction.showToast({ message: '操作失败' });
+       promptAction.showToast({ message: '\u64cd\u4f5c\u5931\u8d25' });
     }
   }
 
@@ -152,7 +145,7 @@ struct Index {
     try {
       const dateRangeObj = this.getDateRange(this.selectedDate);
       const dateRange = dateRangeObj as DateRangeFilter;
-      hilog.info(HILOG_DOMAIN, LOG_TAG, `加载账单: DateRange=${JSON.stringify(dateRange)}, CategoryID=${this.selectedCategoryId}`);
+      hilog.info(HILOG_DOMAIN, LOG_TAG, `\u52a0\u8f7d\u8d26\u5355: DateRange=${JSON.stringify(dateRange)}, CategoryID=${this.selectedCategoryId}`);
 
       const userId = await UserSessionService.getCurrentUserId();
       if (!userId) { 
@@ -167,7 +160,7 @@ struct Index {
       this.transactions = billsFromDB;
       this.isLoading = false;
     } catch (error) {
-        hilog.error(0x0000, 'Index','加载账单失败: %{public}s', JSON.stringify(error));
+        hilog.error(0x0000, 'Index', '\u52a0\u8f7d\u8d26\u5355\u5931\u8d25: %{public}s', JSON.stringify(error));
     }  finally{
       this.isLoading = false;
     }
@@ -180,10 +173,10 @@ struct Index {
       const categories: Category[]= await CategoryDAO.getAll(userId);
       const allOption = new Category();
       allOption.categoryId = 0;
-      allOption.name = '所有分类';
+      allOption.name = '\u6240\u6709\u5206\u7c7b';
       this.allCategories = [allOption, ...categories];
     } catch (error) {
-      hilog.error(HILOG_DOMAIN, LOG_TAG, '加载分类列表失败: %{public}s', JSON.stringify(error));
+      hilog.error(HILOG_DOMAIN, LOG_TAG, '\u52a0\u8f7d\u5206\u7c7b\u5217\u8868\u5931\u8d25: %{public}s', JSON.stringify(error));
     }
   }
 
@@ -196,7 +189,7 @@ struct Index {
     return { start: startDate, end: endDate };
   }
 
-  showMonthPicker() {
+  showMonthPicker(): void {
     DatePickerDialog.show({
       selected: this.selectedDate,
       onAccept: (value: DatePickerResult) => {
@@ -229,16 +222,16 @@ struct Index {
       
       this.statRefreshTrigger++;
 
-      promptAction.showToast({ message: '删除成功，余额已还原' });
+      promptAction.showToast({ message: '\u5220\u9664\u6210\u529f\uff0c\u4f59\u989d\u5df2\u8fd8\u539f' });
 
     } catch (error) {
-      hilog.error(HILOG_DOMAIN, LOG_TAG, '删除账单失败: %{public}s', JSON.stringify(error));
-      promptAction.showToast({ message: '删除失败，请重试' });
+      hilog.error(HILOG_DOMAIN, LOG_TAG, '\u5220\u9664\u8d26\u5355\u5931\u8d25: %{public}s', JSON.stringify(error));
+      promptAction.showToast({ message: '\u5220\u9664\u5931\u8d25\uff0c\u8bf7\u91cd\u8bd5' });
     }
   }
 
   @Builder
-  DeleteButton(bill: Bill) {
+  DeleteButton(bill: Bill): void {
     Button({ type: ButtonType.Normal }) {
       Image($r('app.media.ic_public_delete'))
         .width(20)
@@ -248,18 +241,18 @@ struct Index {
     }
     .width(60)
     .height('100%')
-    .backgroundColor(Color.Red)
+    .backgroundColor(AppTheme.HeroBg)
     .onClick(() => {
         AlertDialog.show({
-          title: '确认删除',
-          message: '删除后金额将退回账户，确定要删除这条记录吗？',
+          title: '\u786e\u8ba4\u5220\u9664',
+          message: '\u5220\u9664\u540e\u91d1\u989d\u5c06\u9000\u56de\u8d26\u6237\uff0c\u786e\u5b9a\u8981\u5220\u9664\u8fd9\u6761\u8bb0\u5f55\u5417\uff1f',
           primaryButton: {
-            value: '取消',
+            value: '\u53d6\u6d88',
             action: () => {}
           },
           secondaryButton: {
-            value: '删除',
-            fontColor: Color.Red,
+            value: '\u5220\u9664',
+            fontColor: AppTheme.TextMain,
             action: () => {
               this.deleteBill(bill);
             }
@@ -271,9 +264,8 @@ struct Index {
   @State currentIndex: number = 0;
   private controller: TabsController = new TabsController();
 
-  build() {
+  build(): void {
     Stack({ alignContent: Alignment.Bottom }) {
-      // 1. 业务内容区
       Tabs({ barPosition: BarPosition.End, controller: this.controller }) {
         TabContent() {
           this.BillListContent()
@@ -285,7 +277,7 @@ struct Index {
           MinePage()
         }
       }
-      .barHeight(0) // 完全隐藏系统自带的底部 Tab 栏
+      .barHeight(0) 
       .layoutWeight(1)
       .onChange((index: number) => {
         this.currentIndex = index;
@@ -293,16 +285,14 @@ struct Index {
            this.statRefreshTrigger++;
         }
       })
-
-      // 2. 自定义绿色底部栏
       Row() {
         Column() {
-          Image(this.currentIndex === 1 ? $r('app.media.ic_pie_chart_filled') : $r('app.media.ic_pie_chart_linear'))
+          Image(this.currentIndex === 1 ? $r('app.media.ic_pie_chart_filled') : $r('app.media.ic_chart_linear'))
             .width(24).height(24)
-            .fillColor(this.currentIndex === 1 ? '#7FB069' : '#999999')
+            .fillColor(this.currentIndex === 1 ? AppTheme.TextMain : AppTheme.TextSub)
             .objectFit(ImageFit.Contain)
-          Text('统计')
-            .fontColor(this.currentIndex === 1 ? '#7FB069' : '#999999')
+          Text('\u7edf\u8ba1')
+            .fontColor(this.currentIndex === 1 ? AppTheme.TextMain : AppTheme.TextSub)
             .fontSize(10)
             .margin({ top: 4 })
         }
@@ -316,12 +306,12 @@ struct Index {
         Blank()
 
         Column() {
-          Image(this.currentIndex === 2 ? $r('app.media.ic_user_filled') : $r('app.media.ic_user_linear'))
+          Image(this.currentIndex === 2 ? $r('app.media.ic_user_avatar_glass') : $r('app.media.ic_user_avatar_linear'))
             .width(24).height(24)
-            .fillColor(this.currentIndex === 2 ? '#7FB069' : '#999999')
+            .fillColor(this.currentIndex === 2 ? AppTheme.TextMain : AppTheme.TextSub)
             .objectFit(ImageFit.Contain)
-          Text('我的')
-            .fontColor(this.currentIndex === 2 ? '#7FB069' : '#999999')
+          Text('\u6211\u7684')
+            .fontColor(this.currentIndex === 2 ? AppTheme.TextMain : AppTheme.TextSub)
             .fontSize(10)
             .margin({ top: 4 })
         }
@@ -333,139 +323,134 @@ struct Index {
         })
       }
       .width('100%')
-      .height(60)
-      .backgroundColor('#7FB069')
+      .height(72)
+      .backgroundColor(AppTheme.GlassBackground)
+      .backdropBlur(30)
       .justifyContent(FlexAlign.SpaceBetween)
-      .padding({ left: 30, right: 30 })
-
-      // 3. 居中巨型 FAB
+      .padding({ left: 30, right: 30, bottom: 8 })
       Button() {
         Text('+')
           .fontSize('40fp')
-          .fontColor(Color.White)
+          .fontColor(AppTheme.TextWhite)
       }
       .type(ButtonType.Circle)
       .width('64vp')
       .height('64vp')
-      .backgroundColor('#FF7F50')
+      .backgroundColor(AppTheme.HeroBg)
       .margin({ bottom: 20 })
       .zIndex(10)
-      .shadow({ radius: 12, color: 'rgba(255, 127, 80, 0.4)', offsetY: 4 })
+      .shadow(AppTheme.FabShadow)
       .onClick(() => {
         router.pushUrl({ url: 'pages/AddBill' })
       })
     }
     .width('100%')
     .height('100%')
+    .backgroundColor(AppTheme.Background)
   }
 
   @Builder
-  BillListContent() {
+  BillListContent(): void {
     Navigation() {
       Column() {
-        // 沉浸式首页结构背景直接铺满
         Scroll() {
           Column() {
-            // 1. 顶部自定义导航与日期 (Top Header) - 避让沉浸式状态栏
             Column() {
-              // 第一行：猪猪头像、默认账本、搜索
               Row() {
                 Image($r('app.media.ic_user_avatar_linear'))
-                  .width(32).height(32).fillColor('#388E3C').objectFit(ImageFit.Contain)
-                Text('默认账本 ▼')
+                  .width(32).height(32).fillColor(AppTheme.TextMain).objectFit(ImageFit.Contain)
+                Text('\u9ed8\u8ba4\u8d26\u672c \u25bc')
                   .fontSize('20fp')
                   .fontWeight(FontWeight.Bold)
-                  .fontColor('#388E3C')
+                  .fontColor(AppTheme.TextMain)
                 Image($r('app.media.ic_search_linear'))
-                  .width(24).height(24).fillColor('#388E3C').objectFit(ImageFit.Contain)
+                  .width(24).height(24).fillColor(AppTheme.TextMain).objectFit(ImageFit.Contain)
               }
               .width('100%')
               .justifyContent(FlexAlign.SpaceBetween)
-              .padding(16)
-
-              // 第二行：带箭头的日期选择、隐显图标
+              .padding(20)
               Row({ space: 8 }) {
-                Text('<').fontSize(16).fontColor('#388E3C').fontWeight(FontWeight.Bold)
-                Text(this.formatDateToYearMonth(this.selectedDate).replace('-', '年') + '月明细')
+                Text('<').fontSize(16).fontColor(AppTheme.TextMain).fontWeight(FontWeight.Bold)
+                Text(this.formatDateToYearMonth(this.selectedDate).replace('-', '\u5e74') + '\u6708\u660e\u7ec6')
                   .fontSize(16)
-                  .fontColor('#388E3C')
+                  .fontColor(AppTheme.TextMain)
                   .fontWeight(FontWeight.Medium)
                   .onClick(() => {
                     this.showMonthPicker();
                   })
-                Text('>').fontSize(16).fontColor('#388E3C').fontWeight(FontWeight.Bold)
-                Text(' 👁️').fontSize(16) // 隐显图标
+                Text('>').fontSize(16).fontColor(AppTheme.TextMain).fontWeight(FontWeight.Bold)
+                Text(' \uD83D\uDC41\uFE0F').fontSize(16)
               }
               .margin({ top: 10, bottom: 20 })
               .justifyContent(FlexAlign.Center)
-
-              // 第三行：核心财务数据
               Row() {
                 Column() {
-                  Text('收入').fontSize('14fp').fontColor('#666666').margin({ bottom: 8 })
+                  Text('\u6536\u5165').fontSize('14fp').fontColor(AppTheme.TextWhite).opacity(0.85).margin({ bottom: 8 })
                   Text(this.transactions.reduce((acc, item) => item.type === 'income' ? acc + item.amount : acc, 0).toFixed(2))
-                    .fontSize('24fp').fontWeight(FontWeight.Bold).fontColor('#388E3C')
+                    .fontSize('26fp').fontWeight(FontWeight.Bolder).fontColor(AppTheme.TextWhite)
                 }.layoutWeight(1).alignItems(HorizontalAlign.Center)
 
                 Column() {
-                  Text('支出').fontSize('14fp').fontColor('#666666').margin({ bottom: 8 })
+                  Text('\u652f\u51fa').fontSize('14fp').fontColor(AppTheme.TextWhite).opacity(0.75).margin({ bottom: 8 })
                   Text(this.transactions.reduce((acc, item) => item.type === 'expense' ? acc + item.amount : acc, 0).toFixed(2))
-                    .fontSize('24fp').fontWeight(FontWeight.Bold).fontColor('#388E3C')
+                    .fontSize('26fp').fontWeight(FontWeight.Medium).fontColor(AppTheme.TextWhite).opacity(0.72)
                 }.layoutWeight(1).alignItems(HorizontalAlign.Center)
 
                 Column() {
-                  Text('结余').fontSize('14fp').fontColor('#666666').margin({ bottom: 8 })
+                  Text('\u7ed3\u4f59').fontSize('14fp').fontColor(AppTheme.TextWhite).opacity(0.85).margin({ bottom: 8 })
                   Text(this.transactions.reduce((acc, item) => item.type === 'income' ? acc + item.amount : acc - item.amount, 0).toFixed(2))
-                    .fontSize('24fp').fontWeight(FontWeight.Bold).fontColor('#388E3C')
+                    .fontSize('28fp').fontWeight(FontWeight.Bolder).fontColor(AppTheme.TextWhite)
                 }.layoutWeight(1).alignItems(HorizontalAlign.Center)
               }
               .width('100%')
               .justifyContent(FlexAlign.SpaceAround)
-              .margin({ bottom: 40 })
+              .margin({ bottom: 12 })
+              .padding(24)
+              .backgroundColor(AppTheme.HeroBg)
+              .borderRadius(24)
+              .shadow(AppTheme.CardShadow)
             }
             .width('100%')
-            .padding({ top: 38 })
-
-            // 2. 悬浮胶囊工具栏 (Floating Pill Bar)
+            .padding({ top: 38, bottom: 20 })
+            .margin({ left: 16, right: 16 })
+            .backgroundColor(AppTheme.GlassBackground)
+            .backdropBlur(30)
+            .borderRadius(28)
             Row() {
-              Column() { Image($r('app.media.ic_book_linear')).width(28).height(28).fillColor('#7FB069').objectFit(ImageFit.Contain).margin({bottom: 4}); Text('记账').fontSize('12fp').fontColor('#333') }.onClick(() => router.pushUrl({ url: 'pages/AddBill' }))
-              Column() { Image($r('app.media.ic_ai_stars_linear')).width(28).height(28).fillColor('#7FB069').objectFit(ImageFit.Contain).margin({bottom: 4}); Text('AI记账').fontSize('12fp').fontColor('#333') }.onClick(() => promptAction.showToast({ message: 'AI记账功能开发中' }))
-              Column() { Image($r('app.media.ic_calendar_linear')).width(28).height(28).fillColor('#7FB069').objectFit(ImageFit.Contain).margin({bottom: 4}); Text('日历').fontSize('12fp').fontColor('#333') }.onClick(() => router.pushUrl({ url: 'pages/CalendarView' }))
-              Column() { Image($r('app.media.ic_wallet_linear')).width(28).height(28).fillColor('#7FB069').objectFit(ImageFit.Contain).margin({bottom: 4}); Text('资产').fontSize('12fp').fontColor('#333') }.onClick(() => promptAction.showToast({ message: '资产管理功能开发中' }))
-              Column() { Image($r('app.media.ic_chart_linear')).width(28).height(28).fillColor('#7FB069').objectFit(ImageFit.Contain).margin({bottom: 4}); Text('预算').fontSize('12fp').fontColor('#333') }.onClick(() => router.pushUrl({ url: 'pages/BudgetManagement' }))
+              Column() { Image($r('app.media.ic_book_linear')).width(28).height(28).fillColor(AppTheme.TextMain).objectFit(ImageFit.Contain).margin({bottom: 4}); Text('\u8bb0\u8d26').fontSize('12fp').fontColor(AppTheme.TextMain) }.onClick(() => router.pushUrl({ url: 'pages/AddBill' }))
+              Column() { Image($r('app.media.ic_ai_brain_linear')).width(28).height(28).fillColor(AppTheme.TextMain).objectFit(ImageFit.Contain).margin({bottom: 4}); Text('AI\u8bb0\u8d26').fontSize('12fp').fontColor(AppTheme.TextMain) }.onClick(() => promptAction.showToast({ message: 'AI\u8bb0\u8d26\u529f\u80fd\u5f00\u53d1\u4e2d' }))
+              Column() { Image($r('app.media.ic_calendar_linear')).width(28).height(28).fillColor(AppTheme.TextMain).objectFit(ImageFit.Contain).margin({bottom: 4}); Text('\u65e5\u5386').fontSize('12fp').fontColor(AppTheme.TextMain) }.onClick(() => router.pushUrl({ url: 'pages/CalendarView' }))
+              Column() { Image($r('app.media.ic_wallet_linear')).width(28).height(28).fillColor(AppTheme.TextMain).objectFit(ImageFit.Contain).margin({bottom: 4}); Text('\u8d44\u4ea7').fontSize('12fp').fontColor(AppTheme.TextMain) }.onClick(() => promptAction.showToast({ message: '\u8d44\u4ea7\u7ba1\u7406\u529f\u80fd\u5f00\u53d1\u4e2d' }))
+              Column() { Image($r('app.media.ic_chart_linear')).width(28).height(28).fillColor(AppTheme.TextMain).objectFit(ImageFit.Contain).margin({bottom: 4}); Text('\u9884\u7b97').fontSize('12fp').fontColor(AppTheme.TextMain) }.onClick(() => router.pushUrl({ url: 'pages/BudgetManagement' }))
             }
             .width('calc(100% - 32vp)')
             .margin({ top: -20, left: 16, right: 16 })
-            .backgroundColor('#FFFFFF')
+            .backgroundColor(AppTheme.CardBg)
             .borderRadius(24)
-            .padding({ left: 16, right: 16, top: 12, bottom: 12 })
-            .shadow({ radius: 12, color: 'rgba(0,0,0,0.05)', offsetY: 4 })
+            .padding({ left: 20, right: 20, top: 20, bottom: 20 })
+            .shadow(AppTheme.CardShadow)
             .justifyContent(FlexAlign.SpaceBetween)
-
-            // 3. 马克笔高亮标题与筛选按钮
             Row() {
               Stack({ alignContent: Alignment.Bottom }) {
-                Row().width('100%').height(10).backgroundColor('#FFF68F').margin({ bottom: 2 })
-                Text('收支记录').fontSize('18fp').fontWeight(FontWeight.Bold)
+                Text('\u6536\u652f\u8bb0\u5f55').fontSize('18fp').fontWeight(FontWeight.Bold).fontColor(AppTheme.TextMain)
               }.width(76)
 
               Row() {
-                Text('筛选 ▼').fontSize('12fp').fontColor('#388E3C')
+                Text('\u7b5b\u9009 \u25bc').fontSize('12fp').fontColor(AppTheme.TextMain)
               }
-              .backgroundColor('#E8F5E9')
+              .backgroundColor(AppTheme.CardBg)
               .borderRadius(16)
               .padding({ left: 12, right: 12, top: 4, bottom: 4 })
+              .border({ width: 0.5, color: AppTheme.Border })
             }
             .width('100%')
-            .padding(16)
+            .padding(20)
             .justifyContent(FlexAlign.SpaceBetween)
-
-            // 4. 账单明细列表
             if (this.transactions.length === 0) {
               Column() {
-                Image($r('app.media.ic_empty_book'))
+                Image($r('app.media.ill_empty_state_glass'))
                   .width(120).height(120).opacity(0.4).objectFit(ImageFit.Contain).margin({ bottom: 10, top: 40 })
-                Text('哎呀，当前时间没有记录呢~').fontColor('#999999').fontSize(14)
+                Text('\u54ce\u5440\uff0c\u5f53\u524d\u65f6\u95f4\u6ca1\u6709\u8bb0\u5f55\u5462~').fontColor(AppTheme.TextSub).fontSize(14)
               }.width('100%').alignItems(HorizontalAlign.Center)
             } else {
               List({ space: 10 }) {
@@ -478,11 +463,12 @@ struct Index {
                     this.detailDialogController.open();
                   })
                   .swipeAction({ end: this.DeleteButton(item) })
-                  .backgroundColor('#FFFFFF')
-                  .borderRadius(12)
+                  .backgroundColor(AppTheme.CardBg)
+                  .borderRadius(24)
+                  .shadow(AppTheme.CardShadow)
                 }, (item: Bill, index: number) => index + JSON.stringify(item))
               }
-              .padding({ left: 16, right: 16, bottom: 120 }) // 避让底部空间
+              .padding({ left: 20, right: 20, bottom: 120 }) 
             }
           }
         }
@@ -491,7 +477,7 @@ struct Index {
       }
       .width('100%')
       .height('100%')
-      .linearGradient({ direction: GradientDirection.Bottom, colors: [['#E0F2E9', 0.0], ['#F4F6F9', 0.4], ['#F4F6F9', 1.0]] })
+      .backgroundColor(AppTheme.Background)
     }
     .width('100%')
     .height('100%')
@@ -500,7 +486,7 @@ struct Index {
     .hideBackButton(true)
   }
 
-  pageTransition() {
+  pageTransition(): void {
     PageTransitionEnter({ duration: 200 })
       .slide(SlideEffect.Right)
     PageTransitionExit({ duration: 200 })
@@ -508,7 +494,7 @@ struct Index {
   }
 
   @Builder
-  TransactionRow(item: Bill) {
+  TransactionRow(item: Bill): void {
     Row() {
       /*
       Image(item.type=='expense'?$r('app.media.ic_expense_default'):$r('app.media.ic_income_default'))
@@ -518,19 +504,19 @@ struct Index {
         .objectFit(ImageFit.Contain)
       */
       Column() {
-        Text(this.allCategories.find(c => c.categoryId === item.categoryId)?.name || (item.type === 'expense' ? '支出' : '收入'))
+        Text(this.allCategories.find(c => c.categoryId === item.categoryId)?.name || (item.type === 'expense' ? '\u652f\u51fa' : '\u6536\u5165'))
           .fontSize(this.titleFontSize.getValue(this.currentBreakpoint) as number)
           .fontWeight(FontWeight.Bold)
         
         Row() {
            Text(item.transactionDate.replace('T', ' ').substring(5, 16))
             .fontSize(12)
-            .fontColor(Color.Gray)
+            .fontColor(AppTheme.TextSub)
             .margin({ right: 8 })
            if (item.note) {
              Text(item.note)
                .fontSize((this.titleFontSize.getValue(this.currentBreakpoint) as number) - 2)
-               .fontColor(Color.Gray)
+               .fontColor(AppTheme.TextSub)
            }
         }
       }
@@ -538,14 +524,18 @@ struct Index {
       .layoutWeight(1)
 
       Text(item.type === 'expense' ? `-${item.amount.toFixed(2)}` : `+${item.amount.toFixed(2)}`)
-        .fontSize(this.amountFontSize.getValue(this.currentBreakpoint) as number)
-        .fontWeight(FontWeight.Bold)
-        .fontColor(item.type === 'expense' ? Color.Red : Color.Green)
+        .fontSize((this.amountFontSize.getValue(this.currentBreakpoint) as number) + 2)
+        .fontWeight(item.type === 'expense' ? FontWeight.Medium : FontWeight.Bolder)
+        .fontColor(item.type === 'expense' ? AppTheme.Expense : AppTheme.Income)
     }
     .width('100%')
-    .padding(12)
-    .backgroundColor(Color.White)
-    .borderRadius(8)
+    .padding({ left: 20, right: 20, top: 24, bottom: 24 })
+    .backgroundColor(AppTheme.CardBg)
+    .borderRadius(24)
+    .border({
+      width: { bottom: 0.5 },
+      color: { bottom: AppTheme.Border }
+    })
     }
   formatDateToYearMonth(date: Date): string {
     const year = date.getFullYear();
@@ -561,38 +551,40 @@ struct InvitationProcessingDialog {
   @Link invitations: LedgerInvitation[];
   onHandle: (invite: LedgerInvitation, action: 'accept' | 'decline') => void = () => {};
 
-  build() {
+  build(): void {
     Column() {
-      Text('收到新的账本邀请!')
+      Text('\u6536\u5230\u65b0\u7684\u8d26\u672c\u9080\u8bf7')
         .fontSize(18).fontWeight(FontWeight.Bold).margin({ top: 20, bottom: 10 })
       
       List() {
         ForEach(this.invitations, (invite: LedgerInvitation) => {
           ListItem() {
              Column() {
-               Text(`邀请人: ${invite.inviterName}`)
-                 .fontSize(14).fontColor(Color.Gray)
-               Text(`账本: ${invite.ledgerName}`)
-                 .fontSize(16).fontWeight(FontWeight.Medium).margin({top: 4, bottom: 8})
+               Text(`\u9080\u8bf7\u4eba: ${invite.inviterName}`)
+                 .fontSize(14).fontColor(AppTheme.TextSub)
+               Text(`\u8d26\u672c: ${invite.ledgerName}`)
+                 .fontSize(16).fontWeight(FontWeight.Medium).fontColor(AppTheme.TextMain).margin({top: 4, bottom: 8})
                
                Row() {
-                 Button('拒绝')
-                   .fontColor(Color.Red).backgroundColor('#FFEBEE')
+                 Button('\u62d2\u7edd')
+                   .fontColor(AppTheme.TextMain).backgroundColor(AppTheme.CardBg)
                    .height(30).fontSize(12)
+                   .border({ width: 0.5, color: AppTheme.Border })
                    .onClick(() => this.onHandle(invite, 'decline'))
                    .margin({ right: 10 })
                    
-                 Button('接受')
-                   .fontColor(Color.Green).backgroundColor('#E8F5E9')
+                 Button('\u63a5\u53d7')
+                   .fontColor(AppTheme.TextWhite).backgroundColor(AppTheme.HeroBg)
                    .height(30).fontSize(12)
                    .onClick(() => this.onHandle(invite, 'accept'))
                }
                .width('100%').justifyContent(FlexAlign.End)
              }
              .width('100%')
-             .padding(10)
-             .backgroundColor('#F5F5F5')
-             .borderRadius(8)
+             .padding(20)
+             .backgroundColor(AppTheme.CardBg)
+             .borderRadius(24)
+             .shadow(AppTheme.CardShadow)
              .margin({ bottom: 10 })
           }
         })
@@ -601,13 +593,15 @@ struct InvitationProcessingDialog {
       .constraintSize({ maxHeight: 300 })
       .padding(10)
 
-      Button('关闭')
+      Button('\u5173\u95ed')
         .width('40%').margin({ top: 10, bottom: 20 })
-        .backgroundColor(Color.Gray)
+        .backgroundColor(AppTheme.HeroBg)
+        .fontColor(AppTheme.TextWhite)
         .onClick(() => this.controller.close())
     }
     .width('80%')
-    .backgroundColor(Color.White)
-    .borderRadius(16)
+    .backgroundColor(AppTheme.CardBg)
+    .borderRadius(24)
   }
 }
+

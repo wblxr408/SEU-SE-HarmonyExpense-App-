@@ -1,7 +1,9 @@
+
 import router from '@ohos.router';
 import { UserSessionService, LoginResult } from '../service/UserSessionService';
 import promptAction from '@ohos.promptAction';
 import { DemoDataService } from '../service/DemoDataService';
+import { AppTheme } from '../common/config/AppTheme';
 
 @Entry
 @Component
@@ -16,17 +18,14 @@ struct LoginPage {
       Column()
         .width('100%')
         .height('100%')
-        .linearGradient({
-          direction: GradientDirection.Bottom,
-          colors: [['#98D8C8', 0.0], ['#F4F6F9', 0.4], ['#F4F6F9', 1.0]]
-        })
+        .backgroundColor(AppTheme.Background)
 
       Column() {
-        // 标题文字：深绿色 #388E3C，避让沉浸式状态栏
+        // 标题文字：主文本色，避让沉浸式状态栏
         Text('欢迎回来')
           .fontSize(32)
           .fontWeight(FontWeight.Bold)
-          .fontColor('#388E3C')
+          .fontColor(AppTheme.TextMain)
           .margin({ top: 120, bottom: 40 })
 
         // 输入框 (TextInput)：实现玻璃拟态
@@ -62,16 +61,12 @@ struct LoginPage {
           .width('85%')
           .height(56)
           .type(ButtonType.Capsule)
-          .backgroundColor('#FFB347')
-          .fontColor(Color.White)
+          .backgroundColor(AppTheme.HeroBg)
+          .fontColor(AppTheme.TextWhite)
           .fontSize(18)
           .fontWeight(FontWeight.Medium)
           .borderRadius(24)
-          .shadow({
-            radius: 16,
-            color: 'rgba(255, 179, 71, 0.5)',
-            offsetY: 8
-          })
+          .shadow(AppTheme.FabShadow)
           .onClick(async () => {
             if (!this.email || !this.password) {
               promptAction.showToast({ message: '请输入邮箱和密码' });
@@ -89,10 +84,10 @@ struct LoginPage {
         Row() {
           Text('还没有账号？')
             .fontSize(14)
-            .fontColor(Color.Gray)
+            .fontColor(AppTheme.TextSub)
           Text('立即注册')
             .fontSize(14)
-            .fontColor('#7FB069') // 深绿色
+            .fontColor(AppTheme.TextMain) // 深绿色
             .fontWeight(FontWeight.Medium)
             .onClick(() => {
               router.pushUrl({ url: 'pages/RegisterPage' });
@@ -105,7 +100,7 @@ struct LoginPage {
           .width('60%')
           .height(44)
           .type(ButtonType.Normal)
-          .fontColor('#7FB069') // 深绿色
+          .fontColor(AppTheme.TextMain) // 深绿色
           .backgroundColor(Color.Transparent)
           .margin({ top: 60 })
           .onClick(async () => {

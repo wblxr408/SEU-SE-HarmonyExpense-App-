@@ -4,6 +4,7 @@ import { Category } from '../model/Category';
 import { CategoryDAO } from '../dao/CategoryDAO';
 import { UserSessionService } from '../service/UserSessionService';
 import { AppSettingsService, ThemeMode } from '../service/AppSettingsService';
+import { AppTheme } from '../common/config/AppTheme';
 import hilog from '@ohos.hilog';
 
 @Component
@@ -29,22 +30,22 @@ export struct StatisticsPage {
   private readonly DAYS_IN_MONTH: number = 31;
   private readonly CHART_MAX_HEIGHT: number = 150;
 
-  // 环形图配色主色调 #FFB347 及同色系渐变色组
+  // Monochrome ring palette
   private donutColors: ResourceColor[] = [
-    '#FFB347', '#FFBF66', '#FFCB85', '#FFD8A3', '#FFE4C2',
-    '#FFF0E0', '#FFF5EB', '#FFF9F5', '#FFFCFA'
+    '#1A1A1A', '#3A3A3C', '#5A5A5D', '#7A7A7E', '#8E8E93',
+    '#A8A8AD', '#BFBFC4', '#D6D6DB', '#ECECEF'
   ];
 
   private get pageBackgroundColor() {
-    return this.isDarkTheme ? '#000000' : '#F5F7F9';
+    return AppTheme.Background;
   }
 
   private get cardBackgroundColor() {
-    return this.isDarkTheme ? '#1C1C1E' : '#FFFFFF';
+    return AppTheme.CardBg;
   }
 
   private get textMainColor() {
-    return this.isDarkTheme ? Color.White : '#333333';
+    return AppTheme.TextMain;
   }
 
   private isSystemDarkTheme(): boolean {
@@ -156,7 +157,7 @@ export struct StatisticsPage {
           name: cat.name,
           amount: amount,
           percentage: totalBase > 0 ? (amount / totalBase) * 100 : 0,
-          color: '#FFB347' 
+          color: AppTheme.TextMain
         });
       }
     });
@@ -194,11 +195,6 @@ export struct StatisticsPage {
   @Builder
   CardHeader(title: string) {
     Stack({ alignContent: Alignment.BottomStart }) {
-      Row()
-        .height(8)
-        .width(title.length * 16)
-        .backgroundColor('#FFF68F')
-        .margin({ bottom: 2 })
       Text(title)
         .fontSize(16)
         .fontWeight(FontWeight.Bold)
@@ -216,17 +212,18 @@ export struct StatisticsPage {
           Text(item)
             .fontSize(14)
             .fontWeight(this.currentPeriod === item ? FontWeight.Bold : FontWeight.Normal)
-            .fontColor(this.currentPeriod === item ? Color.White : '#388E3C')
-            .backgroundColor(this.currentPeriod === item ? '#7FB069' : Color.Transparent)
+            .fontColor(this.currentPeriod === item ? AppTheme.TextWhite : AppTheme.TextMain)
+            .backgroundColor(this.currentPeriod === item ? AppTheme.HeroBg : AppTheme.CardBg)
             .borderRadius(24)
             .padding({ top: 6, bottom: 6, left: 24, right: 24 })
-            .shadow(this.currentPeriod === item ? { radius: 8, color: 'rgba(127, 176, 105, 0.3)', offsetY: 2 } : undefined)
+            .shadow(this.currentPeriod === item ? AppTheme.FabShadow : undefined)
             .onClick(() => {
               this.currentPeriod = item;
             })
         })
       }
-      .backgroundColor('rgba(152, 216, 200, 0.2)')
+      .backgroundColor(AppTheme.GlassBackground)
+      .backdropBlur(30)
       .borderRadius(24)
       .padding(4)
       .margin({ top: 40, bottom: 20 }) // 留出系统状态栏空间
@@ -235,7 +232,7 @@ export struct StatisticsPage {
       Row() {
         Text('<')
           .fontSize(18)
-          .fontColor('#388E3C')
+          .fontColor(AppTheme.TextMain)
           .fontWeight(FontWeight.Bold)
           .padding({ left: 10, right: 10, top: 5, bottom: 5 })
           .onClick(() => {
@@ -250,7 +247,7 @@ export struct StatisticsPage {
 
         Text(`${this.currentYear}年${this.currentMonth}月统计`)
           .fontSize(16)
-          .fontColor('#388E3C')
+          .fontColor(AppTheme.TextMain)
           .fontWeight(FontWeight.Bold)
           .margin({ left: 16, right: 16 })
           .onClick(() => {
@@ -266,7 +263,7 @@ export struct StatisticsPage {
 
         Text('>')
           .fontSize(18)
-          .fontColor('#388E3C')
+          .fontColor(AppTheme.TextMain)
           .fontWeight(FontWeight.Bold)
           .padding({ left: 10, right: 10, top: 5, bottom: 5 })
           .onClick(() => {
@@ -283,15 +280,20 @@ export struct StatisticsPage {
         
         Text('👁️')
           .fontSize(18)
-          .fontColor('#388E3C')
+          .fontColor(AppTheme.TextMain)
           .padding({ right: 10 })
       }
       .width('100%')
-      .padding({ left: 16, right: 16 })
+      .padding({ left: 20, right: 20 })
       .margin({ bottom: 16 })
       .alignItems(VerticalAlign.Center)
     }
     .width('100%')
+    .margin({ left: 16, right: 16, bottom: 12 })
+    .padding({ bottom: 8 })
+    .backgroundColor(AppTheme.GlassBackground)
+    .backdropBlur(30)
+    .borderRadius(28)
   }
 
   @Builder
@@ -301,22 +303,21 @@ export struct StatisticsPage {
       Column() {
         Text('本月支出')
           .fontSize(14)
-          .fontColor(this.displayType === 'expense' ? '#FFFFFF' : Color.Gray)
+          .fontColor(this.displayType === 'expense' ? AppTheme.TextWhite : AppTheme.TextSub)
           .margin({ bottom: 8 })
         Text(`¥${this.totalExpense.toFixed(2)}`)
-          .fontSize(22)
+          .fontSize(24)
           .fontWeight(FontWeight.Bold)
-          .fontColor(this.displayType === 'expense' ? '#FFFFFF' : this.textMainColor)
+          .fontColor(this.displayType === 'expense' ? AppTheme.TextWhite : this.textMainColor)
       }
       .layoutWeight(1)
       .height(88)
       .alignItems(HorizontalAlign.Start)
       .justifyContent(FlexAlign.Center)
-      .padding({ left: 16 })
-      .borderRadius(16)
-      .backgroundColor(this.displayType === 'expense' ? Color.Transparent : 'rgba(255, 255, 255, 0.6)')
-      .linearGradient(this.displayType === 'expense' ? { angle: 135, colors: [['#98D8C8', 0.0], ['#7FB069', 1.0]] } : undefined)
-      .shadow(this.displayType === 'expense' ? { radius: 12, color: 'rgba(127, 176, 105, 0.4)', offsetY: 4 } : undefined)
+      .padding({ left: 20 })
+      .borderRadius(24)
+      .backgroundColor(this.displayType === 'expense' ? AppTheme.HeroBg : AppTheme.CardBg)
+      .shadow(this.displayType === 'expense' ? AppTheme.FabShadow : AppTheme.CardShadow)
       .onClick(() => {
         if (this.displayType !== 'expense') {
           this.displayType = 'expense';
@@ -332,22 +333,21 @@ export struct StatisticsPage {
       Column() {
         Text('本月收入')
           .fontSize(14)
-          .fontColor(this.displayType === 'income' ? '#FFFFFF' : Color.Gray)
+          .fontColor(this.displayType === 'income' ? AppTheme.TextWhite : AppTheme.TextSub)
           .margin({ bottom: 8 })
         Text(`¥${this.totalIncome.toFixed(2)}`)
-          .fontSize(22)
+          .fontSize(24)
           .fontWeight(FontWeight.Bold)
-          .fontColor(this.displayType === 'income' ? '#FFFFFF' : this.textMainColor)
+          .fontColor(this.displayType === 'income' ? AppTheme.TextWhite : this.textMainColor)
       }
       .layoutWeight(1)
       .height(88)
       .alignItems(HorizontalAlign.Start)
       .justifyContent(FlexAlign.Center)
-      .padding({ left: 16 })
-      .borderRadius(16)
-      .backgroundColor(this.displayType === 'income' ? Color.Transparent : 'rgba(255, 255, 255, 0.6)')
-      .linearGradient(this.displayType === 'income' ? { angle: 135, colors: [['#98D8C8', 0.0], ['#7FB069', 1.0]] } : undefined)
-      .shadow(this.displayType === 'income' ? { radius: 12, color: 'rgba(127, 176, 105, 0.4)', offsetY: 4 } : undefined)
+      .padding({ left: 20 })
+      .borderRadius(24)
+      .backgroundColor(this.displayType === 'income' ? AppTheme.HeroBg : AppTheme.CardBg)
+      .shadow(this.displayType === 'income' ? AppTheme.FabShadow : AppTheme.CardShadow)
       .onClick(() => {
         if (this.displayType !== 'income') {
           this.displayType = 'income';
@@ -366,7 +366,7 @@ export struct StatisticsPage {
       Column() {
         Text('单日最高')
           .fontSize(12)
-          .fontColor(Color.Gray)
+          .fontColor(AppTheme.TextSub)
         Text(`¥${this.getMaxTrendAmount().toFixed(0)}`)
           .fontSize(16)
           .fontWeight(FontWeight.Bold)
@@ -378,7 +378,7 @@ export struct StatisticsPage {
       Column() {
         Text('日均')
           .fontSize(12)
-          .fontColor(Color.Gray)
+          .fontColor(AppTheme.TextSub)
         Text(`¥${this.getAvgTrendAmount().toFixed(0)}`)
           .fontSize(16)
           .fontWeight(FontWeight.Bold)
@@ -410,12 +410,11 @@ export struct StatisticsPage {
             BezierLineChart({ data: this.dailyTrend, chartMaxHeight: this.CHART_MAX_HEIGHT })
           }
           .width('100%')
-          .backgroundColor('rgba(255,255,255,0.8)')
-          .backdropBlur(20)
+          .backgroundColor(AppTheme.CardBg)
           .borderRadius(24)
-          .border({ width: 1.5, color: '#98D8C8', style: BorderStyle.Dashed })
+          .shadow(AppTheme.CardShadow)
           .margin({ top: 16 })
-          .padding(20)
+          .padding(24)
 
           // 2.3 类别：占比概况（带洞环形图）
           Column() {
@@ -433,7 +432,7 @@ export struct StatisticsPage {
               Column() {
                 Text(this.displayType === 'expense' ? '本月支出' : '本月收入')
                   .fontSize(12)
-                  .fontColor(Color.Gray)
+                  .fontColor(AppTheme.TextSub)
                 Text(`¥${(this.displayType === 'expense' ? this.totalExpense : this.totalIncome).toFixed(2)}`)
                   .fontSize(18)
                   .fontWeight(FontWeight.Bold)
@@ -445,12 +444,11 @@ export struct StatisticsPage {
             .align(Alignment.Center)
           }
           .width('100%')
-          .backgroundColor('rgba(255,255,255,0.8)')
-          .backdropBlur(20)
+          .backgroundColor(AppTheme.CardBg)
           .borderRadius(24)
-          .border({ width: 1.5, color: '#98D8C8', style: BorderStyle.Dashed })
+          .shadow(AppTheme.CardShadow)
           .margin({ top: 16 })
-          .padding({ top: 20, bottom: 20, left: 16, right: 16 })
+          .padding({ top: 24, bottom: 24, left: 20, right: 20 })
           .alignItems(HorizontalAlign.Start)
 
           // 2.4 类别：支出类目排行
@@ -465,15 +463,15 @@ export struct StatisticsPage {
                         Image($r('app.media.ic_tag_linear')) 
                           .width(16)
                           .height(16)
-                          .fillColor('#7FB069')
+                          .fillColor(AppTheme.TextMain)
                           .objectFit(ImageFit.Contain)
                       }
                       .width(30)
                       .height(30)
                       .margin({ right: 10 })
-                      .backgroundColor(Color.White)
+                      .backgroundColor(AppTheme.CardBg)
                       .borderRadius(20)
-                      .shadow({ radius: 8, color: 'rgba(0,0,0,0.05)', offsetY: 2 })
+                      .shadow(AppTheme.CardShadow)
                       .justifyContent(FlexAlign.Center)
                       
                       Column() {
@@ -485,7 +483,7 @@ export struct StatisticsPage {
                           Row() {
                             Text(`${item.percentage.toFixed(1)}% `)
                               .fontSize(12)
-                              .fontColor(Color.Gray)
+                              .fontColor(AppTheme.TextSub)
                             Text(`¥${item.amount.toFixed(0)}`)
                               .fontSize(16)
                               .fontWeight(FontWeight.Bold)
@@ -495,8 +493,8 @@ export struct StatisticsPage {
                         .width('100%')
 
                         Progress({ value: item.percentage, total: 100, type: ProgressType.Linear })
-                          .color('#FFB347')
-                          .backgroundColor(this.isDarkTheme ? '#333333' : '#E0E0E0')
+                          .color(AppTheme.TextMain)
+                          .backgroundColor(AppTheme.Border)
                           .height(6)
                           .margin({ top: 8 })
                       }
@@ -506,9 +504,8 @@ export struct StatisticsPage {
                     .padding({ top: 5, bottom: 5 })
                   }
                   .border({
-                    width: { bottom: 1 },
-                    color: { bottom: '#98D8C8' },
-                    style: { bottom: BorderStyle.Dashed }
+                    width: { bottom: 0.5 },
+                    color: { bottom: AppTheme.Border }
                   })
                   .padding({ bottom: index < this.categoryRanking.length - 1 ? 10 : 0 })
                 }
@@ -518,17 +515,16 @@ export struct StatisticsPage {
             .margin({ top: 10 })
           }
           .width('100%')
-          .backgroundColor('rgba(255,255,255,0.8)')
-          .backdropBlur(20)
+          .backgroundColor(AppTheme.CardBg)
           .borderRadius(24)
-          .border({ width: 1.5, color: '#98D8C8', style: BorderStyle.Dashed })
+          .shadow(AppTheme.CardShadow)
           .margin({ top: 16, bottom: 30 }) 
-          .padding({ top: 20, bottom: 20, left: 16, right: 16 })
+          .padding({ top: 24, bottom: 24, left: 20, right: 20 })
           .alignItems(HorizontalAlign.Start)
           
         }
         .width('100%')
-        .padding({ left: 16, right: 16 }) 
+        .padding({ left: 20, right: 20 }) 
         .constraintSize({ minHeight: '100%' })
       }
       .layoutWeight(1)
@@ -537,7 +533,7 @@ export struct StatisticsPage {
     .width('100%')
     .height('100%')
     // 渐变与沉浸式区域
-    .linearGradient({ direction: GradientDirection.Bottom, colors: [['#E8F5E9', 0.0], ['#F4F8F5', 0.3], ['#F4F8F5', 1.0]] })
+    .backgroundColor(AppTheme.Background)
     .expandSafeArea([SafeAreaType.SYSTEM], [SafeAreaEdge.TOP])
   }
 }
@@ -613,8 +609,8 @@ struct BezierLineChart {
     if (points.length < 2) return;
 
     const gradient = ctx.createLinearGradient(0, 0, 0, this.canvasHeight);
-    gradient.addColorStop(0, 'rgba(255, 107, 107, 0.4)');
-    gradient.addColorStop(1, 'rgba(255, 107, 107, 0.0)');
+    gradient.addColorStop(0, 'rgba(26, 26, 26, 0.24)');
+    gradient.addColorStop(1, 'rgba(26, 26, 26, 0.0)');
     
     ctx.beginPath();
     ctx.moveTo(points[0].x, points[0].y);
@@ -640,7 +636,7 @@ struct BezierLineChart {
         const cxC = (p0.x + p1.x) / 2;
         ctx.bezierCurveTo(cxC, p0.y, cxC, p1.y, p1.x, p1.y);
     }
-    ctx.strokeStyle = '#FF6B6B';
+    ctx.strokeStyle = '#1A1A1A';
     ctx.lineWidth = 2;
     ctx.stroke();
 
@@ -649,7 +645,7 @@ struct BezierLineChart {
     ctx.arc(maxP.x, maxP.y, 4, 0, Math.PI * 2);
     ctx.fillStyle = '#FFFFFF';
     ctx.fill();
-    ctx.strokeStyle = '#FF6B6B';
+    ctx.strokeStyle = '#1A1A1A';
     ctx.lineWidth = 2;
     ctx.stroke();
   }

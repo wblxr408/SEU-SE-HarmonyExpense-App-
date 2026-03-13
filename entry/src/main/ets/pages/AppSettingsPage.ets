@@ -43,7 +43,7 @@ struct AppSettingsPage {
           Column() {
             Text('外观')
               .fontSize(14)
-              .fontColor('#8395A7')
+              .fontColor('#8E8E93')
               .width('100%')
               .padding({ left: 16, top: 16, bottom: 8 })
 
@@ -55,7 +55,7 @@ struct AppSettingsPage {
                   this.setTheme(ThemeMode.LIGHT);
                 }
               })
-              Divider().color('#F0F0F0').padding({ left: 16 })
+              Divider().color('#F5F5F7').padding({ left: 16 })
               SettingRowItem({
                 label: '深色模式',
                 isSelected: this.currentTheme === ThemeMode.DARK,
@@ -63,7 +63,7 @@ struct AppSettingsPage {
                   this.setTheme(ThemeMode.DARK);
                 }
               })
-              Divider().color('#F0F0F0').padding({ left: 16 })
+              Divider().color('#F5F5F7').padding({ left: 16 })
               SettingRowItem({
                 label: '跟随系统',
                 isSelected: this.currentTheme === ThemeMode.SYSTEM,
@@ -81,7 +81,7 @@ struct AppSettingsPage {
           Column() {
             Text('语言')
               .fontSize(14)
-              .fontColor('#8395A7')
+              .fontColor('#8E8E93')
               .width('100%')
               .padding({ left: 16, top: 24, bottom: 8 })
 
@@ -93,7 +93,7 @@ struct AppSettingsPage {
                   this.setLanguage(LanguageSetting.ZH_CN);
                 }
               })
-              Divider().color('#F0F0F0').padding({ left: 16 })
+              Divider().color('#F5F5F7').padding({ left: 16 })
               SettingRowItem({
                 label: 'English',
                 isSelected: this.currentLanguage === LanguageSetting.EN_US,
@@ -111,7 +111,7 @@ struct AppSettingsPage {
           Column() {
             Text('货币符号')
               .fontSize(14)
-              .fontColor('#8395A7')
+              .fontColor('#8E8E93')
               .width('100%')
               .padding({ left: 16, top: 24, bottom: 8 })
 
@@ -123,7 +123,7 @@ struct AppSettingsPage {
                   this.setCurrency(CurrencySymbol.CNY);
                 }
               })
-              Divider().color('#F0F0F0').padding({ left: 16 })
+              Divider().color('#F5F5F7').padding({ left: 16 })
               SettingRowItem({
                 label: '$ 美元 (USD)',
                 isSelected: this.currentCurrency === CurrencySymbol.USD,
@@ -131,7 +131,7 @@ struct AppSettingsPage {
                   this.setCurrency(CurrencySymbol.USD);
                 }
               })
-              Divider().color('#F0F0F0').padding({ left: 16 })
+              Divider().color('#F5F5F7').padding({ left: 16 })
               SettingRowItem({
                 label: '€ 欧元 (EUR)',
                 isSelected: this.currentCurrency === CurrencySymbol.EUR,
@@ -139,7 +139,7 @@ struct AppSettingsPage {
                   this.setCurrency(CurrencySymbol.EUR);
                 }
               })
-              Divider().color('#F0F0F0').padding({ left: 16 })
+              Divider().color('#F5F5F7').padding({ left: 16 })
               SettingRowItem({
                 label: '£ 英镑 (GBP)',
                 isSelected: this.currentCurrency === CurrencySymbol.GBP,
@@ -158,8 +158,8 @@ struct AppSettingsPage {
             .width('90%')
             .height(50)
             .margin({ top: 40 })
-            .backgroundColor('#F5F7F9')
-            .fontColor('#2D3436')
+            .backgroundColor('#F5F5F7')
+            .fontColor('#1A1A1A')
             .onClick(() => this.resetDefaults())
         }
         .width('100%')
@@ -167,7 +167,7 @@ struct AppSettingsPage {
       }
       .width('100%')
       .height('100%')
-      .backgroundColor('#F5F7F9')
+      .backgroundColor('#F5F5F7')
     }
     .title('应用设置')
     .titleMode(NavigationTitleMode.Mini)
@@ -246,12 +246,12 @@ struct SettingRowItem {
     Row() {
       Text(this.label)
         .fontSize(16)
-        .fontColor('#2D3436')
+        .fontColor('#1A1A1A')
         .layoutWeight(1)
       if (this.isSelected) {
         Text('✓')
           .fontSize(18)
-          .fontColor('#2E65F3')
+          .fontColor('#1A1A1A')
           .fontWeight(FontWeight.Bold)
       }
     }

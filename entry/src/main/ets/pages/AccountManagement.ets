@@ -64,7 +64,7 @@ struct AccountEditDialog {
         }.width('100%').justifyContent(FlexAlign.Start)
 
 
-        TextInput({ placeholder: '颜色代码 (如: #1E90FF)', text: this.editingAccount.color })
+        TextInput({ placeholder: '颜色代码 (如: #1A1A1A)', text: this.editingAccount.color })
           .onChange((value) => { if(this.editingAccount) this.editingAccount.color = value })
 
         // 按钮组
@@ -185,7 +185,7 @@ struct AccountManagement {
               ListItem() {
                 Row() {
                   // 左侧色块条
-                  Column().width(5).height(40).backgroundColor(item.color || '#1890FF').borderRadius(2).margin({ right: 10 })
+                  Column().width(5).height(40).backgroundColor(item.color || '#1A1A1A').borderRadius(2).margin({ right: 10 })
 
                   Column() {
                     Text(item.name).fontSize(16).fontWeight(FontWeight.Bold)
@@ -227,7 +227,7 @@ struct AccountManagement {
       }
       .width('100%')
       .height('100%')
-      .backgroundColor('#F1F3F5')
+      .backgroundColor('#F5F5F7')
     }
     .title('账户管理')
     .titleMode(NavigationTitleMode.Mini)

@@ -213,7 +213,7 @@ struct BudgetManagement {
     Row() {
       Text('智能规划')
         .fontSize(16)
-        .fontColor('#1890FF')
+        .fontColor('#1A1A1A')
         .onClick(() => {
           router.pushUrl({ url: 'pages/SmartBudgetPage' });
         })
@@ -251,7 +251,7 @@ struct BudgetManagement {
           .position({ x: '80%', y: '85%' })
           .onClick(() => this.dialogController.open());
       }
-      .width('100%').height('100%').backgroundColor('#F1F3F5');
+      .width('100%').height('100%').backgroundColor('#F5F5F7');
     }
     .title('预算管理')
     .titleMode(NavigationTitleMode.Mini)
@@ -274,7 +274,7 @@ struct BudgetManagement {
 
       // 进度条
       Progress({ value: item.spentAmount, total: item.budget.amount, type: ProgressType.Linear })
-        .color(item.spentAmount > item.budget.amount ? Color.Red : '#1890FF') // 超支变红
+        .color(item.spentAmount > item.budget.amount ? Color.Red : '#1A1A1A') // 超支变红
         .width('100%');
 
       // 底部数字：已用 / 总额

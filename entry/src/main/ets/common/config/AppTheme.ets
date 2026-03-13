@@ -1,39 +1,48 @@
+interface ThemeShadow {
+  radius: number;
+  color: string;
+  offsetY: number;
+}
+
 /*
- * Copyright (c) 2023 HarmonyExpense
- * 定义全局应用主题颜色和样式。
+ * Global visual theme constants.
  */
-
 export class AppTheme {
-  // 主品牌色
-  static readonly Primary: string = '#2E65F3';
-  static readonly PrimaryLight: string = '#5B86F5';
-  
-  // 背景色
-  static readonly Background: string = '#F5F7F9';
+  // Premium monochrome palette
+  static readonly Background: string = '#F5F5F7';
+  static readonly GlassBackground: string = 'rgba(245, 245, 247, 0.8)';
   static readonly CardBg: string = '#FFFFFF';
-  static readonly InputBg: string = '#F7F8FA';
-  
-  // 文本颜色
-  static readonly TextMain: string = '#2D3436';
-  static readonly TextSub: string = '#8395A7';
-  static readonly TextWhite: string = '#FFFFFF';
-  
-  // 功能色
-  static readonly Success: string = '#00C853'; // 绿色
-  static readonly Failure: string = '#D32F2F'; // 红色
-  static readonly Warning: string = '#FFD600'; // 黄色
-  
-  // 阴影与边框
-  static readonly Shadow: string = 'rgba(46, 101, 243, 0.15)';
-  static readonly Border: string = '#E0E0E0';
-  
-  // 深色主题颜色（用于统计页面）
-  static readonly DarkBackground: string = '#000000';
-  static readonly DarkCardBg: string = '#1C1C1E';
-  static readonly DarkTextMain: string = '#FFFFFF';
-  static readonly DarkTextSub: string = '#999999';
+  static readonly HeroBg: string = '#1A1A1A';
 
-  // 图表颜色
-  static readonly ChartHighlight: string = '#4D8DFF';
-  static readonly ChartInactive: string = '#555555';
+  // Typography colors
+  static readonly TextMain: string = '#1A1A1A';
+  static readonly TextSub: string = '#8E8E93';
+  static readonly TextWhite: string = '#FFFFFF';
+
+  // Semantic amount colors in monochrome
+  static readonly Income: string = '#1A1A1A';
+  static readonly Expense: string = '#8E8E93';
+
+  // Borders and separators
+  static readonly Border: string = '#E5E5EA';
+
+  // Compatibility tokens used by existing chart/stat pages
+  static readonly DarkBackground: string = '#1A1A1A';
+  static readonly DarkCardBg: string = '#2C2C2E';
+  static readonly DarkTextMain: string = '#FFFFFF';
+  static readonly DarkTextSub: string = '#8E8E93';
+  static readonly ChartHighlight: string = '#1A1A1A';
+  static readonly ChartInactive: string = '#D1D1D6';
+
+  // Shadow tokens
+  static readonly CardShadow: ThemeShadow = {
+    radius: 40,
+    color: 'rgba(0, 0, 0, 0.03)',
+    offsetY: 8
+  };
+  static readonly FabShadow: ThemeShadow = {
+    radius: 30,
+    color: 'rgba(26, 26, 26, 0.25)',
+    offsetY: 12
+  };
 }

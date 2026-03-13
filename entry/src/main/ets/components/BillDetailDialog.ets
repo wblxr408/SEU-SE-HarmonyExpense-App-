@@ -1,4 +1,5 @@
 import { Bill } from '../model/Bill';
+import { AppTheme } from '../common/config/AppTheme';
 
 @CustomDialog
 export struct BillDetailDialog {
@@ -27,10 +28,11 @@ export struct BillDetailDialog {
         // 五、 底部操作区 (Pill-shape Actions)
         Row({ space: 16 }) {
           Button('删除')
-            .backgroundColor('rgba(255, 77, 79, 0.1)')
-            .fontColor('#FF4D4F')
+            .backgroundColor(AppTheme.CardBg)
+            .fontColor(AppTheme.TextMain)
             .height(48)
             .borderRadius(24)
+            .border({ width: 0.5, color: AppTheme.Border })
             .layoutWeight(1)
             .onClick(() => {
               this.onDelete();
@@ -38,11 +40,11 @@ export struct BillDetailDialog {
             })
             
           Button('编辑')
-            .backgroundColor('#7FB069')
-            .fontColor('#FFFFFF')
+            .backgroundColor(AppTheme.HeroBg)
+            .fontColor(AppTheme.TextWhite)
             .height(48)
             .borderRadius(24)
-            .shadow({ radius: 8, color: 'rgba(127, 176, 105, 0.3)', offsetY: 4 })
+            .shadow(AppTheme.FabShadow)
             .layoutWeight(1)
             .onClick(() => {
               this.onEdit();
@@ -53,11 +55,9 @@ export struct BillDetailDialog {
         .margin({ top: 32 })
       }
       .margin({ top: 36 })
-      .backgroundColor('rgba(255, 255, 255, 0.75)')
-      .backdropBlur(30)
-      .borderRadius(32)
-      .border({ width: 1, color: 'rgba(255, 255, 255, 0.9)', style: BorderStyle.Solid })
-      .shadow({ radius: 32, color: 'rgba(0, 0, 0, 0.08)', offsetY: 12 })
+      .backgroundColor(AppTheme.CardBg)
+      .borderRadius(24)
+      .shadow(AppTheme.CardShadow)
       .padding({ top: 48, left: 24, right: 24, bottom: 24 })
 
       // 三、 破形悬浮分类 Icon (Floating Top Icon)
@@ -65,13 +65,13 @@ export struct BillDetailDialog {
         Text(this.categoryName ? this.categoryName.charAt(0) : (this.bill.type === 'expense' ? '支' : '收'))
           .fontSize(24)
           .fontWeight(FontWeight.Bold)
-          .fontColor(this.bill.type === 'expense' ? '#FFB347' : '#7FB069')
+          .fontColor(this.bill.type === 'expense' ? AppTheme.Expense : AppTheme.Income)
       }
       .width(72)
       .height(72)
-      .backgroundColor('#FFFFFF')
+      .backgroundColor(AppTheme.CardBg)
       .borderRadius(36)
-      .shadow({ radius: 16, color: 'rgba(127, 176, 105, 0.2)', offsetY: 6 })
+      .shadow(AppTheme.CardShadow)
       .offset({ y: -36 })
       .justifyContent(FlexAlign.Center)
       .alignItems(VerticalAlign.Center)
@@ -83,23 +83,22 @@ export struct BillDetailDialog {
     Row() {
       Text(title)
         .fontSize(14)
-        .fontColor('#888888')
+        .fontColor(AppTheme.TextSub)
       if (isAmount) {
         Text(this.bill.type === 'expense' ? `-${content}` : `+${content}`)
-          .fontSize(20)
-          .fontWeight(FontWeight.Bold)
-          // 金额颜色：支出薄荷绿不可取，题目要求是支出活力橙，收入薄荷绿
-          .fontColor(this.bill.type === 'expense' ? '#FFB347' : '#7FB069')
+          .fontSize(22)
+          .fontWeight(this.bill.type === 'expense' ? FontWeight.Medium : FontWeight.Bolder)
+          .fontColor(this.bill.type === 'expense' ? AppTheme.Expense : AppTheme.Income)
       } else {
         Text(content)
           .fontSize(14)
-          .fontColor('#333333')
+          .fontColor(AppTheme.TextMain)
           .fontWeight(FontWeight.Medium)
       }
     }
     .width('100%')
-    .padding({ top: 16, bottom: 16 })
+    .padding({ top: 20, bottom: 20 })
     .justifyContent(FlexAlign.SpaceBetween)
-    .border(isLast ? undefined : { width: { bottom: 0.5 }, color: 'rgba(0,0,0,0.05)' })
+    .border(isLast ? undefined : { width: { bottom: 0.5 }, color: AppTheme.Border })
   }
 }

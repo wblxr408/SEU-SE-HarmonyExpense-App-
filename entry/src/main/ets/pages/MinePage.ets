@@ -2,8 +2,8 @@ import router from '@ohos.router';
 import { UserSessionService, SessionInfo } from '../service/UserSessionService';
 import { NotificationService } from '../service/NotificationService';
 import { promptAction } from '@kit.ArkUI';
+import { AppTheme } from '../common/config/AppTheme';
 
-// 将玻璃拟态卡片提取为独立组件，使用 @BuilderParam 解决 UI 语法冲突
 @Component
 struct GlassCardContainer {
   @BuilderParam content: () => void;
@@ -14,13 +14,13 @@ struct GlassCardContainer {
         this.content();
       }
     }
-    .backgroundColor('rgba(255, 255, 255, 0.4)')
-    .backdropBlur(20)
+    .backgroundColor(AppTheme.CardBg)
+    
     .borderRadius(24)
-    .border({ width: 1, color: 'rgba(255, 255, 255, 0.8)', style: BorderStyle.Solid })
-    .shadow({ radius: 16, color: 'rgba(0, 0, 0, 0.04)', offsetY: 6 })
+    
+    .shadow(AppTheme.CardShadow)
     .margin({ left: 16, right: 16, bottom: 16 })
-    .padding(16)
+    .padding(24)
   }
 }
 
@@ -28,8 +28,8 @@ struct GlassCardContainer {
 export struct MinePage {
   @State currentUser: SessionInfo | null = null;
   @State unreadCount: number = 0;
-  @State daysCount: number = 128; // 模拟记账天数
-  @State billsCount: number = 856; // 模拟记账笔数
+  @State daysCount: number = 128;
+  @State billsCount: number = 856;
 
   async aboutToAppear() {
     this.currentUser = await UserSessionService.getCurrentSession();
@@ -40,7 +40,7 @@ export struct MinePage {
     try {
       this.unreadCount = await NotificationService.getUnreadCount();
     } catch (error) {
-      console.error('[MinePage] 加载未读数量失败:', error);
+      console.error('[MinePage] Failed to load unread count:', error);
     }
   }
 
@@ -48,37 +48,37 @@ export struct MinePage {
     Column() {
       Scroll() {
         Column() {
-          // A区：头部信息与统计
           Column() {
             Row() {
-              // 圆形头像
-              Image(this.currentUser ? $r('app.media.icon') : $r('app.media.icon'))
+              Image($r('app.media.ic_user_avatar_glass'))
                 .width(64)
                 .height(64)
+                .padding(10)
                 .borderRadius(32)
-                .backgroundColor('#E0E0E0')
+                .backgroundColor(AppTheme.CardBg)
+                .shadow(AppTheme.CardShadow)
                 .margin({ right: 16 })
                 .onClick(() => {
                   if (this.currentUser) {
                     router.pushUrl({ url: 'pages/ProfileEditPage' });
                   }
                 })
-              
+
               Column() {
                 if (this.currentUser) {
                   Text(this.currentUser.username)
                     .fontSize('18fp')
                     .fontWeight(FontWeight.Bold)
-                    .fontColor('#333333')
+                    .fontColor(AppTheme.TextMain)
                   Text(this.currentUser.email)
                     .fontSize('12fp')
-                    .fontColor('#999999')
+                    .fontColor(AppTheme.TextSub)
                     .margin({ top: 4 })
                 } else {
                   Text('点击登录')
                     .fontSize('18fp')
                     .fontWeight(FontWeight.Bold)
-                    .fontColor('#333333')
+                    .fontColor(AppTheme.TextMain)
                     .onClick(() => {
                       router.pushUrl({ url: 'pages/LoginPage' });
                     })
@@ -89,27 +89,26 @@ export struct MinePage {
             }
             .width('100%')
 
-            // 统计数据
             Row() {
               Row() {
                 Text('记账天数 ')
                   .fontSize('14fp')
-                  .fontColor('#666666')
+                  .fontColor(AppTheme.TextSub)
                 Text(this.daysCount.toString())
-                  .fontSize('16fp')
-                  .fontWeight(FontWeight.Bold)
-                  .fontColor('#FFB347')
+                  .fontSize('18fp')
+                  .fontWeight(FontWeight.Bolder)
+                  .fontColor(AppTheme.TextMain)
               }
               .margin({ right: 24 })
 
               Row() {
                 Text('记账笔数 ')
                   .fontSize('14fp')
-                  .fontColor('#666666')
+                  .fontColor(AppTheme.TextSub)
                 Text(this.billsCount.toString())
-                  .fontSize('16fp')
-                  .fontWeight(FontWeight.Bold)
-                  .fontColor('#FFB347')
+                  .fontSize('18fp')
+                  .fontWeight(FontWeight.Bolder)
+                  .fontColor(AppTheme.TextMain)
               }
             }
             .width('100%')
@@ -117,39 +116,23 @@ export struct MinePage {
           }
           .width('100%')
           .padding({ left: 24, right: 24, top: 40, bottom: 20 })
+          .margin({ left: 16, right: 16, bottom: 16 })
+          .backgroundColor(AppTheme.GlassBackground)
+          .backdropBlur(30)
+          .borderRadius(28)
 
-          // B区：核心卡片区 (Core Cards)
           GlassCardContainer() {
             Row({ space: 12 }) {
-              // 账户资产
-              Column() {
-                Text('💼').fontSize(24).margin({ bottom: 8 })
-                Text('账户资产').fontSize('14fp').fontWeight(FontWeight.Medium).fontColor('#333')
-              }
-              .layoutWeight(1)
-              .backgroundColor('rgba(255,255,255,0.6)')
-              .borderRadius(16)
-              .padding(16)
-              .onClick(() => {
+              this.CoreActionCard($r('app.media.ic_wallet_glass'), '账户资产', () => {
                 router.pushUrl({ url: 'pages/AccountManagementPage' });
               })
 
-              // 多人共享账本
-              Column() {
-                Text('👥').fontSize(24).margin({ bottom: 8 })
-                Text('多人共享账本').fontSize('14fp').fontWeight(FontWeight.Medium).fontColor('#333')
-              }
-              .layoutWeight(1)
-              .backgroundColor('rgba(255,255,255,0.6)')
-              .borderRadius(16)
-              .padding(16)
-              .onClick(() => {
+              this.CoreActionCard($r('app.media.ic_users_glass'), '多人共享账本', () => {
                 router.pushUrl({ url: 'pages/SharedLedgerListPage' });
               })
             }
           }
 
-          // C区：宫格菜单 (Grid Tools)
           GlassCardContainer() {
             Grid() {
               GridItem() {
@@ -175,10 +158,9 @@ export struct MinePage {
             }
             .columnsTemplate('1fr 1fr 1fr 1fr')
             .rowsGap(16)
-            .height(80) 
+            .height(80)
           }
 
-          // D区：列表菜单 (List Settings)
           GlassCardContainer() {
             Column() {
               this.ListItemRow('通知中心', this.unreadCount > 0, () => {
@@ -193,16 +175,15 @@ export struct MinePage {
             }
           }
 
-          // 退出登录按钮
           if (this.currentUser) {
             Button('退出登录')
               .width('80%')
               .height(48)
-              .backgroundColor('#FFFFFF')
-              .fontColor('#FF6B6B')
+              .backgroundColor(AppTheme.HeroBg)
+              .fontColor(AppTheme.TextWhite)
               .fontSize('16fp')
               .fontWeight(FontWeight.Medium)
-              .shadow({ radius: 12, color: 'rgba(0,0,0,0.03)', offsetY: 4 })
+              .shadow(AppTheme.FabShadow)
               .margin({ top: 24, bottom: 40 })
               .onClick(() => {
                 UserSessionService.logout();
@@ -220,7 +201,28 @@ export struct MinePage {
     .width('100%')
     .height('100%')
     .expandSafeArea([SafeAreaType.SYSTEM], [SafeAreaEdge.TOP])
-    .linearGradient({ direction: GradientDirection.Bottom, colors: [['#E0F2E9', 0.0], ['#F4F8F5', 0.3], ['#F4F8F5', 1.0]] })
+    .backgroundColor(AppTheme.Background)
+  }
+
+  @Builder
+  CoreActionCard(icon: Resource, label: string, onClick: () => void) {
+    Column() {
+      Image(icon)
+        .width(24)
+        .height(24)
+        .margin({ bottom: 8 })
+      Text(label)
+        .fontSize('14fp')
+        .fontWeight(FontWeight.Medium)
+        .fontColor(AppTheme.TextMain)
+    }
+    .layoutWeight(1)
+    .alignItems(HorizontalAlign.Center)
+    .backgroundColor(AppTheme.CardBg)
+    .borderRadius(24)
+    .padding(20)
+    .shadow(AppTheme.CardShadow)
+    .onClick(onClick)
   }
 
   @Builder
@@ -229,10 +231,10 @@ export struct MinePage {
       Image(iconRes)
         .width(28)
         .height(28)
-        .fillColor('#98D8C8')
-        .opacity(0.8)
+        .fillColor(AppTheme.TextMain)
+        .opacity(0.9)
         .objectFit(ImageFit.Contain)
-      Text(label).fontSize('12fp').fontColor('#666666').margin({ top: 8 })
+      Text(label).fontSize('12fp').fontColor(AppTheme.TextSub).margin({ top: 8 })
     }
     .onClick(onClick)
   }
@@ -241,23 +243,25 @@ export struct MinePage {
   ListItemRow(title: string, hasBadge: boolean, onClick: () => void, isLast: boolean = false) {
     Row() {
       Row() {
-        Text(title).fontSize('14fp').fontColor('#333333')
+        Text(title).fontSize('14fp').fontColor(AppTheme.TextMain)
         if (hasBadge) {
-          Circle({ width: 8, height: 8 }).fill('#FF4B2B').margin({ left: 4 })
+          Circle({ width: 8, height: 8 }).fill(AppTheme.TextMain).margin({ left: 6 })
         }
       }
-      Text('>')
-        .fontSize('14fp')
-        .fontColor('#CCCCCC')
+      Image($r('app.media.ic_chevron_right_glass'))
+        .width(16)
+        .height(16)
+        .opacity(0.85)
     }
     .width('100%')
-    .height(48)
+    .height(52)
     .justifyContent(FlexAlign.SpaceBetween)
-    .border({ 
-      width: { bottom: isLast ? 0 : 0.5 }, 
-      color: 'rgba(0,0,0,0.05)' 
+    .border({
+      width: { bottom: isLast ? 0 : 0.5 },
+      color: AppTheme.Border
     })
     .onClick(onClick)
   }
 }
+
 

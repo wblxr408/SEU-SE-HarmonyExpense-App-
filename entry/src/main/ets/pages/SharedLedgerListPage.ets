@@ -1,8 +1,10 @@
+
 import router from '@ohos.router';
 import { SharedLedgerService, CreateLedgerParams } from '../service/SharedLedgerService';
 import { SharedLedger, LedgerInvitation } from '../model/SharedLedger';
 import { UserSessionService } from '../service/UserSessionService';
 import promptAction from '@ohos.promptAction';
+import { AppTheme } from '../common/config/AppTheme';
 
 @Entry
 @Component
@@ -92,7 +94,7 @@ struct SharedLedgerListPage {
         name: this.newLedgerName,
         type: this.newLedgerType as 'family' | 'roommate' | 'couple' | 'group' | 'trip' | 'project' | 'other',
         currency: 'CNY',
-        color: '#2196F3', // 默认颜色
+        color: AppTheme.HeroBg, // 默认颜色
         ownerId: userId,
         ownerName: user ? user.username : 'Unknown'
       };
@@ -131,7 +133,7 @@ struct SharedLedgerListPage {
       Column() {
         // 头部
         Row() {
-          Image($r('app.media.back')) // 假设有
+        Image($r('app.media.ic_back_glass')) // 假设有
             .width(24).height(24)
             .onClick(() => router.back())
             .margin({ right: 10 })
@@ -144,7 +146,7 @@ struct SharedLedgerListPage {
           
           Text('新建') 
             .fontSize(16)
-            .fontColor(Color.Blue)
+            .fontColor(AppTheme.TextMain)
             .onClick(() => {
               this.newLedgerName = '';
               this.newLedgerType = 'family';
@@ -152,8 +154,8 @@ struct SharedLedgerListPage {
             })
         }
         .width('100%')
-        .padding(16)
-        .backgroundColor(Color.White)
+        .padding(20)
+        .backgroundColor(AppTheme.CardBg)
 
         if (this.isLoading) {
            Text('加载中...').margin({ top: 50 })
@@ -163,7 +165,7 @@ struct SharedLedgerListPage {
              if (this.invitations.length > 0) {
                ListItem() {
                  Text('待处理邀请')
-                   .fontSize(14).fontColor(Color.Gray).margin({ bottom: 5, left: 5 })
+                   .fontSize(14).fontColor(AppTheme.TextSub).margin({ bottom: 5, left: 5 })
                }
                ForEach(this.invitations, (invite: LedgerInvitation) => {
                  ListItem() {
@@ -171,7 +173,7 @@ struct SharedLedgerListPage {
                  }
                })
                ListItem() {
-                 Divider().strokeWidth(1).color('#E0E0E0').margin({top: 5, bottom: 5})
+                 Divider().strokeWidth(1).color(AppTheme.Border).margin({top: 5, bottom: 5})
                }
              }
 
@@ -184,7 +186,7 @@ struct SharedLedgerListPage {
                      Text('还没有共享账本\n快去创建一个吧')
                        .textAlign(TextAlign.Center)
                        .fontSize(16)
-                       .fontColor(Color.Gray)
+                       .fontColor(AppTheme.TextSub)
                      
                      Button('新建账本')
                        .margin({ top: 30 })
@@ -214,12 +216,12 @@ struct SharedLedgerListPage {
            }
            .width('100%')
            .layoutWeight(1)
-           .padding(16)
+           .padding(20)
         }
       }
       .width('100%')
       .height('100%')
-      .backgroundColor('#F1F3F5')
+      .backgroundColor(AppTheme.Background)
     }
   }
 
@@ -229,7 +231,7 @@ struct SharedLedgerListPage {
          Text(`邀请加入: ${invite.ledgerName}`)
            .fontSize(16).fontWeight(FontWeight.Bold)
          Text(`邀请人: ${invite.inviterName}`)
-           .fontSize(12).fontColor(Color.Gray).margin({top: 4})
+           .fontSize(12).fontColor(AppTheme.TextSub).margin({top: 4})
        }
        .alignItems(HorizontalAlign.Start)
        
@@ -238,26 +240,26 @@ struct SharedLedgerListPage {
        Row() {
          Button('拒绝')
            .fontSize(12)
-           .fontColor(Color.Red)
-           .backgroundColor('#FFEBEE') // 浅红
+           .fontColor(AppTheme.Expense)
+           .backgroundColor(AppTheme.CardBg) // 浅红
            .height(28)
            .onClick(() => this.handleDecline(invite))
            .margin({ right: 8 })
            
          Button('接受')
            .fontSize(12)
-           .fontColor(Color.Green)
-           .backgroundColor('#E8F5E9') // 浅绿
+           .fontColor(AppTheme.Income)
+           .backgroundColor(AppTheme.CardBg) // 浅绿
            .height(28)
            .onClick(() => this.handleAccept(invite))
        }
     }
     .width('100%')
     .padding(12)
-    .backgroundColor(Color.White)
-    .borderRadius(10)
-    .shadow({ radius: 2, color: '#E0E0E0', offsetY: 1 })
-    .border({ width: 1, color: '#FF9800', style: BorderStyle.Solid }) // 橙色边框用于引起注意
+    .backgroundColor(AppTheme.CardBg)
+    .borderRadius(24)
+    .shadow({ radius: 2, color: AppTheme.Border, offsetY: 1 })
+    .border({ width: 0.5, color: AppTheme.Border }) // 橙色边框用于引起注意
   }
 
   @Builder LedgerCard(ledger: SharedLedger) {
@@ -266,13 +268,13 @@ struct SharedLedgerListPage {
       Column() {
         Text(ledger.name.substring(0, 1))
           .fontSize(20)
-          .fontColor(Color.White)
+          .fontColor(AppTheme.TextWhite)
           .fontWeight(FontWeight.Bold)
       }
       .width(50)
       .height(50)
       .borderRadius(25)
-      .backgroundColor(ledger.color || '#2196F3')
+      .backgroundColor(AppTheme.HeroBg)
       .justifyContent(FlexAlign.Center)
       .margin({ right: 15 })
 
@@ -285,15 +287,15 @@ struct SharedLedgerListPage {
         Row() {
            Text(this.getTypeLabel(ledger.type))
              .fontSize(12)
-             .fontColor(Color.Gray)
-             .backgroundColor('#F0F0F0')
+             .fontColor(AppTheme.TextSub)
+             .backgroundColor(AppTheme.Background)
              .padding({ left: 6, right: 6, top: 2, bottom: 2 })
              .borderRadius(4)
              .margin({ right: 10 })
 
            Text(`${ledger.memberCount} 成员`)
              .fontSize(12)
-             .fontColor(Color.Gray)
+             .fontColor(AppTheme.TextSub)
         }
       }
       .alignItems(HorizontalAlign.Start)
@@ -301,15 +303,15 @@ struct SharedLedgerListPage {
       Blank()
       
       // 箭头
-      Text('>')
-        .fontSize(18)
-        .fontColor(Color.Gray)
+      Image($r('app.media.ic_chevron_right_glass'))
+        .width(16)
+        .height(16)
     }
     .width('100%')
-    .padding(15)
-    .backgroundColor(Color.White)
-    .borderRadius(12)
-    .shadow({ radius: 2, color: '#E0E0E0', offsetY: 1 })
+    .padding(20)
+    .backgroundColor(AppTheme.CardBg)
+    .borderRadius(24)
+    .shadow({ radius: 2, color: AppTheme.Border, offsetY: 1 })
   }
 
   getTypeLabel(type: string): string {
@@ -358,7 +360,7 @@ struct CreateLedgerDialog {
       
       Text('选择类型')
         .fontSize(14)
-        .fontColor(Color.Gray)
+        .fontColor(AppTheme.TextSub)
         .width('90%')
         .margin({ bottom: 5 })
 
@@ -367,8 +369,8 @@ struct CreateLedgerDialog {
         ForEach(this.ledgerTypes, (item: SelectOption) => {
           Text(item.label)
             .fontSize(14)
-            .fontColor(this.type === item.value ? Color.White : '#333')
-            .backgroundColor(this.type === item.value ? '#2196F3' : '#F0F0F0')
+            .fontColor(this.type === item.value ? AppTheme.TextWhite : AppTheme.TextMain)
+            .backgroundColor(this.type === item.value ? AppTheme.HeroBg : AppTheme.Background)
             .padding({ left: 12, right: 12, top: 6, bottom: 6 })
             .borderRadius(15)
             .margin({ right: 8, bottom: 8 })
@@ -382,8 +384,8 @@ struct CreateLedgerDialog {
 
       Row() {
         Button('取消')
-          .backgroundColor('#F0F0F0')
-          .fontColor('#333')
+          .backgroundColor(AppTheme.Background)
+          .fontColor(AppTheme.TextMain)
           .width('40%')
           .onClick(() => this.controller.close())
         
@@ -398,7 +400,7 @@ struct CreateLedgerDialog {
       .width('90%')
       .margin({ bottom: 10 })
     }
-    .backgroundColor(Color.White)
+    .backgroundColor(AppTheme.CardBg)
     .borderRadius({ topLeft: 16, topRight: 16 })
     .width('100%')
     .padding(20)

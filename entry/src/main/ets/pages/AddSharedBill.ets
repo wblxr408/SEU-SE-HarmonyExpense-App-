@@ -5,6 +5,7 @@ import { UserSessionService } from '../service/UserSessionService';
 import { Category } from '../model/Category';
 import { CategoryDAO } from '../dao/CategoryDAO';
 import promptAction from '@ohos.promptAction';
+import { AppTheme } from '../common/config/AppTheme';
 
 @Entry
 @Component
@@ -184,7 +185,7 @@ struct AddSharedBill {
     Column() {
       // Header
       Row() {
-        Image($r('app.media.back')) // 假设有
+        Image($r('app.media.ic_back_glass')) // 假设有
           .width(24).height(24)
           .onClick(() => router.back())
           .margin({ right: 10 })
@@ -203,7 +204,7 @@ struct AddSharedBill {
               .type(InputType.Number)
               .fontSize(30)
               .fontWeight(FontWeight.Bold)
-              .fontColor('#F44336')
+              .fontColor(AppTheme.TextMain)
               .backgroundColor(Color.Transparent)
               .onChange((val) => this.amount = val)
           }
@@ -219,8 +220,8 @@ struct AddSharedBill {
               ForEach(this.categories, (cat: Category) => {
                 Text(cat.name)
                   .fontSize(14)
-                  .fontColor(this.selectedCategoryId === cat.categoryId ? Color.White : '#333')
-                  .backgroundColor(this.selectedCategoryId === cat.categoryId ? '#F44336' : '#F0F0F0')
+                  .fontColor(this.selectedCategoryId === cat.categoryId ? AppTheme.TextWhite : AppTheme.TextMain)
+                  .backgroundColor(this.selectedCategoryId === cat.categoryId ? AppTheme.HeroBg : AppTheme.Background)
                   .padding({ left: 12, right: 12, top: 6, bottom: 6 })
                   .borderRadius(15)
                   .margin({ right: 8, bottom: 8 })
@@ -241,7 +242,7 @@ struct AddSharedBill {
             Text('备注').fontSize(14).fontColor(Color.Gray).margin({bottom: 5})
             TextInput({ placeholder: '例如：聚餐', text: this.note })
               .onChange((val) => this.note = val)
-              .backgroundColor('#F9F9F9')
+              .backgroundColor(AppTheme.Background)
           }
           .width('100%')
           .padding(15)
@@ -303,6 +304,6 @@ struct AddSharedBill {
     }
     .width('100%')
     .height('100%')
-    .backgroundColor('#F1F3F5')
+    .backgroundColor(AppTheme.Background)
   }
 }

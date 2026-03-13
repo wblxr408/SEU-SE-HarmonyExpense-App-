@@ -80,6 +80,6 @@ struct RegisterPage {
     }
     .width('100%')
     .height('100%')
-    .backgroundColor('#F1F3F5')
+    .backgroundColor('#F5F5F7')
   }
 }

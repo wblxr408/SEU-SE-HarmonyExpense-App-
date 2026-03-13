@@ -1,3 +1,4 @@
+
 import router from '@ohos.router';
 import { SmartBudgetPlan, ForecastResult, BudgetAdvice, CategoryBudgetAllocation } from '../model/SmartBudgetPlan';
 import { Category } from '../model/Category';
@@ -8,6 +9,7 @@ import { Budget } from '../model/Budget';
 import { UserSessionService } from '../service/UserSessionService';
 import { BudgetForecastUtils, ADVICE_DECREASE, ADVICE_MAINTAIN, ADVICE_OPTIMIZATION, ADVICE_INCREASE, FORECAST_ENSEMBLE, EnsembleForecastResult } from '../model/SmartBudgetPlan';
 import promptAction from '@ohos.promptAction';
+import { AppTheme } from '../common/config/AppTheme';
 
 @Entry
 @Component
@@ -333,7 +335,7 @@ struct SmartBudgetPage {
     const getY = (amount: number) => height - padding - ((amount - minAmt) / range) * (height - 2 * padding);
 
     // Draw Grid
-    this.context.strokeStyle = '#f0f0f0';
+    this.context.strokeStyle = '#E5E5EA';
     this.context.lineWidth = 1;
     this.context.beginPath();
     // Horizontal lines
@@ -345,7 +347,7 @@ struct SmartBudgetPage {
     this.context.stroke();
 
     // Draw Line
-    this.context.strokeStyle = '#1890FF';
+    this.context.strokeStyle = '#1A1A1A';
     this.context.lineWidth = 3;
     this.context.lineCap = 'round';
     this.context.beginPath();
@@ -375,11 +377,11 @@ struct SmartBudgetPage {
         
         this.context.beginPath();
         this.context.arc(x, y, 4, 0, 6.28);
-        this.context.fillStyle = (i === forecasts.length - 1) ? '#FAAD14' : '#1890FF';
+        this.context.fillStyle = (i === forecasts.length - 1) ? '#8E8E93' : '#1A1A1A';
         this.context.fill();
 
         // Draw Label text
-        this.context.fillStyle = '#666';
+        this.context.fillStyle = '#8E8E93';
         this.context.font = '10px sans-serif';
         this.context.textAlign = 'center';
         this.context.fillText(f.period.split('-')[1] + '月', x, height - 5);
@@ -396,7 +398,7 @@ struct SmartBudgetPage {
   @Builder
   NavBar() {
     Row() {
-      Image($r('app.media.app_icon'))
+      Image($r('app.media.icon'))
         .width(24)
         .height(24)
         .onClick(() => router.back())
@@ -405,15 +407,12 @@ struct SmartBudgetPage {
       Text('智能预算分析')
         .fontSize(20)
         .fontWeight(FontWeight.Bold)
-        .fontColor(Color.White)
+        .fontColor(AppTheme.TextWhite)
     }
     .width('100%')
     .padding({ top: 40, bottom: 20, left: 20, right: 20 })
-    .backgroundColor('#4facfe')
-    .linearGradient({
-      angle: 135,
-      colors: [[0x4facfe, 0.0], [0x00f2fe, 1.0]]
-    })
+    .backgroundColor(AppTheme.HeroBg)
+    .backgroundColor(AppTheme.HeroBg)
   }
 
   @Builder
@@ -421,7 +420,7 @@ struct SmartBudgetPage {
     Column() {
       Text('本月预算健康度')
         .fontSize(14)
-        .fontColor(Color.White)
+        .fontColor(AppTheme.TextWhite)
         .opacity(0.9)
         .margin({ bottom: 10 })
 
@@ -437,10 +436,10 @@ struct SmartBudgetPage {
             Text(this.healthScore.toFixed(0))
               .fontSize(32)
               .fontWeight(FontWeight.Bold)
-              .fontColor(Color.White)
+              .fontColor(AppTheme.TextWhite)
             Text('分')
               .fontSize(12)
-              .fontColor(Color.White)
+              .fontColor(AppTheme.TextWhite)
           }
         }
         .margin({ right: 30 })
@@ -450,23 +449,23 @@ struct SmartBudgetPage {
           Column() {
             Text('预测总支出')
               .fontSize(12)
-              .fontColor(Color.White)
+              .fontColor(AppTheme.TextWhite)
               .opacity(0.8)
             Text(`¥${this.smartPlan?.getForecasts().pop()?.predictedAmount ?? 0}`)
               .fontSize(24)
               .fontWeight(FontWeight.Bold)
-              .fontColor(Color.White)
+              .fontColor(AppTheme.TextWhite)
           }.alignItems(HorizontalAlign.Start)
 
           Column() {
             Text('当前预算设定')
               .fontSize(12)
-              .fontColor(Color.White)
+              .fontColor(AppTheme.TextWhite)
               .opacity(0.8)
             Text(`¥${this.smartPlan?.totalBudget ?? 0}`)
               .fontSize(16)
               .fontWeight(FontWeight.Medium)
-              .fontColor(Color.White)
+              .fontColor(AppTheme.TextWhite)
           }.alignItems(HorizontalAlign.Start)
         }
         .alignItems(HorizontalAlign.Start)
@@ -477,9 +476,9 @@ struct SmartBudgetPage {
     .width('90%')
     .padding(20)
     .margin({ top: -30 })
-    .backgroundColor('#1A1A1A')
+    .backgroundColor(AppTheme.HeroBg)
     .borderRadius(16)
-    .shadow({ radius: 10, color: 'rgba(0,0,0,0.2)', offsetY: 5 })
+    .shadow(AppTheme.FabShadow)
   }
   
   @Builder
@@ -495,8 +494,8 @@ struct SmartBudgetPage {
         Canvas(this.context)
           .width('100%')
           .height(200)
-          .backgroundColor(Color.White)
-          .borderRadius(12)
+          .backgroundColor(AppTheme.CardBg)
+          .borderRadius(24)
           .onReady(() => {
             this.drawChart();
           })
@@ -533,7 +532,7 @@ struct SmartBudgetPage {
         Row({ space: 10 }) {
           // Category Icon Placeholder
           Circle({ width: 40, height: 40 })
-            .fill(item.adviceType === 'decrease' ? '#FFF2F0' : '#F6FFED')
+            .fill(item.adviceType === 'decrease' ? AppTheme.GlassBackground : AppTheme.CardBg)
             
           Column({ space: 4 }) {
             Text(item.categoryName)
@@ -542,7 +541,7 @@ struct SmartBudgetPage {
             
             Text(item.reason)
               .fontSize(12)
-              .fontColor(Color.Gray)
+              .fontColor(AppTheme.TextSub)
               .maxLines(2)
               .textOverflow({ overflow: TextOverflow.Ellipsis })
           }
@@ -557,17 +556,17 @@ struct SmartBudgetPage {
         if (item.adviceType === 'decrease') {
            Text(`省 ¥${item.potentialSavings.toFixed(0)}`)
              .fontSize(14)
-             .fontColor('#F5222D')
+             .fontColor(AppTheme.TextMain)
              .fontWeight(FontWeight.Medium)
         } else if (item.adviceType === 'increase') {
            Text(`+${item.changePercent}%`)
              .fontSize(14)
-             .fontColor('#FAAD14')
+             .fontColor(AppTheme.TextSub)
              .fontWeight(FontWeight.Medium)
         } else {
            Text('保持')
              .fontSize(14)
-             .fontColor('#52C41A')
+             .fontColor(AppTheme.TextSub)
              .fontWeight(FontWeight.Medium)
         }
 
@@ -575,7 +574,7 @@ struct SmartBudgetPage {
           .fontSize(12)
           .height(28)
           .margin({ top: 5 })
-          .backgroundColor(item.adviceType === 'decrease' ? '#F5222D' : '#1890FF')
+          .backgroundColor(AppTheme.HeroBg)
           .onClick(() => {
             this.applyAdvice(item);
           })
@@ -584,10 +583,10 @@ struct SmartBudgetPage {
       .alignItems(HorizontalAlign.End)
     }
     .width('100%')
-    .padding(15)
-    .backgroundColor(Color.White)
-    .borderRadius(12)
-    .shadow({ radius: 5, color: 'rgba(0,0,0,0.05)', offsetY: 2 })
+    .padding(20)
+    .backgroundColor(AppTheme.CardBg)
+    .borderRadius(24)
+    .shadow(AppTheme.CardShadow)
   }
 
   // -----------------------------------
@@ -614,15 +613,15 @@ struct SmartBudgetPage {
         .height(50)
         .fontSize(16)
         .fontWeight(FontWeight.Bold)
-        .backgroundColor('#1890FF')
+        .backgroundColor(AppTheme.HeroBg)
         .margin({ bottom: 20 })
-        .shadow({ radius: 10, color: 'rgba(24, 144, 255, 0.4)', offsetY: 5 })
+        .shadow(AppTheme.FabShadow)
         .onClick(async () => {
           await this.applyAllOptimizations();
         })
     }
     .width('100%')
     .height('100%')
-    .backgroundColor('#F0F2F5')
+    .backgroundColor(AppTheme.Background)
   }
 }

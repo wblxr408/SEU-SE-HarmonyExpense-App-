@@ -2,10 +2,12 @@
  * 通知中心页面
  * 显示系统通知列表，支持筛选和全部已读
  */
+
 import router from '@ohos.router';
 import promptAction from '@ohos.promptAction';
 import { NotificationService } from '../service/NotificationService';
 import { Notification, NotificationType } from '../model/Notification';
+import { AppTheme } from '../common/config/AppTheme';
 
 @Entry
 @Component
@@ -53,10 +55,10 @@ struct NotificationCenterPage {
           ForEach(this.tabs, (tab: string, index: number) => {
             Text(tab)
               .fontSize(14)
-              .fontColor(this.selectedTab === index ? '#2E65F3' : '#8395A7')
+              .fontColor(this.selectedTab === index ? AppTheme.TextMain : AppTheme.TextSub)
               .fontWeight(this.selectedTab === index ? FontWeight.Bold : FontWeight.Normal)
               .padding({ left: 12, right: 12, top: 8, bottom: 8 })
-              .backgroundColor(this.selectedTab === index ? 'rgba(46, 101, 243, 0.1)' : Color.Transparent)
+              .backgroundColor(this.selectedTab === index ? AppTheme.GlassBackground : Color.Transparent)
               .borderRadius(16)
               .onClick(() => {
                 this.selectedTab = index;
@@ -73,16 +75,16 @@ struct NotificationCenterPage {
           Row() {
             Text(`${this.unreadCount} 条未读`)
               .fontSize(14)
-              .fontColor('#8395A7')
+              .fontColor(AppTheme.TextSub)
               .layoutWeight(1)
             Text('全部已读')
               .fontSize(14)
-              .fontColor('#2E65F3')
+              .fontColor(AppTheme.TextMain)
               .onClick(() => this.markAllAsRead())
           }
           .width('100%')
           .padding({ left: 16, right: 16, top: 8, bottom: 8 })
-          .backgroundColor(Color.White)
+          .backgroundColor(AppTheme.CardBg)
         }
 
         // 通知列表
@@ -99,7 +101,7 @@ struct NotificationCenterPage {
               .margin({ bottom: 16 })
             Text('暂无通知')
               .fontSize(16)
-              .fontColor('#8395A7')
+              .fontColor(AppTheme.TextSub)
           }
           .width('100%')
           .margin({ top: 100 })
@@ -113,13 +115,13 @@ struct NotificationCenterPage {
           }
           .width('100%')
           .layoutWeight(1)
-          .divider({ strokeWidth: 1, color: '#F0F0F0', startMargin: 16 })
-          .backgroundColor(Color.White)
+          .divider({ strokeWidth: 1, color: AppTheme.Border, startMargin: 16 })
+          .backgroundColor(AppTheme.CardBg)
         }
       }
       .width('100%')
       .height('100%')
-      .backgroundColor('#F5F7F9')
+      .backgroundColor(AppTheme.Background)
     }
     .title('通知中心')
     .titleMode(NavigationTitleMode.Mini)
@@ -134,7 +136,7 @@ struct NotificationCenterPage {
         .width(40)
         .height(40)
         .textAlign(TextAlign.Center)
-        .backgroundColor(notification.isRead === 0 ? 'rgba(46, 101, 243, 0.1)' : '#F5F7F9')
+        .backgroundColor(notification.isRead === 0 ? AppTheme.GlassBackground : AppTheme.Background)
         .borderRadius(20)
         .margin({ right: 12 })
 
@@ -142,36 +144,36 @@ struct NotificationCenterPage {
         Row() {
           Text(notification.title)
             .fontSize(16)
-            .fontColor('#2D3436')
+            .fontColor(AppTheme.TextMain)
             .fontWeight(notification.isRead === 0 ? FontWeight.Bold : FontWeight.Normal)
             .layoutWeight(1)
           if (notification.isRead === 0) {
             Circle()
               .width(8)
               .height(8)
-              .fill('#FF4D4F')
+              .fill(AppTheme.TextMain)
           }
         }
         .width('100%')
 
         Text(notification.content)
           .fontSize(14)
-          .fontColor('#8395A7')
+          .fontColor(AppTheme.TextSub)
           .maxLines(2)
           .textOverflow({ overflow: TextOverflow.Ellipsis })
           .margin({ top: 4 })
 
         Text(this.formatTime(notification.createdAt))
           .fontSize(12)
-          .fontColor('#BDBDBD')
+          .fontColor(AppTheme.TextSub)
           .margin({ top: 4 })
       }
       .layoutWeight(1)
       .alignItems(HorizontalAlign.Start)
     }
     .width('100%')
-    .padding(16)
-    .backgroundColor(Color.White)
+    .padding(20)
+    .backgroundColor(AppTheme.CardBg)
     .onClick(() => this.markAsRead(notification))
   }
 

@@ -1,12 +1,14 @@
-import router from '@ohos.router';
-import promptAction from '@ohos.promptAction';
 import fs from '@ohos.file.fs'; // 文件系统
 import pasteboard from '@ohos.pasteboard'; // 剪贴板
+import router from '@ohos.router';
+import promptAction from '@ohos.promptAction';
 import hilog from '@ohos.hilog';
 import { Bill } from '../model/Bill';
 import { BillDAO } from '../dao/BillDAO';
 import { CategoryDAO } from '../dao/CategoryDAO';
 import { AccountDAO } from '../dao/AccountDAO';
+import { AppTheme } from '../common/config/AppTheme';
+
 
 
 const LOG_TAG = 'ExportPage';
@@ -158,7 +160,7 @@ struct ExportImportPage {
           Column() {
             Text('数据导出').fontSize(18).fontWeight(FontWeight.Bold).width('100%')
             Text('将所有账单导出为 CSV 格式，可用于 Excel 查看。')
-              .fontSize(14).fontColor(Color.Gray).margin({ bottom: 10 })
+              .fontSize(14).fontColor(AppTheme.TextSub).margin({ bottom: 10 })
 
             Button(this.isExporting ? '生成中...' : '生成 CSV 数据')
               .onClick(() => this.handleExport())
@@ -170,31 +172,31 @@ struct ExportImportPage {
                 .height(100)
                 .margin({ top: 10 })
                 .fontSize(12)
-                .fontColor(Color.Gray)
+                .fontColor(AppTheme.TextSub)
                 .focusable(false) // 只读
 
               Row({ space: 10 }) {
                 Button('复制到剪贴板')
                   .onClick(() => this.copyToClipboard())
                   .layoutWeight(1)
-                  .backgroundColor('#4CAF50') // 绿色
+                  .backgroundColor(AppTheme.HeroBg) // 绿色
 
                 Button('保存到文件')
                   .onClick(() => this.saveToFile())
                   .layoutWeight(1)
-                  .backgroundColor('#2196F3') // 蓝色
+                  .backgroundColor(AppTheme.HeroBg) // 蓝色
               }.margin({ top: 10 }).width('100%')
             }
           }
-          .padding(15)
-          .backgroundColor(Color.White)
-          .borderRadius(12)
+          .padding(20)
+          .backgroundColor(AppTheme.CardBg)
+          .borderRadius(24)
 
           // --- 导入卡片 ---
           Column() {
             Text('数据导入').fontSize(18).fontWeight(FontWeight.Bold).width('100%')
             Text('粘贴 CSV 内容以恢复数据（格式需与导出一致）。')
-              .fontSize(14).fontColor(Color.Gray).margin({ bottom: 10 })
+              .fontSize(14).fontColor(AppTheme.TextSub).margin({ bottom: 10 })
 
             TextArea({ placeholder: '在此粘贴 CSV 内容...', text: this.importContent })
               .height(100)
@@ -206,18 +208,18 @@ struct ExportImportPage {
               .width('100%')
               .margin({ top: 10 })
               .enabled(!this.isImporting)
-              .backgroundColor('#FF9800') // 橙色
+              .backgroundColor(AppTheme.HeroBg) // 橙色
           }
-          .padding(15)
-          .backgroundColor(Color.White)
-          .borderRadius(12)
+          .padding(20)
+          .backgroundColor(AppTheme.CardBg)
+          .borderRadius(24)
 
         }
-        .padding(15)
+        .padding(20)
       }
       .height('100%')
       .align(Alignment.Top)
-      .backgroundColor('#F1F3F5')
+      .backgroundColor(AppTheme.Background)
     }
     .title('导出与导入')
     .titleMode(NavigationTitleMode.Mini)
