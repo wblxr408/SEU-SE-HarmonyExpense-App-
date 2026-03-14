@@ -375,9 +375,10 @@ export class CloudSyncService {
    */
   private static async importCloudData(dataPackage: CloudDataPackage, userId: number): Promise<number> {
     let recordCount: number = 0;
+    const conflicts: ConflictInfo[] = [];
 
     await DatabaseManager.transaction(async () => {
-      // 导入账户
+      // 导入账户（支持更新）
       if (dataPackage.accounts && dataPackage.accounts.length > 0) {
         for (const acc of dataPackage.accounts) {
           try {
@@ -385,6 +386,22 @@ export class CloudSyncService {
             if (!existing) {
               await AccountDAO.insert(acc);
               recordCount++;
+            } else {
+              const conflict = CloudSyncService.detectAndResolveConflict('accounts', existing, acc);
+              if (conflict) {
+                conflicts.push(conflict);
+                if (conflict.resolution === 'cloud') {
+                  // 用云端数据覆盖本地（简单策略）
+                  await AccountDAO.update(Account.fromJSON(acc as any));
+                  recordCount++;
+                } // local -> 保持本地
+              } else {
+                // 若无冲突但数据不一致，安全地合并/更新（这里以简单更新时间判断为准）
+                if (acc.updatedAt && existing.updatedAt && acc.updatedAt !== existing.updatedAt) {
+                  await AccountDAO.update(Account.fromJSON(acc as any));
+                  recordCount++;
+                }
+              }
             }
           } catch (error) {
             console.warn('[CloudSyncService] 导入账户失败:', error);
@@ -392,7 +409,7 @@ export class CloudSyncService {
         }
       }
 
-      // 导入分类
+      // 导入分类（支持更新）
       if (dataPackage.categories && dataPackage.categories.length > 0) {
         for (const cat of dataPackage.categories) {
           try {
@@ -400,6 +417,20 @@ export class CloudSyncService {
             if (!existing) {
               await CategoryDAO.insert(cat);
               recordCount++;
+            } else {
+              const conflict = CloudSyncService.detectAndResolveConflict('categories', existing, cat);
+              if (conflict) {
+                conflicts.push(conflict);
+                if (conflict.resolution === 'cloud') {
+                  await CategoryDAO.update(Category.fromJSON(cat as any));
+                  recordCount++;
+                }
+              } else {
+                if (cat.updatedAt && existing.updatedAt && cat.updatedAt !== existing.updatedAt) {
+                  await CategoryDAO.update(Category.fromJSON(cat as any));
+                  recordCount++;
+                }
+              }
             }
           } catch (error) {
             console.warn('[CloudSyncService] 导入分类失败:', error);
@@ -407,30 +438,74 @@ export class CloudSyncService {
         }
       }
 
-      // 导入账单
+      // 导入账单（支持按 ID 更新/去重）
       if (dataPackage.bills && dataPackage.bills.length > 0) {
         for (const bill of dataPackage.bills) {
           try {
-            await BillDAO.insert(bill);
-            recordCount++;
+            let existing: Bill | null = null;
+            try { existing = await BillDAO.getById(bill.billId); } catch (_) { existing = null; }
+
+            if (!existing) {
+              await BillDAO.insert(bill);
+              recordCount++;
+            } else {
+              const conflict = CloudSyncService.detectAndResolveConflict('bills', existing, bill);
+              if (conflict) {
+                conflicts.push(conflict);
+                if (conflict.resolution === 'cloud') {
+                  await BillDAO.update(bill);
+                  recordCount++;
+                }
+              } else {
+                if (bill.updatedAt && existing.updatedAt && bill.updatedAt !== existing.updatedAt) {
+                  await BillDAO.update(bill);
+                  recordCount++;
+                }
+              }
+            }
           } catch (error) {
             console.warn('[CloudSyncService] 导入账单失败:', error);
           }
         }
       }
 
-      // 导入预算
+      // 导入预算（支持更新）
       if (dataPackage.budgets && dataPackage.budgets.length > 0) {
         for (const budget of dataPackage.budgets) {
           try {
-            await BudgetDAO.insert(budget);
-            recordCount++;
+            const existing: Budget | null = await BudgetDAO.getById(budget.budgetId);
+            if (!existing) {
+              await BudgetDAO.insert(budget);
+              recordCount++;
+            } else {
+              const conflict = CloudSyncService.detectAndResolveConflict('budgets', existing, budget);
+              if (conflict) {
+                conflicts.push(conflict);
+                if (conflict.resolution === 'cloud') {
+                  await BudgetDAO.update(budget);
+                  recordCount++;
+                }
+              } else {
+                if (budget.updatedAt && existing.updatedAt && budget.updatedAt !== existing.updatedAt) {
+                  await BudgetDAO.update(budget);
+                  recordCount++;
+                }
+              }
+            }
           } catch (error) {
             console.warn('[CloudSyncService] 导入预算失败:', error);
           }
         }
       }
     });
+
+    // 将冲突信息写入同步记录（如果需要，可扩展为返回或保存到 DB）
+    if (conflicts.length > 0) {
+      try {
+        console.warn('[CloudSyncService] 检测到冲突数量:', conflicts.length);
+        // 目前仅在控制台打印，后续可持久化到 CloudSyncRecord 或返回给调用方
+      } catch (e) { /* ignore */ }
+    }
 
     return recordCount;
   }
