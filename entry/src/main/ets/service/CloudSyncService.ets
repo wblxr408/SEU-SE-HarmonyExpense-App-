@@ -432,8 +432,13 @@ export class CloudSyncService {
     const url = 'http://120.46.134.106:5000';
     console.info('[CloudSyncService] 准备上传到: ' + url);
 
-    let httpRequest = http.createHttp();
+    let httpRequest: any = null;
     try {
+      httpRequest = http.createHttp();
+      if (!httpRequest || typeof httpRequest.request !== 'function') {
+        throw new Error('http.createHttp() 返回无效对象');
+      }
+
       let response = await httpRequest.request(url, {
         method: http.RequestMethod.POST,
         header: { 'Content-Type': 'application/json' },
@@ -442,14 +447,20 @@ export class CloudSyncService {
         readTimeout: 10000
       });
 
-      if (response.responseCode === 200) {
+      if (response && response.responseCode === 200) {
         console.info('[CloudSyncService] 同步成功！');
-        return new CloudApiResponse(true, response.result.toString());
+        return new CloudApiResponse(true, response.result ? response.result.toString() : '');
       }
     } catch (err) {
       console.error('[CloudSyncService] 连接失败: ' + JSON.stringify(err));
     } finally {
-      httpRequest.destroy();
+      try {
+        if (httpRequest && typeof httpRequest.destroy === 'function') {
+          httpRequest.destroy();
+        }
+      } catch (e) {
+        console.warn('[CloudSyncService] 关闭 httpRequest 失败:', e);
+      }
     }
     return new CloudApiResponse(false);
   }
