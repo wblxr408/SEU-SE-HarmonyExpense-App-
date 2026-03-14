@@ -131,6 +131,14 @@ export interface SmartBudgetPlanJSON {
 /**
  * 预测引擎配置接口
  */
+export interface ForecastWeights {
+  sma: number;
+  wma: number;
+  es: number;
+  hw: number;
+  lr: number;
+}
+
 export interface ForecastEngineConfig {
   algorithm: string;
   windowSize: number;
@@ -140,6 +148,7 @@ export interface ForecastEngineConfig {
   seasonalPeriod: number;
   confidenceLevel: number;
   minDataPoints: number;
+  weights?: ForecastWeights;
 }
 
 /**

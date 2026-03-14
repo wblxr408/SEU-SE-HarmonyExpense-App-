@@ -16,23 +16,12 @@ import { UserProfileDAO } from '../dao/UserProfileDAO';
 import { AdviceFeedback, FEEDBACK_ACCEPTED, FEEDBACK_REJECTED, ADVICE_DECREASE, ADVICE_INCREASE } from '../model/AdviceFeedback';
 import { AdviceFeedbackDAO } from '../dao/AdviceFeedbackDAO';
 import { BudgetAdvice } from '../model/SmartBudgetPlan';
-import { ForecastEngineConfig } from '../model/SmartBudgetPlan';
+import { ForecastEngineConfig, ForecastWeights } from '../model/SmartBudgetPlan';
 
 const LOG_TAG = 'PersonalizedBudgetService';
 const HILOG_DOMAIN = 0x0002;
 
 // ==================== 个性化配置接口 ====================
-
-/**
- * 个性化算法权重
- */
-export interface PersonalizedWeights {
-  sma: number;        // 简单移动平均
-  wma: number;        // 加权移动平均
-  es: number;         // 指数平滑
-  hw: number;         // Holt-Winters
-  lr: number;         // 线性回归
-}
 
 /**
  * 个性化阈值
@@ -52,9 +41,9 @@ export class PersonalizedBudgetService {
    * 获取个性化算法权重
    * 根据用户画像调整不同算法的权重
    */
-  static getPersonalizedWeights(profile: UserProfile | null): PersonalizedWeights {
+  static getPersonalizedWeights(profile: UserProfile | null): ForecastWeights {
     // 默认权重（平衡型）
-    let weights: PersonalizedWeights = {
+    let weights: ForecastWeights = {
       sma: 0.15,
       wma: 0.20,
       es: 0.25,
@@ -279,14 +268,19 @@ export class PersonalizedBudgetService {
 
     const config: ForecastEngineConfig = {
       algorithm: 'ensemble',
+      alpha: 0.3,
+      beta: 0.1,
+      gamma: 0.2,
+      seasonalPeriod: 12,
       confidenceLevel: thresholds.confidenceLevel,
+      minDataPoints: 12,
       windowSize: 6
-    } as any;
+    };
 
     // 根据用户画像调整参数
     if (profile) {
       const weights = PersonalizedBudgetService.getPersonalizedWeights(profile);
-      (config as any).weights = weights;
+      config.weights = weights;
     }
 
     return config;

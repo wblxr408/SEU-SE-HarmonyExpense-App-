@@ -4,8 +4,8 @@
  */
 import relationalStore from '@ohos.data.relationalStore';
 import common from '@ohos.app.ability.common';
-import { IndexManager } from './IndexManager';
-import { DatabaseConfigOptimizer } from './DatabaseConfigOptimizer';
+import { IndexManager } from '../database/IndexManager';
+import { DatabaseConfigOptimizer } from '../database/DatabaseConfigOptimizer';
 
 export class DatabaseManager {
   private static db: relationalStore.RdbStore | null = null;
