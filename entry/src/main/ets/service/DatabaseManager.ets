@@ -21,7 +21,8 @@ export class DatabaseManager {
    * @param context 应用上下文
    */
   static async initDatabase(context: common.Context): Promise<void> {
-    if (DatabaseManager.isInitialized && DatabaseManager.db) {
+    // 修复：检查db是否为null而不是只检查isInitialized
+    if (DatabaseManager.db) {
       console.log('[DatabaseManager] 数据库已初始化，跳过重复初始化');
       return;
     }
@@ -31,27 +32,45 @@ export class DatabaseManager {
         name: DatabaseManager.DB_NAME,
         securityLevel: DatabaseManager.SECURITY_LEVEL
       };
-      
+
       DatabaseManager.db = await relationalStore.getRdbStore(context, storeConfig);
       console.log('[DatabaseManager] 数据库连接成功');
-      
+
+      // 启用外键约束
+      await DatabaseManager.enableForeignKeys();
+
       // 应用数据库配置优化
       await DatabaseConfigOptimizer.applyOptimizations();
-      
+
       // 按顺序创建所有表
       await DatabaseManager.createAllTables();
-      
+
       // 创建优化索引
       await IndexManager.createAllIndexes();
-      
+
       DatabaseManager.isInitialized = true;
       console.log('[DatabaseManager] 数据库初始化完成');
-      
+
       // 打印数据库配置信息
       await DatabaseConfigOptimizer.printConfig();
     } catch (error) {
+      // 修复：确保初始化失败时重置状态
+      DatabaseManager.db = null;
       DatabaseManager.isInitialized = false;
       throw DatabaseManager.toError('[DatabaseManager] 数据库初始化失败', error);
+    }
+  }
+
+  /**
+   * 启用外键约束
+   */
+  private static async enableForeignKeys(): Promise<void> {
+    try {
+      const store = DatabaseManager.getDatabase();
+      await store.executeSql('PRAGMA foreign_keys = ON');
+      console.log('[DatabaseManager] 外键约束已启用');
+    } catch (error) {
+      console.warn('[DatabaseManager] 启用外键约束失败:', error);
     }
   }
 
@@ -86,12 +105,33 @@ export class DatabaseManager {
           username TEXT NOT NULL,
           email TEXT UNIQUE NOT NULL,
           password_hash TEXT NOT NULL,
+          nickname TEXT DEFAULT '',
+          avatar_path TEXT DEFAULT '',
           created_at TEXT NOT NULL,
           updated_at TEXT NOT NULL,
           is_deleted INTEGER DEFAULT 0
         );
       `);
       console.log('[DatabaseManager] 表 users 创建成功');
+
+      // 1.1 创建通知表
+      await store.executeSql(`
+        CREATE TABLE IF NOT EXISTS notifications (
+          notification_id INTEGER PRIMARY KEY AUTOINCREMENT,
+          user_id INTEGER NOT NULL,
+          type TEXT NOT NULL CHECK (type IN ('SYSTEM', 'BUDGET_ALERT', 'SYNC_STATUS', 'REMINDER')),
+          title TEXT NOT NULL,
+          content TEXT NOT NULL,
+          is_read INTEGER DEFAULT 0 CHECK (is_read IN (0, 1)),
+          created_at TEXT NOT NULL,
+          FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE
+        );
+      `);
+      await store.executeSql(`
+        CREATE INDEX IF NOT EXISTS idx_notifications_user
+        ON notifications (user_id, is_read, created_at DESC);
+      `);
+      console.log('[DatabaseManager] 表 notifications 及索引创建成功');
 
       // 2. 创建账户表（依赖 users）
       await store.executeSql(`
@@ -105,7 +145,7 @@ export class DatabaseManager {
           created_at TEXT NOT NULL,
           updated_at TEXT NOT NULL,
           is_deleted INTEGER DEFAULT 0,
-          FOREIGN KEY (user_id) REFERENCES users(user_id)
+          FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE
         );
       `);
       console.log('[DatabaseManager] 表 accounts 创建成功');
@@ -124,7 +164,7 @@ export class DatabaseManager {
           created_at TEXT NOT NULL,
           updated_at TEXT NOT NULL,
           is_deleted INTEGER DEFAULT 0 CHECK (is_deleted IN (0, 1)),
-          FOREIGN KEY (user_id) REFERENCES users(user_id),
+          FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE,
           UNIQUE(user_id, name, type)
         );
       `);
@@ -158,9 +198,9 @@ export class DatabaseManager {
           created_at TEXT NOT NULL,
           updated_at TEXT NOT NULL,
           is_deleted INTEGER DEFAULT 0,
-          FOREIGN KEY (user_id) REFERENCES users(user_id),
-          FOREIGN KEY (account_id) REFERENCES accounts(account_id),
-          FOREIGN KEY (category_id) REFERENCES categories(category_id)
+          FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE,
+          FOREIGN KEY (account_id) REFERENCES accounts(account_id) ON DELETE CASCADE,
+          FOREIGN KEY (category_id) REFERENCES categories(category_id) ON DELETE CASCADE
         );
       `);
       console.log('[DatabaseManager] 表 bills 创建成功');
@@ -178,8 +218,8 @@ export class DatabaseManager {
           is_active INTEGER DEFAULT 1,
           is_deleted INTEGER DEFAULT 0,
           created_at TEXT NOT NULL,
-          FOREIGN KEY (user_id) REFERENCES users(user_id),
-          FOREIGN KEY (category_id) REFERENCES categories(category_id)
+          FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE,
+          FOREIGN KEY (category_id) REFERENCES categories(category_id) ON DELETE CASCADE
         );
       `);
       console.log('[DatabaseManager] 表 budgets 创建成功');
@@ -231,7 +271,7 @@ export class DatabaseManager {
           created_at TEXT NOT NULL,
           updated_at TEXT NOT NULL,
           is_deleted INTEGER DEFAULT 0 CHECK (is_deleted IN (0, 1)),
-          FOREIGN KEY (user_id) REFERENCES users(user_id),
+          FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE,
           UNIQUE (user_id, name)
         );
       `);
@@ -289,10 +329,10 @@ export class DatabaseManager {
           created_at TEXT NOT NULL,
           updated_at TEXT NOT NULL,
           is_deleted INTEGER DEFAULT 0 CHECK (is_deleted IN (0, 1)),
-          FOREIGN KEY (user_id) REFERENCES users(user_id),
-          FOREIGN KEY (category_id) REFERENCES categories(category_id),
-          FOREIGN KEY (account_id) REFERENCES accounts(account_id),
-          FOREIGN KEY (budget_id) REFERENCES budgets(budget_id)
+          FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE,
+          FOREIGN KEY (category_id) REFERENCES categories(category_id) ON DELETE CASCADE,
+          FOREIGN KEY (account_id) REFERENCES accounts(account_id) ON DELETE CASCADE,
+          FOREIGN KEY (budget_id) REFERENCES budgets(budget_id) ON DELETE CASCADE
         );
       `);
       
@@ -328,7 +368,7 @@ export class DatabaseManager {
           last_sync_hash TEXT,
           created_at TEXT NOT NULL,
           updated_at TEXT NOT NULL,
-          FOREIGN KEY (user_id) REFERENCES users(user_id)
+          FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE
         );
       `);
       
@@ -369,8 +409,8 @@ export class DatabaseManager {
           created_at TEXT NOT NULL,
           updated_at TEXT NOT NULL,
           is_deleted INTEGER DEFAULT 0 CHECK (is_deleted IN (0, 1)),
-          FOREIGN KEY (user_id) REFERENCES users(user_id),
-          FOREIGN KEY (bill_id) REFERENCES bills(bill_id)
+          FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE,
+          FOREIGN KEY (bill_id) REFERENCES bills(bill_id) ON DELETE CASCADE
         );
       `);
 
@@ -411,7 +451,7 @@ export class DatabaseManager {
           created_at TEXT NOT NULL,
           updated_at TEXT NOT NULL,
           is_deleted INTEGER DEFAULT 0 CHECK (is_deleted IN (0, 1)),
-          FOREIGN KEY (user_id) REFERENCES users(user_id),
+          FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE,
           UNIQUE (user_id, category_id, period)
         );
       `);
@@ -435,7 +475,7 @@ export class DatabaseManager {
           metadata_json TEXT NOT NULL DEFAULT '{}',
           occurred_at TEXT NOT NULL,
           created_at TEXT NOT NULL,
-          FOREIGN KEY (user_id) REFERENCES users(user_id)
+          FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE
         );
       `);
 
@@ -468,7 +508,7 @@ export class DatabaseManager {
           issued_at TEXT NOT NULL,
           processed_at TEXT,
           error_message TEXT,
-          FOREIGN KEY (user_id) REFERENCES users(user_id)
+          FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE
         );
       `);
 
@@ -511,7 +551,7 @@ export class DatabaseManager {
           last_event_version INTEGER NOT NULL DEFAULT 0,
           last_updated_at TEXT NOT NULL,
           created_at TEXT NOT NULL,
-          FOREIGN KEY (user_id) REFERENCES users(user_id),
+          FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE,
           UNIQUE (model_type, user_id)
         );
       `);
@@ -539,7 +579,7 @@ export class DatabaseManager {
           created_at TEXT NOT NULL,
           updated_at TEXT NOT NULL,
           is_deleted INTEGER DEFAULT 0 CHECK (is_deleted IN (0, 1)),
-          FOREIGN KEY (owner_id) REFERENCES users(user_id)
+          FOREIGN KEY (owner_id) REFERENCES users(user_id) ON DELETE CASCADE
         );
       `);
 
@@ -574,7 +614,7 @@ export class DatabaseManager {
           updated_at TEXT NOT NULL,
           is_deleted INTEGER DEFAULT 0 CHECK (is_deleted IN (0, 1)),
           FOREIGN KEY (ledger_id) REFERENCES shared_ledgers(ledger_id) ON DELETE CASCADE,
-          FOREIGN KEY (user_id) REFERENCES users(user_id),
+          FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE,
           UNIQUE (ledger_id, user_id)
         );
       `);
@@ -609,7 +649,7 @@ export class DatabaseManager {
           updated_at TEXT NOT NULL,
           is_deleted INTEGER DEFAULT 0 CHECK (is_deleted IN (0, 1)),
           FOREIGN KEY (ledger_id) REFERENCES shared_ledgers(ledger_id) ON DELETE CASCADE,
-          FOREIGN KEY (inviter_id) REFERENCES users(user_id),
+          FOREIGN KEY (inviter_id) REFERENCES users(user_id) ON DELETE CASCADE,
           UNIQUE (invitation_code)
         );
       `);
@@ -656,9 +696,9 @@ export class DatabaseManager {
           updated_at TEXT NOT NULL,
           is_deleted INTEGER DEFAULT 0 CHECK (is_deleted IN (0, 1)),
           FOREIGN KEY (ledger_id) REFERENCES shared_ledgers(ledger_id) ON DELETE CASCADE,
-          FOREIGN KEY (creator_id) REFERENCES users(user_id),
-          FOREIGN KEY (account_id) REFERENCES accounts(account_id),
-          FOREIGN KEY (category_id) REFERENCES categories(category_id)
+          FOREIGN KEY (creator_id) REFERENCES users(user_id) ON DELETE CASCADE,
+          FOREIGN KEY (account_id) REFERENCES accounts(account_id) ON DELETE CASCADE,
+          FOREIGN KEY (category_id) REFERENCES categories(category_id) ON DELETE CASCADE
         );
       `);
 
@@ -697,7 +737,7 @@ export class DatabaseManager {
           is_deleted INTEGER DEFAULT 0 CHECK (is_deleted IN (0, 1)),
           FOREIGN KEY (ledger_id) REFERENCES shared_ledgers(ledger_id) ON DELETE CASCADE,
           FOREIGN KEY (bill_id) REFERENCES shared_bills(bill_id) ON DELETE CASCADE,
-          FOREIGN KEY (requester_id) REFERENCES users(user_id)
+          FOREIGN KEY (requester_id) REFERENCES users(user_id) ON DELETE CASCADE
         );
       `);
 
@@ -725,7 +765,7 @@ export class DatabaseManager {
           metadata_json TEXT NOT NULL DEFAULT '{}',
           created_at TEXT NOT NULL,
           FOREIGN KEY (ledger_id) REFERENCES shared_ledgers(ledger_id) ON DELETE CASCADE,
-          FOREIGN KEY (user_id) REFERENCES users(user_id)
+          FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE
         );
       `);
 
@@ -742,24 +782,17 @@ export class DatabaseManager {
       // 24. 创建智能分类训练数据表
       await store.executeSql(`
         CREATE TABLE IF NOT EXISTS smart_category_training (
-          record_id INTEGER PRIMARY KEY AUTOINCREMENT,
+          training_id INTEGER PRIMARY KEY AUTOINCREMENT,
           user_id INTEGER NOT NULL,
-          bill_note TEXT NOT NULL,
-          bill_amount REAL NOT NULL DEFAULT 0,
+          bill_id INTEGER NOT NULL,
+          predicted_category_id INTEGER NOT NULL,
           actual_category_id INTEGER NOT NULL,
-          actual_category_name TEXT NOT NULL,
-          predicted_category_id INTEGER DEFAULT NULL,
-          predicted_category_name TEXT DEFAULT NULL,
           confidence REAL NOT NULL DEFAULT 0,
+          features_json TEXT NOT NULL DEFAULT '{}',
           is_correct INTEGER DEFAULT 0 CHECK (is_correct IN (0, 1)),
-          keywords_matched TEXT NOT NULL DEFAULT '',
-          training_type TEXT NOT NULL DEFAULT 'manual' CHECK (training_type IN ('manual', 'auto', 'correction')),
-          model_version TEXT NOT NULL DEFAULT '1.0.0',
           created_at TEXT NOT NULL,
-          updated_at TEXT NOT NULL,
-          is_deleted INTEGER DEFAULT 0 CHECK (is_deleted IN (0, 1)),
-          FOREIGN KEY (user_id) REFERENCES users(user_id),
-          FOREIGN KEY (actual_category_id) REFERENCES categories(category_id)
+          FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE,
+          FOREIGN KEY (bill_id) REFERENCES bills(bill_id) ON DELETE CASCADE
         );
       `);
 
@@ -778,23 +811,17 @@ export class DatabaseManager {
         CREATE TABLE IF NOT EXISTS smart_category_rules (
           rule_id INTEGER PRIMARY KEY AUTOINCREMENT,
           user_id INTEGER NOT NULL,
-          rule_name TEXT NOT NULL,
-          category_id INTEGER NOT NULL,
-          category_name TEXT NOT NULL,
           rule_type TEXT NOT NULL DEFAULT 'keyword' CHECK (rule_type IN ('keyword', 'regex', 'amount', 'merchant', 'composite')),
-          pattern TEXT NOT NULL DEFAULT '',
-          keywords TEXT NOT NULL DEFAULT '',
-          amount_min REAL NOT NULL DEFAULT 0,
-          amount_max REAL NOT NULL DEFAULT 999999999,
-          priority INTEGER NOT NULL DEFAULT 5,
+          condition_json TEXT NOT NULL DEFAULT '{}',
+          priority INTEGER NOT NULL DEFAULT 0,
+          confidence REAL NOT NULL DEFAULT 1.0,
+          usage_count INTEGER NOT NULL DEFAULT 0,
+          success_count INTEGER NOT NULL DEFAULT 0,
           is_active INTEGER DEFAULT 1 CHECK (is_active IN (0, 1)),
-          accuracy REAL NOT NULL DEFAULT 0.8,
-          match_count INTEGER NOT NULL DEFAULT 0,
-          last_matched_at TEXT DEFAULT NULL,
           created_at TEXT NOT NULL,
           updated_at TEXT NOT NULL,
           is_deleted INTEGER DEFAULT 0 CHECK (is_deleted IN (0, 1)),
-          FOREIGN KEY (user_id) REFERENCES users(user_id),
+          FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE,
           FOREIGN KEY (category_id) REFERENCES categories(category_id)
         );
       `);
@@ -828,8 +855,8 @@ export class DatabaseManager {
           created_at TEXT NOT NULL,
           updated_at TEXT NOT NULL,
           is_deleted INTEGER DEFAULT 0 CHECK (is_deleted IN (0, 1)),
-          FOREIGN KEY (user_id) REFERENCES users(user_id),
-          FOREIGN KEY (bill_id) REFERENCES bills(bill_id)
+          FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE,
+          FOREIGN KEY (bill_id) REFERENCES bills(bill_id) ON DELETE CASCADE
         );
       `);
 
@@ -841,7 +868,6 @@ export class DatabaseManager {
         CREATE INDEX IF NOT EXISTS idx_ocr_status
         ON ocr_recognition_records (recognition_status) WHERE is_deleted = 0;
       `);
-      console.log('[DatabaseManager] 表 ocr_recognition_records 及索引创建成功');
 
       console.log('[DatabaseManager] 所有数据表创建完成（共26张表）');
     } catch (error) {
