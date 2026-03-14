@@ -20,9 +20,9 @@ export { ConflictInfo } from './CloudSyncService';
 export type { SyncStatistics } from './CloudSyncService';
 
 // 导出备份服务
-export { ExportService } from './export/ExportService';
-export { ImportService } from './export/ImportService';
-export { EncryptionModule } from './export/EncryptionModule';
+export { ExportService } from './export/services/ExportService';
+export { ImportService } from './export/services/ImportService';
+export { EncryptionModule } from './export/utils/EncryptionModule';
 
 // 异常检测服务 (v2.0.0新增)
 export { AnomalyDetectionService } from './AnomalyDetectionService';
