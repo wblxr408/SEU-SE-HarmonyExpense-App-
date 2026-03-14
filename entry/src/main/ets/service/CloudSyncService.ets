@@ -17,10 +17,10 @@ import { BillDAO } from '../dao/BillDAO';
 import { CategoryDAO } from '../dao/CategoryDAO';
 import { BudgetDAO } from '../dao/BudgetDAO';
 import { CloudSyncRecord } from '../model/CloudSyncRecord';
-import { Account } from '../model/Account';
-import { Bill } from '../model/Bill';
-import { Category } from '../model/Category';
-import { Budget } from '../model/Budget';
+import { Account, AccountJSON } from '../model/Account';
+import { Bill, BillJSON } from '../model/Bill';
+import { Category, CategoryJSON } from '../model/Category';
+import { Budget, BudgetInit } from '../model/Budget';
 import cryptoFramework from '@ohos.security.cryptoFramework';
 import { DatabaseManager } from '../database/DatabaseManager';
 import util from '@ohos.util';
@@ -107,34 +107,7 @@ export class ConflictInfo {
   }
 }
 
-  /**
-   * 简单冲突检测：比较 incoming.updatedAt 与 existing.updatedAt
-   * 返回 ConflictInfo（如果存在冲突）或 null（无冲突）
-   */
-  private static detectAndResolveConflict(dataType: string, existing: any, incoming: any): ConflictInfo | null {
-    try {
-      if (!existing || !incoming) return null;
-      const existingTs = existing.updatedAt ? Date.parse(existing.updatedAt) : 0;
-      const incomingTs = incoming.updatedAt ? Date.parse(incoming.updatedAt) : 0;
 
-      if (incomingTs === 0 || existingTs === 0) {
-        // 无法判断更新时间，则不视为冲突（保守处理为跳过）
-        return null;
-      }
-
-      if (incomingTs > existingTs) {
-        // 云端更新较新，采用云端覆盖本地
-        return new ConflictInfo(dataType, existing[`${dataType.slice(0, -1)}Id`] || existing.id || 0, incoming[`${dataType.slice(0, -1)}Id`] || incoming.id || 0, 'cloud');
-      } else if (incomingTs < existingTs) {
-        // 本地更新较新，保留本地
-        return new ConflictInfo(dataType, existing[`${dataType.slice(0, -1)}Id`] || existing.id || 0, incoming[`${dataType.slice(0, -1)}Id`] || incoming.id || 0, 'local');
-      }
-      return null;
-    } catch (e) {
-      console.warn('[CloudSyncService] 冲突检测失败:', e);
-      return null;
-    }
-  }
 
 /**
  * 云端数据包
@@ -143,19 +116,19 @@ class CloudDataPackage {
   userId: number = 0;
   timestamp: string = '';
   dataHash: string = '';
-  accounts: Account[] = [];
-  bills: Bill[] = [];
-  categories: Category[] = [];
-  budgets: Budget[] = [];
+  accounts: AccountJSON[] = [];
+  bills: BillJSON[] = [];
+  categories: CategoryJSON[] = [];
+  budgets: BudgetInit[] = [];
 
   constructor(
     userId: number,
     timestamp: string,
     dataHash: string,
-    accounts: Account[] = [],
-    bills: Bill[] = [],
-    categories: Category[] = [],
-    budgets: Budget[] = []
+    accounts: AccountJSON[] = [],
+    bills: BillJSON[] = [],
+    categories: CategoryJSON[] = [],
+    budgets: BudgetInit[] = []
   ) {
     this.userId = userId;
     this.timestamp = timestamp;
@@ -178,6 +151,65 @@ class CloudApiResponse {
     this.success = success;
     this.data = data;
   }
+}
+
+class SyncStatisticsResult implements SyncStatistics {
+  total: number;
+  completed: number;
+  failed: number;
+  lastSyncTime?: string;
+
+  constructor(total: number, completed: number, failed: number, lastSyncTime?: string) {
+    this.total = total;
+    this.completed = completed;
+    this.failed = failed;
+    this.lastSyncTime = lastSyncTime;
+  }
+}
+
+class MdDataBlob implements cryptoFramework.DataBlob {
+  data: Uint8Array;
+
+  constructor(data: Uint8Array) {
+    this.data = data;
+  }
+}
+
+interface HttpJsonHeader {
+  contentType: string;
+}
+
+interface HttpUserHeader {
+  userId: string;
+}
+
+interface HttpPostOptions {
+  method: http.RequestMethod;
+  header: HttpJsonHeader;
+  extraData: string;
+  connectTimeout: number;
+  readTimeout: number;
+}
+
+interface HttpGetOptions {
+  method: http.RequestMethod;
+  header: HttpUserHeader;
+  connectTimeout: number;
+  readTimeout: number;
+}
+
+interface HttpResponsePayload {
+  text: string;
+}
+
+interface HttpResponseLike {
+  responseCode: number;
+  result?: string | number | boolean | HttpResponsePayload;
+}
+
+interface HttpRequestLike {
+  request(url: string, options: HttpPostOptions | HttpGetOptions): Promise<HttpResponseLike>;
+  destroy(): void;
 }
 
 /**
@@ -358,10 +390,10 @@ export class CloudSyncService {
       options.userId,
       new Date().toISOString(),
       '',
-      accounts,
-      bills,
-      categories,
-      budgets
+      accounts.map((item: Account): AccountJSON => item.toJSON()),
+      bills.map((item: Bill): BillJSON => item.toJSON()),
+      categories.map((item: Category): CategoryJSON => item.toJSON()),
+      budgets.map((item: Budget): BudgetInit => item.toJSON())
     );
 
     const dataStr: string = JSON.stringify(dataPackage);
@@ -369,7 +401,42 @@ export class CloudSyncService {
 
     return dataPackage;
   }
+  /**
+   * 简单冲突检测：比较 incoming.updatedAt 与 existing.updatedAt
+   * 返回 ConflictInfo（如果存在冲突）或 null（无冲突）
+   */
+  private static detectAndResolveConflict(
+    dataType: string,
+    localId: number,
+    cloudId: number,
+    existingTimestamp: string,
+    incomingTimestamp: string
+  ): ConflictInfo | null {
+    try {
+      if (existingTimestamp === '' || incomingTimestamp === '') {
+        return null;
+      }
+      const existingTs: number = Date.parse(existingTimestamp);
+      const incomingTs: number = Date.parse(incomingTimestamp);
 
+      if (incomingTs === 0 || existingTs === 0) {
+        // 无法判断更新时间，则不视为冲突（保守处理为跳过）
+        return null;
+      }
+
+      if (incomingTs > existingTs) {
+        // 云端更新较新，采用云端覆盖本地
+        return new ConflictInfo(dataType, localId, cloudId, 'cloud');
+      } else if (incomingTs < existingTs) {
+        // 本地更新较新，保留本地
+        return new ConflictInfo(dataType, localId, cloudId, 'local');
+      }
+      return null;
+    } catch (error) {
+      console.warn('[CloudSyncService] 冲突检测失败:', error);
+      return null;
+    }
+  }
   /**
    * 导入云端数据到本地
    */
@@ -380,25 +447,32 @@ export class CloudSyncService {
     await DatabaseManager.transaction(async () => {
       // 导入账户（支持更新）
       if (dataPackage.accounts && dataPackage.accounts.length > 0) {
-        for (const acc of dataPackage.accounts) {
+        for (const accJson of dataPackage.accounts) {
           try {
+            const acc: Account = Account.fromJSON(accJson);
             const existing: Account | null = await AccountDAO.getById(acc.accountId);
             if (!existing) {
               await AccountDAO.insert(acc);
               recordCount++;
             } else {
-              const conflict = CloudSyncService.detectAndResolveConflict('accounts', existing, acc);
+              const conflict: ConflictInfo | null = CloudSyncService.detectAndResolveConflict(
+                'accounts',
+                existing.accountId,
+                acc.accountId,
+                existing.updatedAt,
+                acc.updatedAt
+              );
               if (conflict) {
                 conflicts.push(conflict);
                 if (conflict.resolution === 'cloud') {
                   // 用云端数据覆盖本地（简单策略）
-                  await AccountDAO.update(Account.fromJSON(acc as any));
+                  await AccountDAO.update(acc);
                   recordCount++;
                 } // local -> 保持本地
               } else {
                 // 若无冲突但数据不一致，安全地合并/更新（这里以简单更新时间判断为准）
                 if (acc.updatedAt && existing.updatedAt && acc.updatedAt !== existing.updatedAt) {
-                  await AccountDAO.update(Account.fromJSON(acc as any));
+                  await AccountDAO.update(acc);
                   recordCount++;
                 }
               }
@@ -411,23 +485,30 @@ export class CloudSyncService {
 
       // 导入分类（支持更新）
       if (dataPackage.categories && dataPackage.categories.length > 0) {
-        for (const cat of dataPackage.categories) {
+        for (const catJson of dataPackage.categories) {
           try {
+            const cat: Category = Category.fromJSON(catJson);
             const existing: Category | null = await CategoryDAO.getById(userId, cat.categoryId);
             if (!existing) {
               await CategoryDAO.insert(cat);
               recordCount++;
             } else {
-              const conflict = CloudSyncService.detectAndResolveConflict('categories', existing, cat);
+              const conflict: ConflictInfo | null = CloudSyncService.detectAndResolveConflict(
+                'categories',
+                existing.categoryId,
+                cat.categoryId,
+                existing.updatedAt,
+                cat.updatedAt
+              );
               if (conflict) {
                 conflicts.push(conflict);
                 if (conflict.resolution === 'cloud') {
-                  await CategoryDAO.update(Category.fromJSON(cat as any));
+                  await CategoryDAO.update(cat);
                   recordCount++;
                 }
               } else {
                 if (cat.updatedAt && existing.updatedAt && cat.updatedAt !== existing.updatedAt) {
-                  await CategoryDAO.update(Category.fromJSON(cat as any));
+                  await CategoryDAO.update(cat);
                   recordCount++;
                 }
               }
@@ -440,16 +521,23 @@ export class CloudSyncService {
 
       // 导入账单（支持按 ID 更新/去重）
       if (dataPackage.bills && dataPackage.bills.length > 0) {
-        for (const bill of dataPackage.bills) {
+        for (const billJson of dataPackage.bills) {
           try {
+            const bill: Bill = Bill.fromJSON(billJson);
             let existing: Bill | null = null;
-            try { existing = await BillDAO.getById(bill.billId); } catch (_) { existing = null; }
+            try { existing = await BillDAO.getById(bill.billId,bill.userId); } catch (_) { existing = null; }
 
             if (!existing) {
               await BillDAO.insert(bill);
               recordCount++;
             } else {
-              const conflict = CloudSyncService.detectAndResolveConflict('bills', existing, bill);
+              const conflict: ConflictInfo | null = CloudSyncService.detectAndResolveConflict(
+                'bills',
+                existing.billId,
+                bill.billId,
+                existing.updatedAt,
+                bill.updatedAt
+              );
               if (conflict) {
                 conflicts.push(conflict);
                 if (conflict.resolution === 'cloud') {
@@ -471,14 +559,21 @@ export class CloudSyncService {
 
       // 导入预算（支持更新）
       if (dataPackage.budgets && dataPackage.budgets.length > 0) {
-        for (const budget of dataPackage.budgets) {
+        for (const budgetJson of dataPackage.budgets) {
           try {
+            const budget: Budget = Budget.fromJSON(budgetJson);
             const existing: Budget | null = await BudgetDAO.getById(budget.budgetId);
             if (!existing) {
               await BudgetDAO.insert(budget);
               recordCount++;
             } else {
-              const conflict = CloudSyncService.detectAndResolveConflict('budgets', existing, budget);
+              const conflict: ConflictInfo | null = CloudSyncService.detectAndResolveConflict(
+                'budgets',
+                existing.budgetId,
+                budget.budgetId,
+                existing.createdAt,
+                budget.createdAt
+              );
               if (conflict) {
                 conflicts.push(conflict);
                 if (conflict.resolution === 'cloud') {
@@ -486,7 +581,7 @@ export class CloudSyncService {
                   recordCount++;
                 }
               } else {
-                if (budget.updatedAt && existing.updatedAt && budget.updatedAt !== existing.updatedAt) {
+                if (budget.createdAt && existing.createdAt && budget.createdAt !== existing.createdAt) {
                   await BudgetDAO.update(budget);
                   recordCount++;
                 }
@@ -518,7 +613,8 @@ export class CloudSyncService {
       const md: cryptoFramework.Md = cryptoFramework.createMd('SHA256');
       const encoder: util.TextEncoder = new util.TextEncoder();
       const dataBytes: Uint8Array = encoder.encodeInto(data);
-      await md.update({ data: dataBytes });
+      const updateBlob: cryptoFramework.DataBlob = new MdDataBlob(dataBytes);
+      await md.update(updateBlob);
       const hashResult: cryptoFramework.DataBlob = await md.digest();
       const hashArray: number[] = Array.from(new Uint8Array(hashResult.data));
       return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
@@ -536,34 +632,34 @@ export class CloudSyncService {
     const url = 'http://120.46.134.106:5000';
     console.info('[CloudSyncService] 准备上传到: ' + url);
 
-    let httpRequest: any = null;
+    let httpRequest: HttpRequestLike | null = null;
     try {
-      httpRequest = http.createHttp();
-      if (!httpRequest || typeof httpRequest.request !== 'function') {
-        throw new Error('http.createHttp() 返回无效对象');
-      }
-
-      let response = await httpRequest.request(url, {
+      httpRequest = http.createHttp() as HttpRequestLike;
+      const header: HttpJsonHeader = { contentType: 'application/json' };
+      const options: HttpPostOptions = {
         method: http.RequestMethod.POST,
-        header: { 'Content-Type': 'application/json' },
+        header,
         extraData: data, // 这里就是你收集的全部账单
         connectTimeout: 10000,
         readTimeout: 10000
-      });
+      };
+      const requestOptions: HttpPostOptions = options;
+      const response: HttpResponseLike = await httpRequest.request(url, requestOptions);
 
-      if (response && response.responseCode === 200) {
+      if (response.responseCode === 200) {
         console.info('[CloudSyncService] 同步成功！');
-        return new CloudApiResponse(true, response.result ? response.result.toString() : '');
+        const responseData: string = response.result !== undefined ? String(response.result) : '';
+        return new CloudApiResponse(true, responseData);
       }
     } catch (err) {
       console.error('[CloudSyncService] 连接失败: ' + JSON.stringify(err));
     } finally {
       try {
-        if (httpRequest && typeof httpRequest.destroy === 'function') {
+        if (httpRequest) {
           httpRequest.destroy();
         }
-      } catch (e) {
-        console.warn('[CloudSyncService] 关闭 httpRequest 失败:', e);
+      } catch (error) {
+        console.warn('[CloudSyncService] 关闭 httpRequest 失败:', error);
       }
     }
     return new CloudApiResponse(false);
@@ -579,19 +675,23 @@ export class CloudSyncService {
     const url = 'http://120.46.134.106:5000'; // 保持 IP 一致
     console.info('[CloudSyncService] 正在从云端下载数据: ' + url);
 
-    let httpRequest = http.createHttp();
+    const httpRequest: HttpRequestLike = http.createHttp() as HttpRequestLike;
     try {
-      let response = await httpRequest.request(url, {
+      const header: HttpUserHeader = { userId: userId.toString() };
+      const options: HttpGetOptions = {
         method: http.RequestMethod.GET, // 下载通常用 GET
-        header: { 'User-Id': userId.toString() }, // 告诉服务器是谁要下载
+        header,
         connectTimeout: 10000,
         readTimeout: 10000
-      });
+      };
+      const requestOptions: HttpGetOptions = options;
+      const response: HttpResponseLike = await httpRequest.request(url, requestOptions);
 
       if (response.responseCode === 200) {
         console.info('[CloudSyncService] 下载成功！');
         // response.result 就是服务器返回的 JSON 字符串
-        return new CloudApiResponse(true, response.result.toString());
+        const responseData: string = response.result !== undefined ? String(response.result) : '';
+        return new CloudApiResponse(true, responseData);
       } else {
         console.error('[CloudSyncService] 下载失败，状态码: ' + response.responseCode);
       }
@@ -635,12 +735,12 @@ export class CloudSyncService {
   static async getSyncStatistics(userId: number): Promise<SyncStatistics> {
     try {
       const stats = await CloudSyncRecordDAO.getStatistics(userId);
-      const result: SyncStatistics = {
-        total: stats.total,
-        completed: stats.completed,
-        failed: stats.failed,
-        lastSyncTime: stats.lastSyncTime
-      };
+      const result: SyncStatistics = new SyncStatisticsResult(
+        stats.total,
+        stats.completed,
+        stats.failed,
+        stats.lastSyncTime
+      );
       return result;
     } catch (error) {
       const errorMsg: string = error instanceof Error ? error.message : String(error);
