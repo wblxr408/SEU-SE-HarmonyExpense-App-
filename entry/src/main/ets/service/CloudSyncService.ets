@@ -107,6 +107,35 @@ export class ConflictInfo {
   }
 }
 
+  /**
+   * 简单冲突检测：比较 incoming.updatedAt 与 existing.updatedAt
+   * 返回 ConflictInfo（如果存在冲突）或 null（无冲突）
+   */
+  private static detectAndResolveConflict(dataType: string, existing: any, incoming: any): ConflictInfo | null {
+    try {
+      if (!existing || !incoming) return null;
+      const existingTs = existing.updatedAt ? Date.parse(existing.updatedAt) : 0;
+      const incomingTs = incoming.updatedAt ? Date.parse(incoming.updatedAt) : 0;
+
+      if (incomingTs === 0 || existingTs === 0) {
+        // 无法判断更新时间，则不视为冲突（保守处理为跳过）
+        return null;
+      }
+
+      if (incomingTs > existingTs) {
+        // 云端更新较新，采用云端覆盖本地
+        return new ConflictInfo(dataType, existing[`${dataType.slice(0, -1)}Id`] || existing.id || 0, incoming[`${dataType.slice(0, -1)}Id`] || incoming.id || 0, 'cloud');
+      } else if (incomingTs < existingTs) {
+        // 本地更新较新，保留本地
+        return new ConflictInfo(dataType, existing[`${dataType.slice(0, -1)}Id`] || existing.id || 0, incoming[`${dataType.slice(0, -1)}Id`] || incoming.id || 0, 'local');
+      }
+      return null;
+    } catch (e) {
+      console.warn('[CloudSyncService] 冲突检测失败:', e);
+      return null;
+    }
+  }
+
 /**
  * 云端数据包
  */
