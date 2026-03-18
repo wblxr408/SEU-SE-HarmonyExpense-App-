@@ -16,12 +16,23 @@ import { UserProfileDAO } from '../dao/UserProfileDAO';
 import { AdviceFeedback, FEEDBACK_ACCEPTED, FEEDBACK_REJECTED, ADVICE_DECREASE, ADVICE_INCREASE } from '../model/AdviceFeedback';
 import { AdviceFeedbackDAO } from '../dao/AdviceFeedbackDAO';
 import { BudgetAdvice } from '../model/SmartBudgetPlan';
-import { ForecastEngineConfig, ForecastWeights } from '../model/SmartBudgetPlan';
+import { ForecastEngineConfig } from '../model/SmartBudgetPlan';
 
 const LOG_TAG = 'PersonalizedBudgetService';
 const HILOG_DOMAIN = 0x0002;
 
 // ==================== 个性化配置接口 ====================
+
+/**
+ * 个性化算法权重
+ */
+export interface PersonalizedWeights {
+  sma: number;        // 简单移动平均
+  wma: number;        // 加权移动平均
+  es: number;         // 指数平滑
+  hw: number;         // Holt-Winters
+  lr: number;         // 线性回归
+}
 
 /**
  * 个性化阈值
@@ -41,9 +52,9 @@ export class PersonalizedBudgetService {
    * 获取个性化算法权重
    * 根据用户画像调整不同算法的权重
    */
-  static getPersonalizedWeights(profile: UserProfile | null): ForecastWeights {
+  static getPersonalizedWeights(profile: UserProfile | null): PersonalizedWeights {
     // 默认权重（平衡型）
-    let weights: ForecastWeights = {
+    let weights: PersonalizedWeights = {
       sma: 0.15,
       wma: 0.20,
       es: 0.25,
@@ -59,9 +70,9 @@ export class PersonalizedBudgetService {
     if (profile.spendingPersonality === SPENDING_SAVER) {
       // 储蓄型用户：消费稳定，增加简单平均权重
       weights = {
-        sma: 0.30,
+        sma: 0.25,
         wma: 0.25,
-        es: 0.15,
+        es: 0.20,
         hw: 0.15,
         lr: 0.15
       };
@@ -130,31 +141,38 @@ export class PersonalizedBudgetService {
 
       // 根据预算超支率调整
       if (profile.budgetOverrunRate > 0.5) {
-        thresholds.decreaseThreshold = -10;
+        // 经常超支的用户：降低阈值，更早提醒
+        thresholds.increaseThreshold = 15;
         thresholds.warningThreshold = 10;
         hilog.info(HILOG_DOMAIN, LOG_TAG, '降低阈值（经常超支用户）');
       } else if (profile.budgetOverrunRate < 0.2) {
-        thresholds.decreaseThreshold = -30;
+        // 很少超支的用户：提高阈值，减少打扰
+        thresholds.increaseThreshold = 25;
         thresholds.warningThreshold = 20;
-        hilog.info(HILOG_DOMAIN, LOG_TAG, '放宽阈值（较少超支用户）');
+        hilog.info(HILOG_DOMAIN, LOG_TAG, '提高阈值（很少超支用户）');
       }
 
       // 根据建议接受率调整
       if (profile.adviceAcceptanceRate < 0.3) {
-        thresholds.confidenceLevel = 0.99;
-        hilog.info(HILOG_DOMAIN, LOG_TAG, '提高置信以降低错判（低接受率）');
+        // 很少接受建议：提高阈值，只在明显情况下建议
+        thresholds.increaseThreshold += 5;
+        thresholds.decreaseThreshold -= 5;
+        hilog.info(HILOG_DOMAIN, LOG_TAG, '提高阈值（低接受率用户）');
       }
 
       // 根据风险承受能力调整置信水平
       if (profile.riskTolerance === 'conservative') {
         thresholds.confidenceLevel = 0.99;  // 保守型要求更高置信度
       } else if (profile.riskTolerance === 'aggressive') {
-        thresholds.confidenceLevel = 0.9;
+        thresholds.confidenceLevel = 0.90;  // 激进型可接受较低置信度
       }
 
       // 根据家庭规模调整
       if (profile.isLargeFamily()) {
+        // 大家庭：消费波动正常，提高阈值
         thresholds.increaseThreshold += 5;
+        thresholds.warningThreshold += 5;
+        hilog.info(HILOG_DOMAIN, LOG_TAG, '提高阈值（大家庭）');
       }
 
       return thresholds;
@@ -179,22 +197,35 @@ export class PersonalizedBudgetService {
       const decreaseRate = await AdviceFeedbackDAO.getAcceptanceRateByType(userId, ADVICE_DECREASE);
       const increaseRate = await AdviceFeedbackDAO.getAcceptanceRateByType(userId, ADVICE_INCREASE);
 
-      hilog.info(HILOG_DOMAIN, LOG_TAG, `历史接受率 decrease:${decreaseRate} increase:${increaseRate}`);
+      hilog.info(HILOG_DOMAIN, LOG_TAG, 
+        `建议接受率 - 减少: ${decreaseRate}, 增加: ${increaseRate}`);
 
       const filteredAdvices: BudgetAdvice[] = [];
 
       for (const advice of advices) {
-        // 如果用户几乎不接受减少类建议，则降低其权重
+        let shouldInclude = true;
+        let priorityAdjustment = 0;
+
+        // 如果用户从不接受"减少预算"建议（接受率<10%），降低优先级
         if (advice.adviceType === ADVICE_DECREASE && decreaseRate < 0.1) {
-          advice.priority = Math.min(5, advice.priority + 2);
+          priorityAdjustment = 2;  // 降低2级优先级
+          hilog.info(HILOG_DOMAIN, LOG_TAG, 
+            `降低"减少预算"建议优先级（低接受率）`);
         }
 
-        // 如果用户较常接受增加建议，则提升增加类建议优先级
-        if (advice.adviceType === ADVICE_INCREASE && increaseRate > 0.6) {
-          advice.priority = Math.max(1, advice.priority - 1);
+        // 如果用户从不接受"增加预算"建议，降低优先级
+        if (advice.adviceType === ADVICE_INCREASE && increaseRate < 0.1) {
+          priorityAdjustment = 2;
+          hilog.info(HILOG_DOMAIN, LOG_TAG, 
+            `降低"增加预算"建议优先级（低接受率）`);
         }
 
-        filteredAdvices.push(advice);
+        // 调整优先级
+        if (shouldInclude) {
+          const adjustedAdvice = { ...advice };
+          adjustedAdvice.priority = Math.min(5, advice.priority + priorityAdjustment);
+          filteredAdvices.push(adjustedAdvice);
+        }
       }
 
       // 重新排序
@@ -239,9 +270,23 @@ export class PersonalizedBudgetService {
       feedback.effectiveDate = nextMonth.toISOString().substring(0, 10);
       
       feedback.userComment = comment || '';
-      await AdviceFeedbackDAO.insert(feedback);
-      return true;
+      feedback.createdAt = new Date().toISOString();
+      feedback.updatedAt = new Date().toISOString();
+
+      const feedbackId = await AdviceFeedbackDAO.insert(feedback);
+
+      // 更新用户画像的建议接受率
+      const acceptanceRate = await AdviceFeedbackDAO.calculateAcceptanceRate(userId);
+      await UserProfileDAO.updateAdviceAcceptanceRate(userId, acceptanceRate);
+
+      hilog.info(HILOG_DOMAIN, LOG_TAG, 
+        `建议反馈已记录，ID: ${feedbackId}, 接受: ${accepted}`);
+
+      return feedbackId > 0;
+
     } catch (err) {
+      const error = err as Error;
+      hilog.error(HILOG_DOMAIN, LOG_TAG, `记录建议反馈失败: ${error.message}`);
       return false;
     }
   }
@@ -252,9 +297,30 @@ export class PersonalizedBudgetService {
    */
   static async evaluateAdviceAccuracy(userId: number): Promise<number> {
     try {
-      // Placeholder: calculate accuracy from stored feedbacks
-      return 0;
+      // 获取待评估的反馈
+      const pendingFeedbacks = await AdviceFeedbackDAO.getPendingEvaluations(userId);
+
+      if (pendingFeedbacks.length === 0) {
+        hilog.info(HILOG_DOMAIN, LOG_TAG, '没有待评估的建议');
+        return 0;
+      }
+
+      let evaluatedCount = 0;
+
+      for (const feedback of pendingFeedbacks) {
+        // TODO: 从bills表查询实际支出
+        // 这里需要根据category_id和effective_date查询实际支出
+        // 暂时跳过，等待集成时实现
+        
+        hilog.info(HILOG_DOMAIN, LOG_TAG, 
+          `待评估建议: ${feedback.adviceId}, 分类: ${feedback.categoryName}`);
+      }
+
+      return evaluatedCount;
+
     } catch (err) {
+      const error = err as Error;
+      hilog.error(HILOG_DOMAIN, LOG_TAG, `评估建议准确性失败: ${error.message}`);
       return 0;
     }
   }
@@ -268,19 +334,33 @@ export class PersonalizedBudgetService {
 
     const config: ForecastEngineConfig = {
       algorithm: 'ensemble',
+      windowSize: 6,
       alpha: 0.3,
       beta: 0.1,
       gamma: 0.2,
       seasonalPeriod: 12,
       confidenceLevel: thresholds.confidenceLevel,
-      minDataPoints: 12,
-      windowSize: 6
+      minDataPoints: 12
     };
 
     // 根据用户画像调整参数
     if (profile) {
-      const weights = PersonalizedBudgetService.getPersonalizedWeights(profile);
-      config.weights = weights;
+      if (profile.spendingPersonality === SPENDING_SPENDER) {
+        // 消费型用户：增加alpha（对新数据更敏感）
+        config.alpha = 0.4;
+      } else if (profile.spendingPersonality === SPENDING_SAVER) {
+        // 储蓄型用户：降低alpha（更平滑）
+        config.alpha = 0.2;
+      }
+
+      // 根据数据量调整窗口大小
+      if (profile.averageMonthlyExpense > 0) {
+        // 有足够历史数据，可以使用更大窗口
+        config.windowSize = 6;
+      } else {
+        // 新用户，使用较小窗口
+        config.windowSize = 3;
+      }
     }
 
     return config;

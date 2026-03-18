@@ -37,6 +37,9 @@ import {
 import { BillDAO } from '../dao/BillDAO';
 import { CategoryDAO } from '../dao/CategoryDAO';
 import { BudgetDAO } from '../dao/BudgetDAO';
+import { UserProfileDAO } from '../dao/UserProfileDAO';
+import { PersonalizedBudgetService } from './PersonalizedBudgetService';
+import { SeasonalityDetectionService } from './SeasonalityDetectionService';
 
 const LOG_TAG = 'SmartBudgetService';
 const HILOG_DOMAIN = 0x0002;
@@ -89,26 +92,48 @@ export class PeriodDatesResult {
 export class SmartBudgetService {
 
   /**
-   * 生成智能预算计划
+   * 生成智能预算计划（集成个性化功能）
    */
   static async generateSmartBudget(params: SmartBudgetGenerationParams): Promise<SmartBudgetPlan> {
     hilog.info(HILOG_DOMAIN, LOG_TAG, '开始生成智能预算计划: %{public}s', JSON.stringify(params));
 
     try {
-      // 1. 参数默认值设置
+      // ========== 个性化增强：步骤1 - 确保用户画像存在 ==========
+      let profile = await UserProfileDAO.getByUserId(params.userId);
+      if (!profile) {
+        hilog.info(HILOG_DOMAIN, LOG_TAG, '用户画像不存在，开始自动分析');
+        await UserProfileDAO.analyzeAndUpdate(params.userId);
+        profile = await UserProfileDAO.getByUserId(params.userId);
+      }
+
+      // ========== 个性化增强：步骤2 - 获取个性化配置 ==========
+      const personalizedThresholds = await PersonalizedBudgetService.getPersonalizedThresholds(params.userId);
+      hilog.info(HILOG_DOMAIN, LOG_TAG, 
+        `个性化阈值 - 增加: ${personalizedThresholds.increaseThreshold}%, 减少: ${personalizedThresholds.decreaseThreshold}%`);
+
+      // 1. 参数默认值设置（使用个性化置信水平）
       const lookbackMonths = params.lookbackMonths ?? 6;
       const algorithm = params.algorithm ?? FORECAST_ENSEMBLE;
-      const confidenceLevel = params.confidenceLevel ?? 0.95;
+      const confidenceLevel = params.confidenceLevel ?? personalizedThresholds.confidenceLevel;
 
       // 2. 获取历史消费数据
       const historicalData = await SmartBudgetService.fetchHistoricalData(params.userId, lookbackMonths);
       hilog.info(HILOG_DOMAIN, LOG_TAG, '获取到%{public}d个分类的历史数据', historicalData.length);
 
-      // 3. 创建预测配置
+      // 3. 创建预测配置（使用个性化参数）
       const config = BudgetForecastUtils.createDefaultConfig();
       config.algorithm = algorithm;
       config.confidenceLevel = confidenceLevel;
       config.windowSize = Math.min(lookbackMonths, 6);
+      
+      // 根据用户画像调整alpha参数
+      if (profile) {
+        if (profile.spendingPersonality === 'spender') {
+          config.alpha = 0.4; // 消费型用户：对新数据更敏感
+        } else if (profile.spendingPersonality === 'saver') {
+          config.alpha = 0.2; // 储蓄型用户：更平滑
+        }
+      }
 
       // 4. 生成分类预算分配
       const categoryBudgets = await SmartBudgetService.generateCategoryBudgets(
@@ -120,12 +145,21 @@ export class SmartBudgetService {
       // 5. 生成预测结果
       const forecasts = SmartBudgetService.generateForecasts(historicalData, config, params.targetMonth);
 
-      // 6. 生成预算建议
+      // 6. 生成预算建议（使用个性化阈值）
       const advices = await SmartBudgetService.generateBudgetAdvices(
         params.userId,
         historicalData,
-        categoryBudgets
+        categoryBudgets,
+        personalizedThresholds
       );
+
+      // ========== 个性化增强：步骤3 - 过滤建议 ==========
+      const filteredAdvices = await PersonalizedBudgetService.filterAdvicesByHistory(
+        params.userId,
+        advices
+      );
+      hilog.info(HILOG_DOMAIN, LOG_TAG, 
+        `建议过滤：原始${advices.length}条，过滤后${filteredAdvices.length}条`);
 
       // 7. 识别季节性因子（简化版）
       const seasonalFactors = SmartBudgetService.detectSeasonalFactors(historicalData);
@@ -141,7 +175,7 @@ export class SmartBudgetService {
       const startDate = periodDates.startDate;
       const endDate = periodDates.endDate;
 
-      // 10. 组装SmartBudgetPlan对象
+      // 10. 组装SmartBudgetPlan对象（使用过滤后的建议）
       const plan = new SmartBudgetPlan();
       plan.userId = params.userId;
       plan.planName = params.planName;
@@ -151,7 +185,7 @@ export class SmartBudgetService {
       plan.totalBudget = totalBudget;
       plan.setCategoryBudgets(categoryBudgets);
       plan.forecastsJson = JSON.stringify(forecasts);
-      plan.advicesJson = JSON.stringify(advices);
+      plan.advicesJson = JSON.stringify(filteredAdvices); // 使用过滤后的建议
       plan.seasonalFactorsJson = JSON.stringify(seasonalFactors);
       plan.algorithm = algorithm;
       plan.accuracy = SmartBudgetService.calculateAccuracy(historicalData, forecasts);
@@ -160,7 +194,7 @@ export class SmartBudgetService {
       plan.createdAt = new Date().toISOString();
       plan.updatedAt = new Date().toISOString();
 
-      hilog.info(HILOG_DOMAIN, LOG_TAG, '智能预算计划生成完成');
+      hilog.info(HILOG_DOMAIN, LOG_TAG, '智能预算计划生成完成（已应用个性化）');
       return plan;
 
     } catch (err) {
@@ -319,15 +353,21 @@ export class SmartBudgetService {
   }
 
   /**
-   * 生成预算建议
+   * 生成预算建议（集成个性化阈值）
    */
   private static async generateBudgetAdvices(
     userId: number,
     historicalData: CategoryHistoricalData[],
-    categoryBudgets: CategoryBudgetAllocation[]
+    categoryBudgets: CategoryBudgetAllocation[],
+    personalizedThresholds?: any
   ): Promise<BudgetAdvice[]> {
     const advices: BudgetAdvice[] = [];
     const currentBudgets = await BudgetDAO.getByUserId(userId);
+
+    // 使用个性化阈值或默认值
+    const increaseThreshold = personalizedThresholds?.increaseThreshold ?? 20;
+    const decreaseThreshold = personalizedThresholds?.decreaseThreshold ?? -20;
+    const warningThreshold = personalizedThresholds?.warningThreshold ?? 15;
 
     for (const catBudget of categoryBudgets) {
       const currentBudget = currentBudgets.find((b) => b.categoryId === catBudget.categoryId);
@@ -348,15 +388,21 @@ export class SmartBudgetService {
         priority = 2;
       } else {
         const changePercent = ((suggestedAmount - currentAmount) / currentAmount) * 100;
-        if (changePercent > 20) {
+        
+        // 使用个性化阈值判断
+        if (changePercent > increaseThreshold) {
           adviceType = ADVICE_INCREASE;
           reason = `消费呈上升趋势，建议增加预算 ${changePercent.toFixed(0)}%`;
           priority = 1;
-        } else if (changePercent < -20) {
+        } else if (changePercent < decreaseThreshold) {
           adviceType = ADVICE_DECREASE;
           reason = `消费下降，可减少预算 ${Math.abs(changePercent).toFixed(0)}%`;
           priority = 2;
           potentialSavings = currentAmount - suggestedAmount;
+        } else if (changePercent > warningThreshold) {
+          adviceType = ADVICE_WARNING;
+          reason = `消费增长${changePercent.toFixed(1)}%，需关注预算执行`;
+          priority = 2;
         } else if (trend === 'increasing') {
           adviceType = ADVICE_WARNING;
           reason = '消费趋势上升，需关注预算执行';
@@ -387,12 +433,59 @@ export class SmartBudgetService {
   }
 
   /**
-   * 检测季节性因子（简化版）
+   * 检测季节性因子（使用高级统计分析）
    */
   private static detectSeasonalFactors(historicalData: CategoryHistoricalData[]): SeasonalFactor[] {
+    hilog.info(HILOG_DOMAIN, LOG_TAG, '开始季节性检测（高级统计分析）');
+
+    try {
+      // 准备批量检测数据
+      const dataList = historicalData
+        .filter((data: CategoryHistoricalData) => data.monthlyAmounts.length >= 6)
+        .map((data: CategoryHistoricalData) => ({
+          categoryId: data.categoryId,
+          categoryName: data.categoryName,
+          monthlyData: data.monthlyAmounts
+        }));
+
+      if (dataList.length === 0) {
+        hilog.info(HILOG_DOMAIN, LOG_TAG, '没有足够数据进行季节性检测');
+        return [];
+      }
+
+      // 批量检测季节性
+      const analysisResults = SeasonalityDetectionService.detectSeasonalityBatch(dataList);
+
+      // 转换为SeasonalFactor格式
+      const factors = SeasonalityDetectionService.convertToSeasonalFactors(analysisResults);
+
+      hilog.info(HILOG_DOMAIN, LOG_TAG, 
+        `季节性检测完成：检测${dataList.length}个分类，发现${factors.length}个季节性模式`);
+
+      // 记录详细结果
+      for (const result of analysisResults) {
+        if (result.hasSeasonality) {
+          hilog.info(HILOG_DOMAIN, LOG_TAG, 
+            `${result.categoryName}: 强度=${result.strength}, 置信度=${result.confidence.toFixed(2)}, 周期=${result.period}月`);
+        }
+      }
+
+      return factors;
+
+    } catch (err) {
+      const error = err as Error;
+      hilog.error(HILOG_DOMAIN, LOG_TAG, `季节性检测失败: ${error.message}`);
+      // 降级到简单检测
+      return SmartBudgetService.detectSeasonalFactorsSimple(historicalData);
+    }
+  }
+
+  /**
+   * 简单季节性检测（降级方案）
+   */
+  private static detectSeasonalFactorsSimple(historicalData: CategoryHistoricalData[]): SeasonalFactor[] {
     const factors: SeasonalFactor[] = [];
 
-    // 示例：简单判断是否有明显的月度波动
     for (const data of historicalData) {
       if (data.monthlyAmounts.length < 6) {
         continue;
@@ -498,7 +591,7 @@ export class SmartBudgetService {
   }
 
   /**
-   * 获取预算优化建议
+   * 获取预算优化建议（集成个性化过滤）
    */
   static async getBudgetOptimization(params: BudgetOptimizationParams): Promise<BudgetAdvice[]> {
     hilog.info(HILOG_DOMAIN, LOG_TAG, '获取预算优化建议');
@@ -507,10 +600,26 @@ export class SmartBudgetService {
       const historicalData = await SmartBudgetService.fetchHistoricalData(params.userId, 6);
       const config = BudgetForecastUtils.createDefaultConfig();
       const categoryBudgets = await SmartBudgetService.generateCategoryBudgets(historicalData, config);
-      const advices = await SmartBudgetService.generateBudgetAdvices(params.userId, historicalData, categoryBudgets);
+      
+      // 获取个性化阈值
+      const personalizedThresholds = await PersonalizedBudgetService.getPersonalizedThresholds(params.userId);
+      
+      // 生成建议（使用个性化阈值）
+      const advices = await SmartBudgetService.generateBudgetAdvices(
+        params.userId, 
+        historicalData, 
+        categoryBudgets,
+        personalizedThresholds
+      );
+
+      // 过滤建议（基于历史反馈）
+      const filteredAdvices = await PersonalizedBudgetService.filterAdvicesByHistory(
+        params.userId,
+        advices
+      );
 
       // 只返回高优先级的优化建议
-      return advices.filter((a: BudgetAdvice) =>
+      return filteredAdvices.filter((a: BudgetAdvice) =>
         a.adviceType === ADVICE_OPTIMIZATION ||
         a.adviceType === ADVICE_WARNING ||
         a.priority <= 2

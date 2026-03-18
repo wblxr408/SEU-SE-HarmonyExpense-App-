@@ -26,7 +26,21 @@ export class UserProfileDAO {
   static async insert(profile: UserProfile): Promise<number> {
     try {
       const store = DatabaseManager.getDatabase();
-      const valueBucket: relationalStore.ValuesBucket = {/* minimal insertion */};
+      const valueBucket: relationalStore.ValuesBucket = {
+        user_id: profile.userId,
+        age: profile.age,
+        income_level: profile.incomeLevel,
+        family_size: profile.familySize,
+        risk_tolerance: profile.riskTolerance,
+        spending_personality: profile.spendingPersonality,
+        budget_execution_pattern: profile.budgetExecutionPattern,
+        average_monthly_income: profile.averageMonthlyIncome,
+        average_monthly_expense: profile.averageMonthlyExpense,
+        budget_overrun_rate: profile.budgetOverrunRate,
+        advice_acceptance_rate: profile.adviceAcceptanceRate,
+        created_at: profile.createdAt || new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      };
 
       const rowId = await store.insert(UserProfile.tableName, valueBucket);
       hilog.info(HILOG_DOMAIN, LOG_TAG, `用户画像插入成功，ID: ${rowId}`);
@@ -72,7 +86,19 @@ export class UserProfileDAO {
   static async update(profile: UserProfile): Promise<boolean> {
     try {
       const store = DatabaseManager.getDatabase();
-      const valueBucket: relationalStore.ValuesBucket = {/* minimal update */};
+      const valueBucket: relationalStore.ValuesBucket = {
+        age: profile.age,
+        income_level: profile.incomeLevel,
+        family_size: profile.familySize,
+        risk_tolerance: profile.riskTolerance,
+        spending_personality: profile.spendingPersonality,
+        budget_execution_pattern: profile.budgetExecutionPattern,
+        average_monthly_income: profile.averageMonthlyIncome,
+        average_monthly_expense: profile.averageMonthlyExpense,
+        budget_overrun_rate: profile.budgetOverrunRate,
+        advice_acceptance_rate: profile.adviceAcceptanceRate,
+        updated_at: new Date().toISOString()
+      };
 
       const predicates = new relationalStore.RdbPredicates(UserProfile.tableName);
       predicates.equalTo('user_id', profile.userId);
@@ -115,7 +141,18 @@ export class UserProfileDAO {
       sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
       const startDate = sixMonthsAgo.toISOString().substring(0, 10);
       
-      const incomeQuery = `SELECT ...`;
+      const incomeQuery = `
+        SELECT AVG(monthly_income) as avg_income, AVG(monthly_expense) as avg_expense
+        FROM (
+          SELECT 
+            strftime('%Y-%m', transaction_date) as month,
+            SUM(CASE WHEN type='income' THEN amount ELSE 0 END) as monthly_income,
+            SUM(CASE WHEN type='expense' THEN amount ELSE 0 END) as monthly_expense
+          FROM bills
+          WHERE user_id = ? AND transaction_date >= ? AND is_deleted = 0
+          GROUP BY month
+        )
+      `;
       
       const incomeResult = await store.querySql(incomeQuery, [userId.toString(), startDate]);
       
@@ -123,18 +160,34 @@ export class UserProfileDAO {
       let avgExpense = 0;
       
       if (incomeResult.rowCount > 0) {
-        // parse
+        incomeResult.goToFirstRow();
+        avgIncome = incomeResult.getDouble(incomeResult.getColumnIndex('avg_income'));
+        avgExpense = incomeResult.getDouble(incomeResult.getColumnIndex('avg_expense'));
       }
       incomeResult.close();
       
       // 2. 计算预算超支率
-      const overrunQuery = `SELECT ...`;
+      const overrunQuery = `
+        SELECT 
+          COUNT(CASE WHEN spent > budget THEN 1 END) * 1.0 / COUNT(*) as overrun_rate
+        FROM (
+          SELECT 
+            b.category_id,
+            bg.amount as budget,
+            SUM(b.amount) as spent
+          FROM bills b
+          JOIN budgets bg ON b.category_id = bg.category_id AND b.user_id = bg.user_id
+          WHERE b.user_id = ? AND b.transaction_date >= ? AND b.is_deleted = 0 AND bg.is_active = 1
+          GROUP BY b.category_id, bg.amount
+        )
+      `;
       
       const overrunResult = await store.querySql(overrunQuery, [userId.toString(), startDate]);
       
       let overrunRate = 0;
       if (overrunResult.rowCount > 0) {
-        // parse
+        overrunResult.goToFirstRow();
+        overrunRate = overrunResult.getDouble(overrunResult.getColumnIndex('overrun_rate'));
       }
       overrunResult.close();
       
@@ -182,6 +235,7 @@ export class UserProfileDAO {
       
       // 8. 保存
       return await UserProfileDAO.upsert(profile);
+      
     } catch (err) {
       const error = err as Error;
       hilog.error(HILOG_DOMAIN, LOG_TAG, `分析用户画像失败: ${error.message}`);
@@ -195,12 +249,19 @@ export class UserProfileDAO {
   static async updateAdviceAcceptanceRate(userId: number, acceptanceRate: number): Promise<boolean> {
     try {
       const store = DatabaseManager.getDatabase();
-      const valueBucket: relationalStore.ValuesBucket = {/* minimal */};
+      const valueBucket: relationalStore.ValuesBucket = {
+        advice_acceptance_rate: acceptanceRate,
+        updated_at: new Date().toISOString()
+      };
+
       const predicates = new relationalStore.RdbPredicates(UserProfile.tableName);
       predicates.equalTo('user_id', userId);
+
       const rows = await store.update(valueBucket, predicates);
       return rows > 0;
     } catch (err) {
+      const error = err as Error;
+      hilog.error(HILOG_DOMAIN, LOG_TAG, `更新建议接受率失败: ${error.message}`);
       return false;
     }
   }
