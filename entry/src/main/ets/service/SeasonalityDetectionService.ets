@@ -76,7 +76,19 @@ interface StatisticalMetrics {
   max: number;
   range: number;
 }
+interface CategoryMonthlyData {
+  categoryId: number;
+  categoryName: string;
+  monthlyData: number[];
+}
+interface ConfidenceWeights{
 
+  acf:number,
+  cv: number,
+  peaks: number,
+  troughs: number
+
+}
 // ==================== 核心服务类 ====================
 
 export class SeasonalityDetectionService {
@@ -187,7 +199,7 @@ export class SeasonalityDetectionService {
    * 批量检测季节性
    */
   static detectSeasonalityBatch(
-    dataList: Array<{ categoryId: number; categoryName: string; monthlyData: number[] }>,
+    dataList: Array<CategoryMonthlyData>,
     thresholds?: SeasonalityThresholds
   ): SeasonalityAnalysisResult[] {
     const results: SeasonalityAnalysisResult[] = [];
@@ -458,7 +470,7 @@ export class SeasonalityDetectionService {
     dataLength: number
   ): number {
     // 权重分配
-    const weights = {
+    const weights:ConfidenceWeights = {
       acf: 0.4,
       cv: 0.3,
       peaks: 0.2,
