@@ -76,7 +76,7 @@ interface StatisticalMetrics {
   max: number;
   range: number;
 }
-interface CategoryMonthlyData {
+export interface  CategoryMonthlyData {
   categoryId: number;
   categoryName: string;
   monthlyData: number[];
