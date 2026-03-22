@@ -38,8 +38,8 @@ import { BillDAO } from '../dao/BillDAO';
 import { CategoryDAO } from '../dao/CategoryDAO';
 import { BudgetDAO } from '../dao/BudgetDAO';
 import { UserProfileDAO } from '../dao/UserProfileDAO';
-import { PersonalizedBudgetService } from './PersonalizedBudgetService';
-import { SeasonalityDetectionService } from './SeasonalityDetectionService';
+import { PersonalizedBudgetService ,PersonalizedThresholds} from './PersonalizedBudgetService';
+import { SeasonalityDetectionService ,CategoryMonthlyData} from './SeasonalityDetectionService';
 
 const LOG_TAG = 'SmartBudgetService';
 const HILOG_DOMAIN = 0x0002;
@@ -359,7 +359,7 @@ export class SmartBudgetService {
     userId: number,
     historicalData: CategoryHistoricalData[],
     categoryBudgets: CategoryBudgetAllocation[],
-    personalizedThresholds?: any
+    personalizedThresholds?: PersonalizedThresholds
   ): Promise<BudgetAdvice[]> {
     const advices: BudgetAdvice[] = [];
     const currentBudgets = await BudgetDAO.getByUserId(userId);
@@ -440,13 +440,13 @@ export class SmartBudgetService {
 
     try {
       // 准备批量检测数据
-      const dataList = historicalData
+      const dataList: CategoryMonthlyData[]= historicalData
         .filter((data: CategoryHistoricalData) => data.monthlyAmounts.length >= 6)
         .map((data: CategoryHistoricalData) => ({
           categoryId: data.categoryId,
           categoryName: data.categoryName,
           monthlyData: data.monthlyAmounts
-        }));
+        })as CategoryMonthlyData);
 
       if (dataList.length === 0) {
         hilog.info(HILOG_DOMAIN, LOG_TAG, '没有足够数据进行季节性检测');

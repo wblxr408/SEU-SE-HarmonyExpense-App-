@@ -222,7 +222,20 @@ export class PersonalizedBudgetService {
 
         // 调整优先级
         if (shouldInclude) {
-          const adjustedAdvice = { ...advice };
+          const adjustedAdvice: BudgetAdvice = {
+            // 改用显式赋值
+            adviceId: advice.adviceId,
+            adviceType: advice.adviceType,
+            categoryId: advice.categoryId,
+            categoryName: advice.categoryName,
+            suggestedBudget: advice.suggestedBudget,
+            currentBudget: advice.currentBudget,
+            changePercent:advice.changePercent,
+            reason: advice.reason,
+            potentialSavings:advice.potentialSavings,
+            historicalTrend:advice.historicalTrend,
+            priority: Math.min(5, advice.priority + priorityAdjustment)
+          };
           adjustedAdvice.priority = Math.min(5, advice.priority + priorityAdjustment);
           filteredAdvices.push(adjustedAdvice);
         }
