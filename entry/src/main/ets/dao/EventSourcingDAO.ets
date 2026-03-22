@@ -870,4 +870,4 @@ export class ReadModelDAO {
 }
 
 // 导出接口类型
-export type { EventStoreStats, CommandStats };
+export type { EventStoreStats };
