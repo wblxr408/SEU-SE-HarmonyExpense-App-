@@ -155,10 +155,15 @@ export struct MinePage {
                   router.pushUrl({ url: 'pages/BackupPage' });
                 })
               }
+              GridItem() {
+                this.GridToolItem($r('app.media.ic_user_avatar_linear'), '我的画像', () => {
+                  router.pushUrl({ url: 'pages/UserProfilePage' });
+                })
+              }
             }
             .columnsTemplate('1fr 1fr 1fr 1fr')
             .rowsGap(16)
-            .height(80)
+            .height(160)
           }
 
           GlassCardContainer() {
