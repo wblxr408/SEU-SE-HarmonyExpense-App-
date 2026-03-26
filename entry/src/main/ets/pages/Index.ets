@@ -416,7 +416,7 @@ struct Index {
               .shadow(AppTheme.CardShadow)
             }
             .width('100%')
-            .padding({ top: 38, bottom: 20 })
+            .padding({ top: 56, bottom: 20 })
             .margin({ left: 16, right: 16 })
             .backgroundColor(AppTheme.GlassBackground)
             .backdropBlur(30)

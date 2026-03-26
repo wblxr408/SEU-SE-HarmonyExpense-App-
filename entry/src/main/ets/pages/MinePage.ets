@@ -152,7 +152,7 @@ export struct MinePage {
             .margin({ top: 20 })
           }
           .width('100%')
-          .padding({ left: 24, right: 24, top: 40, bottom: 20 })
+          .padding({ left: 24, right: 24, top: 56, bottom: 20 })
           .margin({ left: 16, right: 16, bottom: 16 })
           .backgroundColor(AppTheme.GlassBackground)
           .backdropBlur(30)

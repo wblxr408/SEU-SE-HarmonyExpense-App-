@@ -249,7 +249,7 @@ export struct StatisticsPage {
       .backdropBlur(30)
       .borderRadius(24)
       .padding(4)
-      .margin({ top: 40, bottom: 20 }) // 留出系统状态栏空间
+      .margin({ top: 56, bottom: 20 }) // 留出系统状态栏空间
       
       // 2. 月份切换组件
       Row() {

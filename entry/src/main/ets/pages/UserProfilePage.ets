@@ -472,6 +472,5 @@ struct UserProfilePage {
       .backgroundColor(AppTheme.Background)
     }
     .title('我的画像')
-    .titleMode(NavigationTitleMode.Mini)
   }
 }
