@@ -47,6 +47,8 @@ struct Index {
   @State allCategories: Array<Category> = [];
   @State selectedDate: Date = new Date();
   @State selectedCategoryId: number = 0;
+  @State searchKeyword: string = '';
+  @State showSearchBar: boolean = false;
   @State statRefreshTrigger: number = 0;
   @State mineRefreshTrigger: number = 0;
   @StorageProp('currentBreakpoint') currentBreakpoint: string = 'md';
@@ -189,6 +191,52 @@ struct Index {
     const lastDay = new Date(year, month, 0).getDate();
     const endDate = `${year}-${month.toString().padStart(2, '0')}-${lastDay.toString().padStart(2, '0')}`;
     return { start: startDate, end: endDate };
+  }
+
+  private getCategoryName(category?: Category): string {
+    if (!category) {
+      return '所有分类';
+    }
+    if (typeof category.name === 'string') {
+      return category.name;
+    }
+    return '分类';
+  }
+
+  private getCategoryOptions(): SelectOption[] {
+    return this.allCategories.map((category: Category) => new SelectOption(this.getCategoryName(category)));
+  }
+
+  private getSelectedCategoryName(): string {
+    const category = this.allCategories.find((item: Category) => item.categoryId === this.selectedCategoryId);
+    return this.getCategoryName(category);
+  }
+
+  private getDisplayedTransactions(): Bill[] {
+    const keyword = this.searchKeyword.trim().toLowerCase();
+    if (!keyword) {
+      return this.transactions;
+    }
+
+    return this.transactions.filter((item: Bill) => {
+      const categoryName = this.getCategoryName(this.allCategories.find((category: Category) => category.categoryId === item.categoryId))
+        .toLowerCase();
+      const note = (item.note || '').toLowerCase();
+      const amountText = item.amount.toFixed(2);
+      return note.includes(keyword) || categoryName.includes(keyword) || amountText.includes(keyword);
+    });
+  }
+
+  private getIncomeTotal(): number {
+    return this.getDisplayedTransactions().reduce((acc: number, item: Bill) => item.type === 'income' ? acc + item.amount : acc, 0);
+  }
+
+  private getExpenseTotal(): number {
+    return this.getDisplayedTransactions().reduce((acc: number, item: Bill) => item.type === 'expense' ? acc + item.amount : acc, 0);
+  }
+
+  private getBalanceTotal(): number {
+    return this.getDisplayedTransactions().reduce((acc: number, item: Bill) => item.type === 'income' ? acc + item.amount : acc - item.amount, 0);
   }
 
   showMonthPicker(): void {
@@ -370,10 +418,46 @@ struct Index {
                   .fontColor(AppTheme.TextMain)
                 Image($r('app.media.ic_search_linear'))
                   .width(24).height(24).fillColor(AppTheme.TextMain).objectFit(ImageFit.Contain)
+                  .onClick(() => {
+                    this.showSearchBar = !this.showSearchBar;
+                    if (!this.showSearchBar) {
+                      this.searchKeyword = '';
+                    }
+                  })
               }
               .width('100%')
               .justifyContent(FlexAlign.SpaceBetween)
               .padding(20)
+              if (this.showSearchBar) {
+                Row({ space: 8 }) {
+                  TextInput({ placeholder: '\u641c\u7d22\u5907\u6ce8/\u5206\u7c7b/\u91d1\u989d', text: this.searchKeyword })
+                    .layoutWeight(1)
+                    .height(36)
+                    .fontSize(14)
+                    .fontColor(AppTheme.TextMain)
+                    .backgroundColor(AppTheme.CardBg)
+                    .borderRadius(12)
+                    .onChange((value: string) => {
+                      this.searchKeyword = value;
+                    })
+
+                  if (this.searchKeyword.trim().length > 0) {
+                    Button('\u6e05\u7a7a')
+                      .height(36)
+                      .fontSize(12)
+                      .fontColor(AppTheme.TextMain)
+                      .backgroundColor(AppTheme.CardBg)
+                      .borderRadius(12)
+                      .border({ width: 0.5, color: AppTheme.Border })
+                      .onClick(() => {
+                        this.searchKeyword = '';
+                      })
+                  }
+                }
+                .width('100%')
+                .padding({ left: 20, right: 20 })
+                .margin({ bottom: 12 })
+              }
               Row({ space: 8 }) {
                 Text('<').fontSize(16).fontColor(AppTheme.TextMain).fontWeight(FontWeight.Bold)
                 Text(this.formatDateToYearMonth(this.selectedDate).replace('-', '\u5e74') + '\u6708\u660e\u7ec6')
@@ -391,19 +475,19 @@ struct Index {
               Row() {
                 Column() {
                   Text('\u6536\u5165').fontSize('14fp').fontColor(AppTheme.TextWhite).opacity(0.85).margin({ bottom: 8 })
-                  Text(this.transactions.reduce((acc, item) => item.type === 'income' ? acc + item.amount : acc, 0).toFixed(2))
+                  Text(this.getIncomeTotal().toFixed(2))
                     .fontSize('26fp').fontWeight(FontWeight.Bolder).fontColor(AppTheme.TextWhite)
                 }.layoutWeight(1).alignItems(HorizontalAlign.Center)
 
                 Column() {
                   Text('\u652f\u51fa').fontSize('14fp').fontColor(AppTheme.TextWhite).opacity(0.75).margin({ bottom: 8 })
-                  Text(this.transactions.reduce((acc, item) => item.type === 'expense' ? acc + item.amount : acc, 0).toFixed(2))
+                  Text(this.getExpenseTotal().toFixed(2))
                     .fontSize('26fp').fontWeight(FontWeight.Medium).fontColor(AppTheme.TextWhite).opacity(0.72)
                 }.layoutWeight(1).alignItems(HorizontalAlign.Center)
 
                 Column() {
                   Text('\u7ed3\u4f59').fontSize('14fp').fontColor(AppTheme.TextWhite).opacity(0.85).margin({ bottom: 8 })
-                  Text(this.transactions.reduce((acc, item) => item.type === 'income' ? acc + item.amount : acc - item.amount, 0).toFixed(2))
+                  Text(this.getBalanceTotal().toFixed(2))
                     .fontSize('28fp').fontWeight(FontWeight.Bolder).fontColor(AppTheme.TextWhite)
                 }.layoutWeight(1).alignItems(HorizontalAlign.Center)
               }
@@ -440,26 +524,33 @@ struct Index {
                 Text('\u6536\u652f\u8bb0\u5f55').fontSize('18fp').fontWeight(FontWeight.Bold).fontColor(AppTheme.TextMain)
               }.width(76)
 
-              Row() {
-                Text('\u7b5b\u9009 \u25bc').fontSize('12fp').fontColor(AppTheme.TextMain)
-              }
-              .backgroundColor(AppTheme.CardBg)
-              .borderRadius(16)
-              .padding({ left: 12, right: 12, top: 4, bottom: 4 })
-              .border({ width: 0.5, color: AppTheme.Border })
+              Select(this.getCategoryOptions())
+                .value(this.getSelectedCategoryName())
+                .font({ size: 12 })
+                .fontColor(AppTheme.TextMain)
+                .backgroundColor(AppTheme.CardBg)
+                .borderRadius(16)
+                .padding({ left: 8, right: 8, top: 2, bottom: 2 })
+                .onSelect((index: number) => {
+                  const category = this.allCategories[index];
+                  this.selectedCategoryId = category ? category.categoryId : 0;
+                  this.loadBills();
+                })
             }
             .width('100%')
             .padding(20)
             .justifyContent(FlexAlign.SpaceBetween)
-            if (this.transactions.length === 0) {
+            if (this.getDisplayedTransactions().length === 0) {
               Column() {
                 Image($r('app.media.ill_empty_state_glass'))
                   .width(120).height(120).opacity(0.4).objectFit(ImageFit.Contain).margin({ bottom: 10, top: 40 })
-                Text('\u54ce\u5440\uff0c\u5f53\u524d\u65f6\u95f4\u6ca1\u6709\u8bb0\u5f55\u5462~').fontColor(AppTheme.TextSub).fontSize(14)
+                Text(this.searchKeyword.trim().length > 0 ? '\u6ca1\u6709\u5339\u914d\u7684\u641c\u7d22\u7ed3\u679c~' : '\u54ce\u5440\uff0c\u5f53\u524d\u65f6\u95f4\u6ca1\u6709\u8bb0\u5f55\u5462~')
+                  .fontColor(AppTheme.TextSub)
+                  .fontSize(14)
               }.width('100%').alignItems(HorizontalAlign.Center)
             } else {
               List({ space: 10 }) {
-                ForEach(this.transactions, (item: Bill) => {
+                ForEach(this.getDisplayedTransactions(), (item: Bill) => {
                   ListItem() {
                     this.TransactionRow(item)
                   }
