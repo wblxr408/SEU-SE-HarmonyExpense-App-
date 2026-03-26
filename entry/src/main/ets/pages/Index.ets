@@ -48,6 +48,7 @@ struct Index {
   @State selectedDate: Date = new Date();
   @State selectedCategoryId: number = 0;
   @State statRefreshTrigger: number = 0;
+  @State mineRefreshTrigger: number = 0;
   @StorageProp('currentBreakpoint') currentBreakpoint: string = 'md';
   @State pendingInvitations: LedgerInvitation[] = [];
   invitationController: CustomDialogController = new CustomDialogController({
@@ -107,6 +108,7 @@ struct Index {
 
     await this.loadFilterData();
     await this.loadBills();
+    this.mineRefreshTrigger++;
     this.checkInvitations();
   }
 
@@ -274,7 +276,7 @@ struct Index {
           StatisticsPage({ refreshTrigger: this.statRefreshTrigger })
         }
         TabContent() {
-          MinePage()
+          MinePage({ refreshTrigger: this.mineRefreshTrigger })
         }
       }
       .barHeight(0) 
@@ -283,6 +285,8 @@ struct Index {
         this.currentIndex = index;
         if (index === 1) {
            this.statRefreshTrigger++;
+        } else if (index === 2) {
+          this.mineRefreshTrigger++;
         }
       })
       Row() {

@@ -1,6 +1,7 @@
 import router from '@ohos.router';
 import { UserSessionService, SessionInfo } from '../service/UserSessionService';
 import { NotificationService } from '../service/NotificationService';
+import { BillDAO } from '../dao/BillDAO';
 import { promptAction } from '@kit.ArkUI';
 import { AppTheme } from '../common/config/AppTheme';
 
@@ -26,14 +27,24 @@ struct GlassCardContainer {
 
 @Component
 export struct MinePage {
+  @Prop @Watch('onRefreshTrigger') refreshTrigger: number = 0;
   @State currentUser: SessionInfo | null = null;
   @State unreadCount: number = 0;
-  @State daysCount: number = 128;
-  @State billsCount: number = 856;
+  @State daysCount: number = 0;
+  @State billsCount: number = 0;
 
   async aboutToAppear() {
+    await this.reloadDashboardData();
+  }
+
+  onRefreshTrigger() {
+    this.reloadDashboardData();
+  }
+
+  private async reloadDashboardData() {
     this.currentUser = await UserSessionService.getCurrentSession();
-    this.loadUnreadCount();
+    await this.loadUnreadCount();
+    await this.loadBillStats();
   }
 
   async loadUnreadCount() {
@@ -41,6 +52,32 @@ export struct MinePage {
       this.unreadCount = await NotificationService.getUnreadCount();
     } catch (error) {
       console.error('[MinePage] Failed to load unread count:', error);
+    }
+  }
+
+  async loadBillStats() {
+    try {
+      const userId = await UserSessionService.getCurrentUserId();
+      if (!userId) {
+        this.daysCount = 0;
+        this.billsCount = 0;
+        return;
+      }
+
+      const bills = await BillDAO.getByUserId(userId);
+      this.billsCount = bills.length;
+
+      const uniqueDays = new Set<string>();
+      for (const bill of bills) {
+        if (bill.transactionDate) {
+          uniqueDays.add(bill.transactionDate.substring(0, 10));
+        }
+      }
+      this.daysCount = uniqueDays.size;
+    } catch (error) {
+      console.error('[MinePage] Failed to load bill stats:', error);
+      this.daysCount = 0;
+      this.billsCount = 0;
     }
   }
 
