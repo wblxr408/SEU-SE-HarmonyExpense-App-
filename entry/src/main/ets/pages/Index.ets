@@ -280,6 +280,7 @@ struct Index {
         }
       }
       .barHeight(0) 
+      .padding({ bottom: 72 })
       .layoutWeight(1)
       .onChange((index: number) => {
         this.currentIndex = index;
