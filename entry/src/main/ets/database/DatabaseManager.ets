@@ -871,7 +871,33 @@ export class DatabaseManager {
       `);
       console.log('[DatabaseManager] 表 ocr_recognition_records 及索引创建成功');
 
-      console.log('[DatabaseManager] 所有数据表创建完成（共26张表）');
+      // 27. 创建用户画像表
+      await store.executeSql(`
+        CREATE TABLE IF NOT EXISTS user_profiles (
+          profile_id INTEGER PRIMARY KEY AUTOINCREMENT,
+          user_id INTEGER NOT NULL UNIQUE,
+          age INTEGER DEFAULT 0,
+          income_level TEXT DEFAULT 'medium',
+          family_size INTEGER DEFAULT 1,
+          risk_tolerance TEXT DEFAULT 'moderate',
+          spending_personality TEXT DEFAULT 'balanced',
+          budget_execution_pattern TEXT DEFAULT 'flexible',
+          average_monthly_income REAL DEFAULT 0,
+          average_monthly_expense REAL DEFAULT 0,
+          budget_overrun_rate REAL DEFAULT 0,
+          advice_acceptance_rate REAL DEFAULT 0,
+          created_at TEXT NOT NULL,
+          updated_at TEXT NOT NULL,
+          FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE
+        );
+      `);
+      await store.executeSql(`
+        CREATE INDEX IF NOT EXISTS idx_user_profiles_user
+        ON user_profiles (user_id);
+      `);
+      console.log('[DatabaseManager] 表 user_profiles 及索引创建成功');
+
+      console.log('[DatabaseManager] 所有数据表创建完成（共27张表）');
     } catch (error) {
       throw DatabaseManager.toError('[DatabaseManager] 创建数据表失败', error);
     }

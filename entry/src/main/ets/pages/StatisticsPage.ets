@@ -192,6 +192,29 @@ export struct StatisticsPage {
     return sum / this.dailyTrend.length;
   }
 
+  private getCurrentStatLabel(): string {
+    return this.displayType === 'expense' ? '支出' : '收入';
+  }
+
+  private getTrendTitle(): string {
+    return this.displayType === 'expense' ? '支出趋势' : '收入趋势';
+  }
+
+  private getSourceOverviewTitle(): string {
+    return this.displayType === 'expense' ? '支出占比概况' : '收入来源概况';
+  }
+
+  private getRankingTitle(): string {
+    return this.displayType === 'expense' ? '支出类目排行' : '收入来源排行';
+  }
+
+  private switchDisplayType(type: 'expense' | 'income'): void {
+    hilog.info(0x0000, 'StatisticsPage', `switchDisplayType: %{public}s -> %{public}s`, this.displayType, type);
+    this.displayType = type;
+    const lastDay = new Date(this.currentYear, this.currentMonth, 0).getDate();
+    this.recalculateTrendAndRanking(lastDay);
+  }
+
   @Builder
   CardHeader(title: string) {
     Stack({ alignContent: Alignment.BottomStart }) {
@@ -226,7 +249,7 @@ export struct StatisticsPage {
       .backdropBlur(30)
       .borderRadius(24)
       .padding(4)
-      .margin({ top: 40, bottom: 20 }) // 留出系统状态栏空间
+      .margin({ top: 56, bottom: 20 }) // 留出系统状态栏空间
       
       // 2. 月份切换组件
       Row() {
@@ -300,60 +323,62 @@ export struct StatisticsPage {
   buildSummaryCards() {
     Row() {
       // 本月支出
-      Column() {
-        Text('本月支出')
-          .fontSize(14)
-          .fontColor(this.displayType === 'expense' ? AppTheme.TextWhite : AppTheme.TextSub)
-          .margin({ bottom: 8 })
-        Text(`¥${this.totalExpense.toFixed(2)}`)
-          .fontSize(24)
-          .fontWeight(FontWeight.Bold)
-          .fontColor(this.displayType === 'expense' ? AppTheme.TextWhite : this.textMainColor)
+      Button({ type: ButtonType.Normal }) {
+        Column() {
+          Text('本月支出')
+            .fontSize(14)
+            .fontColor(this.displayType === 'expense' ? AppTheme.TextWhite : AppTheme.TextSub)
+            .margin({ bottom: 8 })
+          Text(`¥${this.totalExpense.toFixed(2)}`)
+            .fontSize(24)
+            .fontWeight(FontWeight.Bold)
+            .fontColor(this.displayType === 'expense' ? AppTheme.TextWhite : this.textMainColor)
+        }
+        .width('100%')
+        .height('100%')
+        .alignItems(HorizontalAlign.Start)
+        .justifyContent(FlexAlign.Center)
+        .padding({ left: 20 })
       }
       .layoutWeight(1)
       .height(88)
-      .alignItems(HorizontalAlign.Start)
-      .justifyContent(FlexAlign.Center)
-      .padding({ left: 20 })
       .borderRadius(24)
       .backgroundColor(this.displayType === 'expense' ? AppTheme.HeroBg : AppTheme.CardBg)
       .shadow(this.displayType === 'expense' ? AppTheme.FabShadow : AppTheme.CardShadow)
+      .stateEffect(false)
       .onClick(() => {
-        if (this.displayType !== 'expense') {
-          this.displayType = 'expense';
-          const lastDay = new Date(this.currentYear, this.currentMonth, 0).getDate();
-          this.recalculateTrendAndRanking(lastDay);
-        }
+        this.switchDisplayType('expense');
       })
 
       // 间隙
       Row().width(12)
 
       // 本月收入
-      Column() {
-        Text('本月收入')
-          .fontSize(14)
-          .fontColor(this.displayType === 'income' ? AppTheme.TextWhite : AppTheme.TextSub)
-          .margin({ bottom: 8 })
-        Text(`¥${this.totalIncome.toFixed(2)}`)
-          .fontSize(24)
-          .fontWeight(FontWeight.Bold)
-          .fontColor(this.displayType === 'income' ? AppTheme.TextWhite : this.textMainColor)
+      Button({ type: ButtonType.Normal }) {
+        Column() {
+          Text('本月收入')
+            .fontSize(14)
+            .fontColor(this.displayType === 'income' ? AppTheme.TextWhite : AppTheme.TextSub)
+            .margin({ bottom: 8 })
+          Text(`¥${this.totalIncome.toFixed(2)}`)
+            .fontSize(24)
+            .fontWeight(FontWeight.Bold)
+            .fontColor(this.displayType === 'income' ? AppTheme.TextWhite : this.textMainColor)
+        }
+        .width('100%')
+        .height('100%')
+        .alignItems(HorizontalAlign.Start)
+        .justifyContent(FlexAlign.Center)
+        .padding({ left: 20 })
       }
       .layoutWeight(1)
       .height(88)
-      .alignItems(HorizontalAlign.Start)
-      .justifyContent(FlexAlign.Center)
-      .padding({ left: 20 })
       .borderRadius(24)
       .backgroundColor(this.displayType === 'income' ? AppTheme.HeroBg : AppTheme.CardBg)
       .shadow(this.displayType === 'income' ? AppTheme.FabShadow : AppTheme.CardShadow)
+      .stateEffect(false)
       .onClick(() => {
-        if (this.displayType !== 'income') {
-          this.displayType = 'income';
-          const lastDay = new Date(this.currentYear, this.currentMonth, 0).getDate();
-          this.recalculateTrendAndRanking(lastDay);
-        }
+        this.switchDisplayType('income');
       })
     }
     .width('100%')
@@ -405,7 +430,13 @@ export struct StatisticsPage {
 
           // 2.2 类别：趋势折线图
           Column() {
-            this.CardHeader(this.displayType === 'expense' ? '支出趋势' : '收入趋势')
+            Stack({ alignContent: Alignment.BottomStart }) {
+              Text(this.getTrendTitle())
+                .fontSize(16)
+                .fontWeight(FontWeight.Bold)
+                .fontColor(this.textMainColor)
+            }
+            .margin({ bottom: 15, right: 'auto' })
             this.buildTrendDataSummary()
             BezierLineChart({ data: this.dailyTrend, chartMaxHeight: this.CHART_MAX_HEIGHT })
           }
@@ -418,7 +449,13 @@ export struct StatisticsPage {
 
           // 2.3 类别：占比概况（带洞环形图）
           Column() {
-            this.CardHeader(this.displayType === 'expense' ? '支出占比概况' : '收入占比概况')
+            Stack({ alignContent: Alignment.BottomStart }) {
+              Text(this.getSourceOverviewTitle())
+                .fontSize(16)
+                .fontWeight(FontWeight.Bold)
+                .fontColor(this.textMainColor)
+            }
+            .margin({ bottom: 15, right: 'auto' })
             Stack({ alignContent: Alignment.Center }) {
               DataPanel({ 
                 values: this.getTopCategoryValues(), 
@@ -430,7 +467,7 @@ export struct StatisticsPage {
                 .valueColors(this.donutColors)
               
               Column() {
-                Text(this.displayType === 'expense' ? '本月支出' : '本月收入')
+                Text(`本月${this.getCurrentStatLabel()}`)
                   .fontSize(12)
                   .fontColor(AppTheme.TextSub)
                 Text(`¥${(this.displayType === 'expense' ? this.totalExpense : this.totalIncome).toFixed(2)}`)
@@ -453,7 +490,13 @@ export struct StatisticsPage {
 
           // 2.4 类别：支出类目排行
           Column() {
-            this.CardHeader(this.displayType === 'expense' ? '支出类目排行' : '收入类目排行')
+            Stack({ alignContent: Alignment.BottomStart }) {
+              Text(this.getRankingTitle())
+                .fontSize(16)
+                .fontWeight(FontWeight.Bold)
+                .fontColor(this.textMainColor)
+            }
+            .margin({ bottom: 15, right: 'auto' })
             List({ space: 15 }) {
               ForEach(this.categoryRanking, (item: CategoryStatItem, index: number) => {
                 ListItem() {

@@ -171,6 +171,8 @@ export class DemoDataService {
        // 处理年份回退
        const dateBase = new Date(year, month, 1);
        const daysInMonth = new Date(year, month + 1, 0).getDate();
+       const isCurrentMonth = dateBase.getFullYear() === now.getFullYear() && dateBase.getMonth() === now.getMonth();
+       const maxValidDay = isCurrentMonth ? Math.min(now.getDate(), daysInMonth) : daysInMonth;
 
        // 每月固定收入
        if (incomeCats.length > 0) {
@@ -179,13 +181,13 @@ export class DemoDataService {
 
        // 随机支出生成
        // 餐饮：每月 20-30 笔
-       DemoDataService.generateRandomBills(bills, userId, mainAccount.accountId, DemoDataService.findCatId(expenseCats, '餐饮'), 'expense', dateBase, daysInMonth, 20, 20, 100, '午餐/晚餐');
+       DemoDataService.generateRandomBills(bills, userId, mainAccount.accountId, DemoDataService.findCatId(expenseCats, '餐饮'), 'expense', dateBase, maxValidDay, 20, 20, 100, '午餐/晚餐');
        
        // 交通：每月 10-15 笔
-       DemoDataService.generateRandomBills(bills, userId, mainAccount.accountId, DemoDataService.findCatId(expenseCats, '交通'), 'expense', dateBase, daysInMonth, 10, 5, 50, '地铁/打车');
+       DemoDataService.generateRandomBills(bills, userId, mainAccount.accountId, DemoDataService.findCatId(expenseCats, '交通'), 'expense', dateBase, maxValidDay, 10, 5, 50, '地铁/打车');
 
        // 购物：每月 3-5 笔
-       DemoDataService.generateRandomBills(bills, userId, mainAccount.accountId, DemoDataService.findCatId(expenseCats, '购物'), 'expense', dateBase, daysInMonth, 4, 100, 800, '生活用品');
+       DemoDataService.generateRandomBills(bills, userId, mainAccount.accountId, DemoDataService.findCatId(expenseCats, '购物'), 'expense', dateBase, maxValidDay, 4, 100, 800, '生活用品');
 
        // 住房：固定每月 1 号
        DemoDataService.addBill(bills, userId, mainAccount.accountId, DemoDataService.findCatId(expenseCats, '居住'), 2800, 'expense', dateBase, 1, '房租');
@@ -237,6 +239,12 @@ export class DemoDataService {
     const d = new Date(baseDate.getFullYear(), baseDate.getMonth(), day);
     // 添加随机小时
     d.setHours(Math.floor(Math.random() * 24), Math.floor(Math.random() * 60));
+
+    // 兜底保护：禁止生成未来时间账单
+    const now = new Date();
+    if (d.getTime() > now.getTime()) {
+      d.setTime(now.getTime());
+    }
     
     const b = new Bill();
     b.userId = userId;
