@@ -2,6 +2,7 @@
 import router from '@ohos.router';
 import promptAction from '@ohos.promptAction';
 import { UserSessionService } from '../service/UserSessionService';
+import { BillDAO } from '../dao/BillDAO';
 import { UserProfileDAO } from '../dao/UserProfileDAO';
 import { UserProfile, INCOME_LOW, INCOME_MEDIUM, INCOME_HIGH,
   SPENDING_SAVER, SPENDING_BALANCED, SPENDING_SPENDER,
@@ -12,6 +13,7 @@ import { AppTheme } from '../common/config/AppTheme';
 @Entry
 @Component
 struct UserProfilePage {
+  private static readonly MIN_BILL_COUNT_FOR_PROFILE: number = 10;
   @State profile: UserProfile | null = null;
   @State isLoading: boolean = true;
   @State isRefreshing: boolean = false;
@@ -41,16 +43,23 @@ struct UserProfilePage {
     try {
       const userId = await UserSessionService.getCurrentUserId();
       if (!userId) return;
+
+      const bills = await BillDAO.getByUserId(userId);
+      if (bills.length < UserProfilePage.MIN_BILL_COUNT_FOR_PROFILE) {
+        promptAction.showToast({ message: `账单数量不够，至少需要 ${UserProfilePage.MIN_BILL_COUNT_FOR_PROFILE} 条` });
+        return;
+      }
+
       const success = await UserProfileDAO.analyzeAndUpdate(userId);
       if (success) {
         this.profile = await UserProfileDAO.getByUserId(userId);
         promptAction.showToast({ message: '画像分析已更新' });
       } else {
-        promptAction.showToast({ message: '分析失败，请确保有足够的账单数据' });
+        promptAction.showToast({ message: '画像分析失败，请稍后重试' });
       }
     } catch (err) {
       console.error('[UserProfilePage] Refresh analysis failed:', err);
-      promptAction.showToast({ message: '分析失败' });
+      promptAction.showToast({ message: '画像分析失败，请稍后重试' });
     } finally {
       this.isRefreshing = false;
     }
